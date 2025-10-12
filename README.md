@@ -504,15 +504,6 @@ _Principal Solutions Architect, AWS_
 
 ---
 
-## 🙏 Acknowledgments
-
-- **Anthropic** - For Claude Sonnet 4 and the amazing capabilities
-- **AWS** - For Bedrock, Aurora, and the broader ecosystem
-- **Strands Team** - For the excellent agent framework
-- **MCP Community** - For the standardization efforts
-
----
-
 <div align="center">
 
 **Built with ❤️ using vibe coding**
