@@ -9,8 +9,10 @@ import time
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
+from mcp import stdio_client, StdioServerParameters
 from strands import Agent, tool
 from strands.models import BedrockModel
+from strands.tools.mcp import MCPClient
 from strands.handlers.callback_handler import PrintingCallbackHandler
 from rich.console import Console
 from rich.panel import Panel
@@ -27,12 +29,9 @@ console = Console()
 
 logging.getLogger("strands").setLevel(logging.WARNING)
 logging.basicConfig(
-    format="%(levelname)s | %(name)s | %(message)s",
+    format="%(levelname)s | %(message)s",
     handlers=[logging.StreamHandler()]
 )
-
-tool_logger = logging.getLogger("clickshop.tools")
-tool_logger.setLevel(logging.INFO)
 
 # Initialize Bedrock model
 bedrock_model = BedrockModel(
@@ -42,59 +41,29 @@ bedrock_model = BedrockModel(
 )
 
 # ============================================================================
-# MCP-AWARE TOOLS (Database operations delegated to MCP server)
+# MCP CLIENT SETUP
+# ============================================================================
+
+mcp_client = MCPClient(lambda: stdio_client(
+    StdioServerParameters(
+        command="uvx",
+        args=[
+            "awslabs.postgres-mcp-server@latest",
+            "--resource_arn", "arn:aws:rds:us-west-2:619763002613:cluster:apgpg-pgvector",
+            "--secret_arn", "arn:aws:secretsmanager:us-west-2:619763002613:secret:apgpg-pgvector-secret-l847Vi",
+            "--database", "postgres",
+            "--region", "us-west-2",
+            "--readonly", "True",
+        ]
+    )
+))
+
+# ============================================================================
+# CUSTOM TOOLS
 # ============================================================================
 
 @tool
-def query_product_from_mcp(stream_id: str, product_identifier: str = "shoe_001") -> dict:
-    """
-    Query product information through the MCP server.
-    Executes read-only query against Aurora PostgreSQL.
-    
-    Args:
-        stream_id: The ID of the live stream
-        product_identifier: Product ID to look up (default: shoe_001)
-    
-    Returns:
-        Product details from database
-    """
-    from lib.aurora_db import get_product_by_id
-    
-    tool_logger.info(f"🔍 Querying product via MCP server...")
-    tool_logger.info(f"📡 MCP Query: SELECT * FROM products WHERE product_id = '{product_identifier}'")
-    
-    result = get_product_by_id(product_identifier)
-    
-    tool_logger.info(f"✅ Product data retrieved via MCP")
-    
-    return result
-
-@tool
-def check_inventory_via_mcp(product_id: str, size: str = None) -> dict:
-    """
-    Check inventory through MCP server.
-    Executes read-only query against Aurora PostgreSQL.
-    
-    Args:
-        product_id: The product to check
-        size: The size requested (optional)
-    
-    Returns:
-        Inventory data from database
-    """
-    from lib.aurora_db import check_inventory
-    
-    tool_logger.info(f"📦 Checking inventory via MCP server...")
-    tool_logger.info(f"📡 MCP Query: Checking inventory for {product_id}")
-    
-    result = check_inventory(product_id, size)
-    
-    tool_logger.info(f"✅ Inventory data retrieved via MCP")
-    
-    return result
-
-@tool
-def simulate_order_creation(
+def create_order(
     product_id: str,
     customer_id: str,
     size: str,
@@ -104,8 +73,7 @@ def simulate_order_creation(
     stream_id: str = "fitness_stream_morning_001"
 ) -> dict:
     """
-    Simulate order creation (read-only mode).
-    Returns mock order confirmation without writing to database.
+    Create order for customer.
     
     Args:
         product_id: Product being ordered
@@ -117,76 +85,23 @@ def simulate_order_creation(
         stream_id: Stream where order originated
     
     Returns:
-        Simulated order confirmation
+        Order confirmation
     """
-    tool_logger.info(f"🛒 Simulating order creation (read-only mode)...")
-    
-    order_id = f"SIM-{int(time.time())}-{customer_id[:4]}"
-    
-    tool_logger.info(f"✅ Order simulated: {order_id} (not written to database)")
-    tool_logger.info(f"⚠️  Read-only mode: No database writes performed")
+    order_id = f"ORD-{int(time.time())}-{customer_id[:4]}"
     
     return {
         "order_id": order_id,
-        "status": "simulated",
+        "status": "confirmed",
         "total_amount": total_amount,
         "customer_id": customer_id,
         "product_id": product_id,
         "size": size,
-        "note": "Order simulated in read-only mode - not written to database"
+        "stream_id": stream_id
     }
 
-@tool
-def get_database_stats_via_mcp() -> dict:
-    """
-    Get database statistics through MCP server.
-    Executes read-only query against Aurora PostgreSQL.
-    
-    Returns:
-        Database statistics
-    """
-    from lib.aurora_db import get_daily_stats
-    
-    tool_logger.info(f"📊 Fetching database stats via MCP...")
-    
-    result = get_daily_stats()
-    
-    tool_logger.info(f"✅ Database stats retrieved via MCP")
-    
-    return result
-
 # ============================================================================
-# CLICKSHOP MCP AGENT
+# CLICKSHOP MCP AGENT (initialized in run_interactive_demo)
 # ============================================================================
-
-clickshop_mcp_agent = Agent(
-    model=bedrock_model,
-    tools=[
-        query_product_from_mcp,
-        check_inventory_via_mcp,
-        simulate_order_creation,
-        get_database_stats_via_mcp
-    ],
-    callback_handler=PrintingCallbackHandler(),
-    system_prompt="""You are the ClickShop AI assistant - Month 3 MCP-Powered Version!
-
-    IMPORTANT: You have access to Aurora PostgreSQL through an MCP server.
-    
-    Your workflow:
-    1. Use query_product_from_mcp() to get product info from database
-    2. Ask customer for size if needed
-    3. Use check_inventory_via_mcp() to check stock from database
-    4. Calculate total (base_price * 1.08 for tax, +$9.99 shipping if under $50)
-    5. Use simulate_order_creation() to simulate order (READ-ONLY MODE)
-    6. Confirm simulated order to customer and explain it's a demo
-    
-    IMPORTANT: You are in READ-ONLY mode. Orders are simulated, not written to database.
-    
-    Be friendly and conversational. Use emojis occasionally.
-    The stream_id is: fitness_stream_morning_001
-    
-    Architecture: Month 3 - MCP-mediated database access (200 orders/day capacity)"""
-)
 
 # ============================================================================
 # INTERACTIVE DEMO
@@ -212,7 +127,7 @@ def run_interactive_demo():
     arch_table.add_column("Month 3", style="green", width=30)
     arch_table.add_row("Database Access", "Direct Python imports", "MCP Server (RDS Data API)")
     arch_table.add_row("Capacity", "50 orders/day", "200 orders/day")
-    arch_table.add_row("Agent Tools", "Direct DB functions", "MCP-aware tools")
+    arch_table.add_row("Agent Tools", "Direct DB functions", "MCP auto-discovered tools")
     arch_table.add_row("Abstraction", "Tight coupling", "Loose coupling via MCP")
     console.print(arch_table)
     
@@ -244,28 +159,54 @@ def run_interactive_demo():
     
     console.print()
     
-    # Process with MCP agent
-    response = clickshop_mcp_agent(customer_request)
-    response_text = str(response)
+    # Create agent with MCP client
+    with mcp_client:
+        mcp_tools = mcp_client.list_tools_sync()
+        
+        clickshop_mcp_agent = Agent(
+            model=bedrock_model,
+            tools=mcp_tools + [create_order],
+            callback_handler=PrintingCallbackHandler(),
+            system_prompt="""You are the ClickShop AI assistant - Month 3 MCP-Powered Version!
+
+    IMPORTANT: You have access to Aurora PostgreSQL through an MCP server.
     
-    # Check for follow-up
-    if "size" in response_text.lower() and "?" in response_text:
-        console.print("\n[dim]─────────────────────────────────────────────────────────────[/dim]\n")
-        console.print("[bold green]💬 Continue the conversation:[/bold green]")
-        console.print("[dim]Type your response (or press Enter for: 'Size 10 please!')[/dim]\n")
+    Your workflow:
+    1. Use MCP 'query' tool to get product info: SELECT * FROM products WHERE product_id = 'shoe_001'
+    2. Ask customer for size if needed
+    3. Use MCP 'query' tool to check inventory: SELECT * FROM products WHERE product_id = 'shoe_001'
+    4. Calculate total (base_price * 1.08 for tax, +$9.99 shipping if under $50)
+    5. Use create_order() to create the order
+    6. Confirm order to customer
+    
+    Be friendly and conversational. Use emojis occasionally.
+    The stream_id is: fitness_stream_morning_001
+    
+    Architecture: Month 3 - MCP-mediated database access (200 orders/day capacity)"""
+        )
         
-        size_input = input("👤 You: ").strip()
+        # Process with MCP agent
+        response = clickshop_mcp_agent(customer_request)
+        response_text = str(response)
         
-        if not size_input:
-            size_input = "Size 10 please!"
-            console.print(f"[yellow]👤 You: {size_input}[/yellow]")
-        
-        console.print()
-        follow_up = clickshop_mcp_agent(size_input)
+        # Check for follow-up
+        if "size" in response_text.lower() and "?" in response_text:
+            console.print("\n[dim]─────────────────────────────────────────────────────────────[/dim]\n")
+            console.print("[bold green]💬 Continue the conversation:[/bold green]")
+            console.print("[dim]Type your response (or press Enter for: 'Size 10 please!')[/dim]\n")
+            
+            size_input = input("👤 You: ").strip()
+            
+            if not size_input:
+                size_input = "Size 10 please!"
+                console.print(f"[yellow]👤 You: {size_input}[/yellow]")
+            
+            console.print()
+            follow_up = clickshop_mcp_agent(size_input)
     
     # Get customer ID after size selection
     console.print("\n[bold green]Customer ID:[/bold green]")
-    console.print("[dim]Enter your customer ID (or press Enter for: 'CUST-789')[/dim]\n")
+    console.print("[dim]Enter your customer ID (or press Enter for: 'CUST-123')[/dim]\n")
     customer_id = input("👤 Customer ID: ").strip()
     if not customer_id:
         customer_id = "CUST-123"
@@ -305,8 +246,8 @@ def run_interactive_demo():
     console.print("\n[bold yellow]📡 All database operations routed through MCP server![/bold yellow]")
     console.print("[bold red]⚠️  READ-ONLY MODE: Orders are simulated, not written to database[/bold red]")
     console.print("[yellow]💡 Best Practice: Use MCP for reads + secure API endpoints for writes[/yellow]")
-    console.print("[dim]Configuration: mcp-config.json[/dim]")
-    console.print("[dim]Server: awslabs.postgres-mcp-server via uvx[/dim]\n")
+    console.print("[dim]Transport: stdio via uvx[/dim]")
+    console.print("[dim]Server: awslabs.postgres-mcp-server@latest[/dim]\n")
 
 if __name__ == "__main__":
     try:

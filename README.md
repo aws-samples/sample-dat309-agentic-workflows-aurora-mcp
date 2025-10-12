@@ -187,6 +187,37 @@ python -m demos.month_3_agent_mcp
 - Horizontal scaling capability
 - Production-ready architecture
 
+**MCP Implementation:**
+
+```python
+from mcp import stdio_client, StdioServerParameters
+from strands.tools.mcp import MCPClient
+
+# Create MCP client with stdio transport
+mcp_client = MCPClient(lambda: stdio_client(
+    StdioServerParameters(
+        command="uvx",
+        args=[
+            "awslabs.postgres-mcp-server@latest",
+            "--resource_arn", "arn:aws:rds:...",
+            "--secret_arn", "arn:aws:secretsmanager:...",
+            "--database", "postgres",
+            "--region", "us-west-2",
+            "--readonly", "True",
+        ]
+    )
+))
+
+# Use MCP client in Agent
+with mcp_client:
+    tools = mcp_client.list_tools_sync()
+    agent = Agent(
+        model=bedrock_model,
+        tools=tools + [custom_tool]
+    )
+    agent("Your query here")
+```
+
 </details>
 
 ### 🎯 Month 6: Multi-Agent System
@@ -223,7 +254,6 @@ clickshop-demo/
 ├── run_demo.py                 # 🎯 Main entry point
 ├── requirements.txt            # 📦 Python dependencies
 ├── .env.example               # 🔐 Environment template
-├── mcp-config.json            # 🔧 MCP server configuration
 │
 ├── demos/                     # 🎬 Demo implementations
 │   ├── month_1_single_agent.py    # Month 1: Single agent
