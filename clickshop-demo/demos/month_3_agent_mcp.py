@@ -119,18 +119,6 @@ def run_interactive_demo():
         border_style="cyan"
     ))
     
-    # Show architecture evolution
-    console.print("\n[bold]🏗️  Architecture Evolution:[/bold]")
-    arch_table = Table(show_header=True, box=None)
-    arch_table.add_column("Aspect", style="cyan", width=20)
-    arch_table.add_column("Month 1", style="yellow", width=30)
-    arch_table.add_column("Month 3", style="green", width=30)
-    arch_table.add_row("Database Access", "Direct Python imports", "MCP Server (RDS Data API)")
-    arch_table.add_row("Capacity", "50 orders/day", "5,000 orders/day")
-    arch_table.add_row("Agent Tools", "Direct DB functions", "MCP auto-discovered tools")
-    arch_table.add_row("Abstraction", "Tight coupling", "Loose coupling via MCP")
-    console.print(arch_table)
-    
     # MCP Server Status
     console.print("\n[bold]📡 MCP Server Status:[/bold]")
     console.print("[green]✅ Aurora PostgreSQL MCP Server: Connected[/green]")
@@ -217,8 +205,20 @@ def run_interactive_demo():
     console.print("\n[bold green]✅ MCP Transaction Complete![/bold green]")
     console.print(f"[cyan]Customer ID: {customer_id}[/cyan]\n")
     
+    # Architecture evolution
+    console.print("[bold]🏗️  Architecture Evolution:[/bold]")
+    arch_table = Table(show_header=True, box=None)
+    arch_table.add_column("Aspect", style="cyan", width=20)
+    arch_table.add_column("Month 1", style="yellow", width=30)
+    arch_table.add_column("Month 3", style="green", width=30)
+    arch_table.add_row("Database Access", "Direct Python imports", "MCP Server (RDS Data API)")
+    arch_table.add_row("Capacity", "50 orders/day", "5,000 orders/day")
+    arch_table.add_row("Agent Tools", "Direct DB functions", "MCP auto-discovered tools")
+    arch_table.add_row("Abstraction", "Tight coupling", "Loose coupling via MCP")
+    console.print(arch_table)
+    
     # Performance comparison
-    console.print("[bold]⚡ Performance Comparison:[/bold]")
+    console.print("\n[bold]⚡ Performance Comparison:[/bold]")
     perf_table = Table(show_header=True, box=None)
     perf_table.add_column("Metric", style="cyan", width=25)
     perf_table.add_column("Month 1 (Direct)", style="yellow", width=20)
