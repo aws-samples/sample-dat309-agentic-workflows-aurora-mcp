@@ -99,10 +99,9 @@ CREATE INDEX idx_analytics_agent_type ON agent_analytics(agent_type);
 CREATE INDEX idx_analytics_created ON agent_analytics(created_at DESC);
 CREATE INDEX idx_analytics_status ON agent_analytics(status);
 
--- Vector similarity index for fast semantic search
+-- Vector similarity index for fast semantic search (HNSW with cosine distance)
 CREATE INDEX idx_products_embedding ON products 
-USING ivfflat (embedding vector_cosine_ops)
-WITH (lists = 100);
+USING hnsw (embedding vector_cosine_ops);
 
 -- Comments for documentation
 COMMENT ON TABLE products IS 'Product catalog with vector embeddings for semantic search';

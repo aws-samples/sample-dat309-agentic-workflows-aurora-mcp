@@ -59,51 +59,84 @@ def semantic_product_search(query: str, limit: int = 3) -> dict:
     Returns:
         Matching products with similarity scores
     """
-    tool_logger.info(f"🔍 Semantic search: '{query}'")
-    tool_logger.info("✅ Returning running shoes from catalog")
+    from lib.aurora_db import search_products_semantic
     
-    # Simplified: return product info directly
-    return {
-        "products": [
-            {
-                "product_id": "shoe_001",
-                "name": "Nike Air Zoom Pegasus",
-                "brand": "Nike",
-                "price": 120.00,
-                "category": "running_shoes",
-                "description": "Responsive cushioning running shoes perfect for daily training"
-            }
-        ]
-    }
+    tool_logger.info(f"🔍 Semantic search: '{query}'")
+    
+    try:
+        results = search_products_semantic(query, limit)
+        tool_logger.info(f"✅ Found {len(results)} semantic matches")
+        
+        # Format results
+        products = []
+        for product, similarity in results:
+            products.append({
+                "product_id": product['product_id'],
+                "name": product['name'],
+                "brand": product['brand'],
+                "price": float(product['price']),
+                "category": product['category'],
+                "description": product['description'],
+                "similarity": float(similarity)
+            })
+        
+        return {"products": products}
+    except Exception as e:
+        tool_logger.error(f"❌ Semantic search failed: {e}")
+        # Fallback to hardcoded data
+        return {
+            "products": [
+                {
+                    "product_id": "shoe_001",
+                    "name": "Nike Air Zoom Pegasus",
+                    "brand": "Nike",
+                    "price": 120.00,
+                    "category": "running_shoes",
+                    "description": "Responsive cushioning running shoes perfect for daily training"
+                }
+            ]
+        }
 
 @tool
 def get_product_details(product_id: str) -> dict:
     """Get detailed product information by ID."""
-    tool_logger.info(f"📋 Fetching details for {product_id}")
-    tool_logger.info(f"✅ Product details retrieved")
+    from lib.aurora_db import get_product
     
-    return {
-        "product_id": "shoe_001",
-        "name": "Nike Air Zoom Pegasus",
-        "brand": "Nike",
-        "price": 120.00,
-        "category": "running_shoes",
-        "description": "Responsive cushioning running shoes perfect for daily training",
-        "available_sizes": ["8", "9", "10", "11", "12"]
-    }
+    tool_logger.info(f"📋 Fetching details for {product_id}")
+    
+    try:
+        product = get_product(product_id)
+        if product:
+            tool_logger.info(f"✅ Product details retrieved")
+            return {
+                "product_id": product['product_id'],
+                "name": product['name'],
+                "brand": product['brand'],
+                "price": float(product['price']),
+                "category": product['category'],
+                "description": product['description'],
+                "available_sizes": product.get('available_sizes', [])
+            }
+        else:
+            return {"error": "Product not found"}
+    except Exception as e:
+        tool_logger.error(f"❌ Error: {e}")
+        return {"error": str(e)}
 
 @tool
 def check_inventory_status(product_id: str, size: str = None) -> dict:
     """Check real-time inventory for a product."""
-    tool_logger.info(f"📦 Checking inventory: {product_id} size {size}")
-    tool_logger.info(f"✅ Inventory checked")
+    from lib.aurora_db import check_inventory
     
-    return {
-        "in_stock": True,
-        "size": size,
-        "quantity": 5,
-        "available_sizes": ["8", "9", "10", "11", "12"]
-    }
+    tool_logger.info(f"📦 Checking inventory: {product_id} size {size}")
+    
+    try:
+        inventory = check_inventory(product_id, size)
+        tool_logger.info(f"✅ Inventory checked")
+        return inventory
+    except Exception as e:
+        tool_logger.error(f"❌ Error: {e}")
+        return {"error": str(e)}
 
 @tool
 def simulate_order_placement(product_id: str, customer_id: str, size: str, total: float) -> dict:
