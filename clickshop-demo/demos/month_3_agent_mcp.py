@@ -58,13 +58,12 @@ def query_product_from_mcp(stream_id: str, product_identifier: str = "shoe_001")
     Returns:
         Product details from database
     """
-    from run_query import run_query
+    from lib.aurora_db import get_product_by_id
     
     tool_logger.info(f"🔍 Querying product via MCP server...")
     tool_logger.info(f"📡 MCP Query: SELECT * FROM products WHERE product_id = '{product_identifier}'")
     
-    query = f"SELECT product_id, name, brand, price, category, description FROM products WHERE product_id = '{product_identifier}'"
-    result = run_query(sql=query)
+    result = get_product_by_id(product_identifier)
     
     tool_logger.info(f"✅ Product data retrieved via MCP")
     
@@ -83,13 +82,12 @@ def check_inventory_via_mcp(product_id: str, size: str = None) -> dict:
     Returns:
         Inventory data from database
     """
-    from run_query import run_query
+    from lib.aurora_db import check_inventory
     
     tool_logger.info(f"📦 Checking inventory via MCP server...")
     tool_logger.info(f"📡 MCP Query: Checking inventory for {product_id}")
     
-    query = f"SELECT inventory, available_sizes FROM products WHERE product_id = '{product_id}'"
-    result = run_query(sql=query)
+    result = check_inventory(product_id, size)
     
     tool_logger.info(f"✅ Inventory data retrieved via MCP")
     
@@ -147,19 +145,11 @@ def get_database_stats_via_mcp() -> dict:
     Returns:
         Database statistics
     """
-    from run_query import run_query
+    from lib.aurora_db import get_daily_stats
     
     tool_logger.info(f"📊 Fetching database stats via MCP...")
     
-    query = """
-    SELECT 
-        (SELECT COUNT(*) FROM products) as total_products,
-        (SELECT COUNT(*) FROM orders) as total_orders,
-        (SELECT COUNT(*) FROM orders WHERE DATE(created_at) = CURRENT_DATE) as orders_today,
-        (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE DATE(created_at) = CURRENT_DATE) as revenue_today;
-    """
-    
-    result = run_query(sql=query)
+    result = get_daily_stats()
     
     tool_logger.info(f"✅ Database stats retrieved via MCP")
     
