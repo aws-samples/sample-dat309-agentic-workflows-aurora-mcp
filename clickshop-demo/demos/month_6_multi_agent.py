@@ -37,7 +37,7 @@ tool_logger = logging.getLogger("clickshop.tools")
 tool_logger.setLevel(logging.INFO)
 
 bedrock_model = BedrockModel(
-    model_id=os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-20250514-v1:0"),
+    model_id=os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-5-20250929-v1:0"),
     region_name=os.getenv("BEDROCK_REGION", "us-west-2"),
     temperature=0.3,
 )

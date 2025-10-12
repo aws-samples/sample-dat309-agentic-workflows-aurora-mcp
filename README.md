@@ -258,7 +258,7 @@ clickshop-demo/
 <tr>
 <td><strong>Amazon Bedrock</strong></td>
 <td>Claude Sonnet 4 LLM access</td>
-<td>claude-sonnet-4-20250514</td>
+<td>claude-sonnet-4-5-20250929</td>
 </tr>
 <tr>
 <td><strong>Amazon Aurora</strong></td>
