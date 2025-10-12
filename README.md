@@ -122,13 +122,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 cp .env.example .env
 # Edit .env with your AWS credentials
 
-# 5. Test Aurora connection
-python scripts/test_aurora_connection.py
-
-# 6. Initialize database
-python scripts/init_aurora_schema.py
-
-# 7. Run demos
+# 5. Run demos
 python run_demo.py
 ```
 
@@ -240,11 +234,7 @@ clickshop-demo/
 │   └── aurora_db.py              # Database operations
 │
 ├── scripts/                   # 🛠️ Utility scripts
-│   ├── setup.sh                  # Installation script
-│   ├── verify_installation.py     # Dependency checker
-│   ├── test_aurora_connection.py  # DB connection test
-│   ├── init_aurora_schema.py      # Schema initialization
-│   └── generate_embeddings.py     # Embedding generation
+│   └── setup.sh                  # Installation script
 │
 └── data/                      # 📊 Static data files
     └── products.json             # Product catalog
@@ -332,18 +322,6 @@ aws bedrock-runtime invoke-model \
 
 ```bash
 chmod +x scripts/setup.sh
-```
-
-### 🗄️ Aurora Connection Issues
-
-```bash
-# Test connection
-python scripts/test_aurora_connection.py
-
-# Check if RDS Data API is enabled
-aws rds describe-db-clusters \
-    --db-cluster-identifier your-cluster-name \
-    --query 'DBClusters[0].HttpEndpointEnabled'
 ```
 
 ---
