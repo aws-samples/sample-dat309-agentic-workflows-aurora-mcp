@@ -31,7 +31,7 @@ Two friends created ClickShop in a weekend using Claude and "vibe coding." Six m
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.11 or higher
 - AWS Account with Bedrock access
 - Access to Claude Sonnet 4 model in Amazon Bedrock
 - AWS CLI configured (optional but recommended)
