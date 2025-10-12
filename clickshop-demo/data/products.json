@@ -1,0 +1,45 @@
+{
+  "shoe_001": {
+    "id": "shoe_001",
+    "name": "Nike Air Zoom Pegasus",
+    "category": "running_shoes",
+    "price": 120.00,
+    "brand": "Nike",
+    "description": "Responsive cushioning for your daily runs",
+    "available_sizes": ["8", "9", "10", "11", "12"],
+    "inventory": {
+      "8": 3,
+      "9": 5,
+      "10": 5,
+      "11": 2,
+      "12": 1
+    }
+  },
+  "band_001": {
+    "id": "band_001",
+    "name": "Resistance Band Set",
+    "category": "fitness",
+    "price": 29.99,
+    "brand": "FitPro",
+    "description": "5-piece resistance band set for home workouts",
+    "inventory": 50
+  },
+  "mat_001": {
+    "id": "mat_001",
+    "name": "Premium Yoga Mat",
+    "category": "fitness",
+    "price": 49.99,
+    "brand": "ZenFlow",
+    "description": "Non-slip eco-friendly yoga mat",
+    "inventory": 25
+  },
+  "bottle_001": {
+    "id": "bottle_001",
+    "name": "Insulated Water Bottle",
+    "category": "accessories",
+    "price": 34.99,
+    "brand": "HydroMax",
+    "description": "Keeps drinks cold for 24 hours",
+    "inventory": 40
+  }
+}
