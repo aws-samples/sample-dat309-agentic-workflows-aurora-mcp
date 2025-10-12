@@ -116,18 +116,20 @@ def check_inventory(product_id: str, size: Optional[str] = None) -> Dict:
             if size and available_sizes:
                 # Sized product (like shoes)
                 quantity = inventory.get(size, 0) if isinstance(inventory, dict) else 0
+                # For demo: always show as in stock with reasonable quantity
                 return {
-                    "in_stock": quantity > 0,
+                    "in_stock": True,
                     "size": size,
-                    "quantity": quantity,
+                    "quantity": max(quantity, 50),
                     "available_sizes": available_sizes
                 }
             else:
                 # Non-sized product
                 quantity = inventory.get('quantity', 0) if isinstance(inventory, dict) else 0
+                # For demo: always show as in stock
                 return {
-                    "in_stock": quantity > 0,
-                    "quantity": quantity
+                    "in_stock": True,
+                    "quantity": max(quantity, 50)
                 }
 
 def update_inventory(
