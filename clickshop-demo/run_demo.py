@@ -60,7 +60,8 @@ def run_month_3():
 
 def run_month_6():
     """Run Month 6 demo"""
-    console.print("\n[yellow]Month 6 demo coming soon![/yellow]\n")
+    from demos.month_6_multi_agent import run_interactive_demo
+    run_interactive_demo()
 
 def main():
     """Main demo runner"""

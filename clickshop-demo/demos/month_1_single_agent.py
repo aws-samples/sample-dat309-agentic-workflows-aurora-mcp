@@ -349,7 +349,7 @@ def run_interactive_demo():
     console.print("[dim]Enter your customer ID (or press Enter for: '123')[/dim]\n")
     customer_id = input("👤 Customer ID: ").strip()
     if not customer_id:
-        customer_id = "123"
+        customer_id = "CUST-123"
         console.print(f"[yellow]Using customer ID: {customer_id}[/yellow]")
     
     console.print()

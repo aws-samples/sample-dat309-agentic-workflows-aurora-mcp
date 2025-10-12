@@ -87,17 +87,30 @@ python -m demos.month_1_single_agent
 - Sequential tool execution
 - Aurora PostgreSQL integration
 
-### Month 3: Agent + MCP (Coming Soon)
+### Month 3: Agent + MCP
 
 ```bash
-python -m demos.month_3_mcp
+python -m demos.month_3_agent_mcp
 ```
 
-### Month 6: Multi-Agent System (Coming Soon)
+**What it demonstrates:**
+- MCP server integration for database access
+- Tool-based specialization
+- RDS Data API for serverless scaling
+- Read-only mode with simulated writes
+
+### Month 6: Multi-Agent System
 
 ```bash
 python -m demos.month_6_multi_agent
 ```
+
+**What it demonstrates:**
+- Supervisor pattern for orchestration
+- Specialized agents (Search, Product, Order)
+- Semantic search with pgvector
+- Agent-based task delegation
+- Sub-200ms response time
 
 ---
 
@@ -108,9 +121,12 @@ clickshop-demo/
 ├── run_demo.py              # Main entry point
 ├── requirements.txt         # Dependencies
 ├── .env.example            # Environment template
+├── mcp-config.json         # MCP server configuration
 │
 ├── demos/                  # Demo implementations
-│   └── month_1_single_agent.py
+│   ├── month_1_single_agent.py
+│   ├── month_3_agent_mcp.py
+│   └── month_6_multi_agent.py
 │
 ├── lib/                    # Core library modules
 │   └── aurora_db.py        # Database operations
@@ -125,8 +141,6 @@ clickshop-demo/
 └── data/                   # Static data files
     └── products.json
 ```
-
-See [STRUCTURE.md](STRUCTURE.md) for detailed documentation.
 
 ---
 
@@ -178,16 +192,18 @@ chmod +x scripts/setup.sh
 ### For Presentations
 
 1. **Start with the story** - Two friends, weekend project, explosive growth
-2. **Show Month 1 first** - Establish the baseline
-3. **Demonstrate the evolution** - Show why each change was necessary
-4. **Highlight developer velocity** - Still just two friends maintaining this
+2. **Show Month 1 first** - Establish the baseline (50 orders/day)
+3. **Month 3: MCP integration** - Show tool-based specialization (200 orders/day)
+4. **Month 6: Multi-agent** - Demonstrate supervisor pattern (50K orders/day)
+5. **Highlight the evolution** - Monolithic → Tool-based → Agent-based
 
 ### Live Demo Tips
 
 - Use the interactive menu (`python run_demo.py`)
-- Have backup screenshots in case of connectivity issues
-- Show the `.env.example` to explain configuration
-- Demonstrate the clean project structure
+- Show the architecture evolution table at the end
+- Demonstrate semantic search in Month 6
+- Highlight the orchestration workflow diagram
+- Use consistent customer ID (CUST-123) across demos
 
 ---
 
@@ -206,6 +222,19 @@ chmod +x scripts/setup.sh
 - GitHub: https://github.com/modelcontextprotocol
 
 ---
+
+## 🎯 Key Takeaways
+
+**Architecture Evolution:**
+- **Month 1**: Monolithic single agent (50 orders/day)
+- **Month 3**: Tool-based specialization with MCP (200 orders/day)
+- **Month 6**: Agent-based with supervisor pattern (50K orders/day)
+
+**Best Practices:**
+- Use MCP for standardized data access
+- Implement supervisor pattern for complex workflows
+- Specialize agents for specific tasks
+- Leverage semantic search for better UX
 
 **Remember:** The goal isn't just to scale - it's to scale while maintaining development velocity and developer happiness. That's the "vibe coding" philosophy! 🚀
 
