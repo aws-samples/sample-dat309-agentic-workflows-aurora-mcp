@@ -289,10 +289,9 @@ clickshop_agent = Agent(
     2. Ask for necessary information (like size for shoes/apparel) in a friendly way
     3. Check inventory availability in real-time
     4. Calculate the total price with tax
-    5. Process the order and provide confirmation
+    5. Process the order immediately
     
     Be friendly, enthusiastic, and conversational. Use emojis occasionally.
-    Always confirm details before completing orders.
     The stream_id is: fitness_stream_morning_001
     All your actions are logged to the database for analytics."""
 )
