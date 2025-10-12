@@ -273,7 +273,7 @@ clickshop-demo/
 <tr>
 <td><strong>pgvector</strong></td>
 <td>Vector embeddings for semantic search</td>
-<td>0.5.0+</td>
+<td>0.8.0+</td>
 </tr>
 <tr>
 <td><strong>Python</strong></td>
