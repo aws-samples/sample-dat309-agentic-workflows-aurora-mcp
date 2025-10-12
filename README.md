@@ -8,7 +8,7 @@
 ![Claude](https://img.shields.io/badge/Claude-Sonnet_4-8E75B2?style=for-the-badge&logo=anthropic&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-Protocol-00A67E?style=for-the-badge&logo=protocol&logoColor=white)
 
-![License](https://img.shields.io/badge/License-Demo_Only-orange?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT--0-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Educational-blue?style=for-the-badge)
 ![Architecture](https://img.shields.io/badge/Architecture-Multi--Agent-green?style=for-the-badge)
 
@@ -16,7 +16,7 @@
 
 ![Strands](https://img.shields.io/badge/Strands-Framework-blueviolet?style=flat-square)
 ![boto3](https://img.shields.io/badge/boto3-AWS_SDK-orange?style=flat-square)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-13+-336791?style=flat-square&logo=postgresql&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791?style=flat-square&logo=postgresql&logoColor=white)
 ![pgvector](https://img.shields.io/badge/pgvector-Embeddings-4169E1?style=flat-square)
 
 </div>
@@ -273,7 +273,7 @@ clickshop-demo/
 <tr>
 <td><strong>Amazon Aurora</strong></td>
 <td>Serverless PostgreSQL for data persistence</td>
-<td>PostgreSQL 13+ compatible</td>
+<td>PostgreSQL 16+ compatible</td>
 </tr>
 <tr>
 <td><strong>MCP Protocol</strong></td>
@@ -404,6 +404,31 @@ aws rds describe-db-clusters \
 </tr>
 </table>
 
+### 📝 AWS Blogs & Articles
+
+<table>
+<tr>
+<td width="50%">
+
+#### 🔍 Vector Search with pgvector
+
+**[Supercharging Vector Search Performance with pgvector 0.8.0 on Amazon Aurora PostgreSQL](https://aws.amazon.com/blogs/database/supercharging-vector-search-performance-and-relevance-with-pgvector-0-8-0-on-amazon-aurora-postgresql/)**
+
+Learn about the latest pgvector improvements and how to optimize semantic search performance on Aurora PostgreSQL.
+
+</td>
+<td width="50%">
+
+#### 🔧 MCP Servers for AWS
+
+**[Supercharging AWS Database Development with AWS MCP Servers](https://aws.amazon.com/blogs/database/supercharging-aws-database-development-with-aws-mcp-servers/)**
+
+Discover how to use Model Context Protocol servers to build better database-connected applications with AI agents.
+
+</td>
+</tr>
+</table>
+
 ---
 
 ## 🎯 Key Takeaways
@@ -488,9 +513,29 @@ aws-cli>=2.15.0
 
 ## 📄 License
 
-This project is provided as-is for **educational and demonstration purposes only**.
+This project is licensed under the **MIT-0 License** - see below for details.
 
-⚠️ **Not for production use without proper security review and testing.**
+```
+MIT No Attribution
+
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+⚠️ **Note:** This is educational and demonstration code. Apply proper security, testing, and compliance procedures before using in production environments.
 
 ---
 
@@ -515,6 +560,5 @@ _Principal Solutions Architect, AWS_
 **Built with ❤️ using vibe coding**
 
 [![AWS](https://img.shields.io/badge/Powered_by-AWS-FF9900?style=flat&logo=amazon-aws)](https://aws.amazon.com)
-[![Anthropic](https://img.shields.io/badge/Built_with-Claude-8E75B2?style=flat&logo=anthropic)](https://anthropic.com)
 
 </div>
