@@ -55,7 +55,8 @@ def run_month_1():
 
 def run_month_3():
     """Run Month 3 demo"""
-    console.print("\n[yellow]Month 3 demo coming soon![/yellow]\n")
+    from demos.month_3_agent_mcp import run_interactive_demo
+    run_interactive_demo()
 
 def run_month_6():
     """Run Month 6 demo"""
