@@ -353,7 +353,7 @@ def run_interactive_demo():
     arch_table.add_column("Month 3", style="magenta", width=20)
     arch_table.add_column("Month 6", style="green", width=20)
     arch_table.add_row("Architecture", "Single Agent", "Single + MCP", "Multi-Agent + MCP")
-    arch_table.add_row("Capacity", "50 orders/day", "200 orders/day", "50K orders/day")
+    arch_table.add_row("Capacity", "50 orders/day", "5,000 orders/day", "50K orders/day")
     arch_table.add_row("Response Time", "~2.0s", "~3.5s", "~200ms")
     arch_table.add_row("Search", "Exact match", "Exact match", "Semantic (vector)")
     arch_table.add_row("Specialization", "Monolithic", "Tool-based", "Agent-based (4 agents)")
