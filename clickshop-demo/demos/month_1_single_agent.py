@@ -83,7 +83,7 @@ def identify_product_from_stream(stream_id: str, timestamp: str = "now") -> dict
             tool_logger.error("❌ Product not found in database")
             return {"error": "Product not found in database"}
         
-        tool_logger.info(f"✅ Product identified: {product['brand']} {product['name']}")
+        tool_logger.info(f"✅ Product identified: {product['name']}")
         
         duration_ms = int((time.time() - start_time) * 1000)
         log_agent_action("SingleAgent", "identify_product", duration_ms, "success",
@@ -128,7 +128,7 @@ def check_product_inventory(product_id: str, size: str = None) -> dict:
         
         if inventory.get('in_stock'):
             qty = inventory.get('quantity', 0)
-            tool_logger.info(f"✅ In stock: {qty} units available")
+            tool_logger.info(f"✅ In stock: {qty} units available for size {size}" if size else f"✅ In stock: {qty} units available")
         else:
             tool_logger.warning(f"⚠️  Out of stock for size {size}")
         
