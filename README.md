@@ -16,7 +16,7 @@
 
 ![Strands](https://img.shields.io/badge/Strands-Framework-blueviolet?style=flat-square)
 ![boto3](https://img.shields.io/badge/boto3-AWS_SDK-orange?style=flat-square)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791?style=flat-square&logo=postgresql&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17+-336791?style=flat-square&logo=postgresql&logoColor=white)
 ![pgvector](https://img.shields.io/badge/pgvector-Embeddings-4169E1?style=flat-square)
 
 </div>
@@ -263,7 +263,7 @@ clickshop-demo/
 <tr>
 <td><strong>Amazon Aurora</strong></td>
 <td>Serverless PostgreSQL for data persistence</td>
-<td>PostgreSQL 16+ compatible</td>
+<td>PostgreSQL 17+ compatible</td>
 </tr>
 <tr>
 <td><strong>MCP Protocol</strong></td>
