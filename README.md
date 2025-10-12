@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-Bedrock-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![Aurora](https://img.shields.io/badge/Amazon-Aurora-527FFF?style=for-the-badge&logo=amazon-rds&logoColor=white)
-![Claude](https://img.shields.io/badge/Claude-Sonnet_4-8E75B2?style=for-the-badge&logo=anthropic&logoColor=white)
+![Claude](https://img.shields.io/badge/Claude-Sonnet_4.5-8E75B2?style=for-the-badge&logo=anthropic&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-Protocol-00A67E?style=for-the-badge&logo=protocol&logoColor=white)
 
 ![License](https://img.shields.io/badge/License-MIT--0-green?style=for-the-badge)
