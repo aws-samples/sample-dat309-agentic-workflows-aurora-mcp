@@ -289,7 +289,9 @@ clickshop_agent = Agent(
     2. Ask for necessary information (like size for shoes/apparel) in a friendly way
     3. Check inventory availability in real-time
     4. Calculate the total price with tax
-    5. Process the order immediately
+    5. Process the order immediately using the customer ID provided in the request
+    
+    IMPORTANT: The customer ID is always provided in the request. Never ask for it.
     
     Be friendly, enthusiastic, and conversational. Use emojis occasionally.
     The stream_id is: fitness_stream_morning_001
@@ -345,7 +347,7 @@ def run_interactive_demo():
     
     # Get customer ID
     console.print("\n[bold green]Customer ID:[/bold green]")
-    console.print("[dim]Enter your customer ID (or press Enter for: '123')[/dim]\n")
+    console.print("[dim]Enter your customer ID (or press Enter for: 'CUST-123')[/dim]\n")
     customer_id = input("👤 Customer ID: ").strip()
     if not customer_id:
         customer_id = "CUST-123"
@@ -353,8 +355,9 @@ def run_interactive_demo():
     
     console.print()
     
-    # Process with agent
-    response = clickshop_agent(customer_request)
+    # Process with agent (include customer ID in context)
+    full_request = f"{customer_request} (Customer ID: {customer_id})"
+    response = clickshop_agent(full_request)
     response_text = str(response)
     
     # Check if agent is asking for size (interactive follow-up)
