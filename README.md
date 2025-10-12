@@ -326,28 +326,6 @@ chmod +x scripts/setup.sh
 
 ---
 
-## 🎓 Demo Tips
-
-### For Presentations
-
-1. **📖 Start with the story** - Two friends, weekend project, explosive growth
-2. **📦 Show Month 1 first** - Establish the baseline (50 orders/day)
-3. **🔧 Month 3: MCP integration** - Show tool-based specialization (5K orders/day)
-4. **🎯 Month 6: Multi-agent** - Demonstrate supervisor pattern (50K orders/day)
-5. **📊 Highlight the evolution** - Monolithic → Tool-based → Agent-based
-
-### Live Demo Tips
-
-- ✅ Use the interactive menu (`python run_demo.py`)
-- ✅ Show the architecture evolution table at the end
-- ✅ Demonstrate semantic search in Month 6
-- ✅ Highlight the orchestration workflow diagram
-- ✅ Use consistent customer ID (CUST-123) across demos
-- ✅ Show response time improvements
-- ✅ Demonstrate parallel agent execution
-
----
-
 ## 📚 Additional Resources
 
 <table>
