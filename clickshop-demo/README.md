@@ -218,3 +218,7 @@ chmod +x scripts/setup.sh
 ---
 
 **Remember:** The goal isn't just to scale - it's to scale while maintaining development velocity and developer happiness. That's the "vibe coding" philosophy! 🚀
+
+---
+
+© Shayon Sanyal, Principal Solutions Architect, AWS
