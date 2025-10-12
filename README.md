@@ -43,7 +43,7 @@ Two friends created ClickShop in a weekend using Claude and "vibe coding." Six m
 cd clickshop-demo
 
 # 2. Run the setup script
-./setup.sh
+./scripts/setup.sh
 
 # 3. Activate the virtual environment
 source venv/bin/activate
@@ -52,174 +52,81 @@ source venv/bin/activate
 cp .env.example .env
 # Edit .env with your AWS credentials
 
-# 5. Verify setup
-python -c "import strands; import boto3; print('✅ Setup successful!')"
-```
+# 5. Test Aurora connection
+python scripts/test_aurora_connection.py
 
-### Configure AWS Credentials
+# 6. Initialize database
+python scripts/init_aurora_schema.py
 
-Edit the `.env` file with your AWS credentials:
-
-```bash
-# AWS Configuration
-AWS_ACCESS_KEY_ID=your_access_key_here
-AWS_SECRET_ACCESS_KEY=your_secret_key_here
-AWS_DEFAULT_REGION=us-west-2
-
-# Bedrock Configuration
-BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-20250514-v1:0
-BEDROCK_REGION=us-west-2
-```
-
-### Verify Bedrock Access
-
-```bash
-# Check if you have access to Claude Sonnet 4
-aws bedrock list-foundation-models --region us-west-2 | grep claude-sonnet-4
+# 7. Run demos
+python run_demo.py
 ```
 
 ---
 
 ## 🎬 Running the Demos
 
+### Interactive Menu (Recommended)
+
+```bash
+python run_demo.py
+```
+
+This launches an interactive menu where you can select which demo to run.
+
 ### Month 1: Single Agent
+
+```bash
+python -m demos.month_1_single_agent
+```
 
 **What it demonstrates:**
 - Basic agentic loop with ReAct pattern
 - Chain of Thought (CoT) reasoning
 - Asking clarifying questions
 - Sequential tool execution
+- Aurora PostgreSQL integration
+
+### Month 3: Agent + MCP (Coming Soon)
 
 ```bash
-python month_1_single_agent.py
+python -m demos.month_3_mcp
 ```
 
-**Expected output:**
-```
-🛍️  ClickShop - Month 1: Single Agent Demo
-============================================================
-
-📺 Customer watching a live fitness stream...
-
-👤 Customer: I want those running shoes from the stream!
-
-🤖 Agent: I'd be happy to help you order those running shoes! 
-What size do you need?
-
-[Demo continues with order processing...]
-
-✅ Demo complete!
-💡 What happened:
-   1. Agent identified the product from the stream
-   2. Agent asked for clarification (size)
-   3. Agent checked inventory
-   4. Agent calculated total price
-   5. Agent processed the order
-
-⏱️  Response time: ~2 seconds
-📦 Orders/day capacity: ~50
-```
-
-### Month 3: Agent + MCP
-
-**What it demonstrates:**
-- Integration with Model Context Protocol
-- Specialized tools for different capabilities
-- Improved performance with tool specialization
-- Still maintainable by two developers
+### Month 6: Multi-Agent System (Coming Soon)
 
 ```bash
-python month_3_mcp.py
-```
-
-### Month 6: Multi-Agent System
-
-**What it demonstrates:**
-- Supervisor pattern orchestrating multiple agents
-- Parallel processing capabilities
-- Specialized agents for different domains
-- Production-scale architecture
-
-```bash
-python month_6_multi_agent.py
+python -m demos.month_6_multi_agent
 ```
 
 ---
 
-## 🏗️ Architecture Evolution
+## 📁 Project Structure
 
-### Month 1: Single Agent
 ```
-Customer Request
-      ↓
-  [Single Agent]
-      ↓
-  [Tools: Identify, Check, Calculate, Process]
-      ↓
-   Response
-```
-
-**Characteristics:**
-- One agent handles all requests
-- Sequential processing
-- Simple to build and debug
-- Perfect for MVP
-
-### Month 3: Agent + MCP
-```
-Customer Request
-      ↓
-  [Single Agent]
-      ↓
-  [MCP Tools]  [Native Tools]
-      ↓              ↓
-      └──────┬───────┘
-           Response
+clickshop-demo/
+├── run_demo.py              # Main entry point
+├── requirements.txt         # Dependencies
+├── .env.example            # Environment template
+│
+├── demos/                  # Demo implementations
+│   └── month_1_single_agent.py
+│
+├── lib/                    # Core library modules
+│   └── aurora_db.py        # Database operations
+│
+├── scripts/                # Utility scripts
+│   ├── setup.sh
+│   ├── verify_installation.py
+│   ├── test_aurora_connection.py
+│   ├── init_aurora_schema.py
+│   └── generate_embeddings.py
+│
+└── data/                   # Static data files
+    └── products.json
 ```
 
-**Characteristics:**
-- Enhanced with specialized MCP tools
-- Tool reusability across projects
-- Better separation of concerns
-- Faster response times
-
-### Month 6: Multi-Agent Supervisor
-```
-Customer Request
-      ↓
-[Supervisor Agent]
-      ↓
-  ┌───┴───┬───────┬─────────┐
-  ↓       ↓       ↓         ↓
-[Product][Commerce][Analytics][Notification]
- Agent    Agent    Agent     Agent
-  ↓       ↓       ↓         ↓
-  └───┬───┴───────┴─────────┘
-      ↓
-   Response
-```
-
-**Characteristics:**
-- Parallel processing
-- Specialized agents for domains
-- Supervisor orchestrates workflow
-- Production-scale ready
-
----
-
-## 🛍️ Use Case: ClickShop
-
-ClickShop is a live shopping platform where:
-- 👥 Customers watch influencer live streams
-- 🛒 They can instantly purchase products they see
-- 🤖 AI agents handle the entire purchase flow
-- ⚡ Everything happens in real-time
-
-**The Challenge:**
-How do two friends scale from 50 to 50,000 orders/day without hiring a team?
-
-**The Solution:**
-Evolve the agent architecture progressively, maintaining "vibe coding" while scaling.
+See [STRUCTURE.md](STRUCTURE.md) for detailed documentation.
 
 ---
 
@@ -233,60 +140,6 @@ Evolve the agent architecture progressively, maintaining "vibe coding" while sca
 | **MCP (Model Context Protocol)** | Standardized tool integration |
 | **Python** | Primary development language |
 | **AWS SDK (boto3)** | AWS service integration |
-
----
-
-## 📁 Project Structure
-
-```
-clickshop-demo/
-├── README.md                    # This file
-├── requirements.txt             # Python dependencies
-├── .env.example                 # Environment template
-├── .env                         # Your credentials (gitignored)
-├── setup.sh                     # Setup script
-│
-├── month_1_single_agent.py     # Single agent demo
-├── month_3_mcp.py              # MCP integration demo
-├── month_6_multi_agent.py      # Multi-agent demo
-│
-├── data/
-│   └── products.json           # Mock product data
-│
-├── demos/
-│   └── demo_scenarios.py       # Additional demo scenarios
-│
-└── .vscode/
-    ├── launch.json             # Debug configurations
-    └── settings.json           # VSCode settings
-```
-
----
-
-## 🎯 Learning Objectives
-
-By exploring these demos, you'll learn:
-
-1. **Agentic Patterns**
-   - ReAct (Reason + Act) loop
-   - Chain of Thought reasoning
-   - Tool calling and orchestration
-
-2. **Architecture Evolution**
-   - When to use single agent vs multi-agent
-   - How to scale agent systems
-   - Trade-offs between simplicity and capability
-
-3. **Production Practices**
-   - Agent observability
-   - Error handling
-   - Performance optimization
-   - Cost management
-
-4. **AWS Integration**
-   - Using Amazon Bedrock for LLM access
-   - Integrating with Aurora for persistence
-   - Building production-ready agent systems
 
 ---
 
@@ -312,26 +165,10 @@ aws sts get-caller-identity
 aws bedrock list-foundation-models --region us-west-2
 ```
 
-### Bedrock Access Denied
-
-1. Ensure your AWS account has Bedrock enabled
-2. Request access to Claude Sonnet 4 in the Bedrock console
-3. Verify your IAM permissions include `bedrock:InvokeModel`
-
 ### Setup Script Permission Error
 
 ```bash
-chmod +x setup.sh
-```
-
-### Module Not Found Errors
-
-```bash
-# Make sure you're in the correct directory
-pwd  # Should end with /clickshop-demo
-
-# Verify Python path
-which python  # Should point to venv/bin/python
+chmod +x scripts/setup.sh
 ```
 
 ---
@@ -345,18 +182,12 @@ which python  # Should point to venv/bin/python
 3. **Demonstrate the evolution** - Show why each change was necessary
 4. **Highlight developer velocity** - Still just two friends maintaining this
 
-### Code Walkthrough Tips
-
-- Focus on the agent definitions and tool implementations
-- Show how little code change is needed between iterations
-- Emphasize the "vibe coding" philosophy - simple, clear, maintainable
-
 ### Live Demo Tips
 
-- Use the mock data for predictable results
+- Use the interactive menu (`python run_demo.py`)
 - Have backup screenshots in case of connectivity issues
 - Show the `.env.example` to explain configuration
-- Demonstrate debugging in VSCode if time allows
+- Demonstrate the clean project structure
 
 ---
 
@@ -374,26 +205,6 @@ which python  # Should point to venv/bin/python
 - Specification: https://modelcontextprotocol.io
 - GitHub: https://github.com/modelcontextprotocol
 
-### Agent Patterns
-- ReAct Paper: https://arxiv.org/abs/2210.03629
-- Chain of Thought: https://arxiv.org/abs/2201.11903
-
----
-
-## 🤝 Contributing
-
-This is a demo project for educational purposes. If you find issues or have suggestions:
-
-1. Create an issue in the parent repository
-2. Submit a pull request with improvements
-3. Share your own agent evolution stories!
-
----
-
-## 📄 License
-
-This demo is part of the AWS samples repository and follows its licensing terms.
-
 ---
 
 ## 🎉 Next Steps
@@ -406,12 +217,8 @@ This demo is part of the AWS samples repository and follows its licensing terms.
 
 ---
 
-## 💬 Questions?
-
-- **AWS Support**: https://support.aws.amazon.com
-- **Bedrock Documentation**: https://docs.aws.amazon.com/bedrock
-- **Repository Issues**: Create an issue in the GitHub repo
+**Remember:** The goal isn't just to scale - it's to scale while maintaining development velocity and developer happiness. That's the "vibe coding" philosophy! 🚀
 
 ---
 
-**Remember:** The goal isn't just to scale - it's to scale while maintaining development velocity and developer happiness. That's the "vibe coding" philosophy! 🚀
+© Shayon Sanyal, Principal Solutions Architect, AWS
