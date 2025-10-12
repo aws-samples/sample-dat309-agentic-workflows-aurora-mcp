@@ -1,7 +1,7 @@
 """
 ClickShop - Month 3: MCP-Powered Agent with Aurora PostgreSQL
 Evolution from direct DB access to MCP architecture
-200 orders/day, database operations via MCP server
+5,000 orders/day, database operations via MCP server
 """
 import os
 import sys
@@ -115,7 +115,7 @@ def run_interactive_demo():
     console.print(Panel.fit(
         "[bold cyan]🛍️  ClickShop - Month 3: MCP-Powered Architecture[/bold cyan]\n"
         "[yellow]Database operations through MCP server[/yellow]\n"
-        "[green]Scaling to 200 orders/day with proper abstraction[/green]",
+        "[green]Scaling to 5,000 orders/day with proper abstraction[/green]",
         border_style="cyan"
     ))
     
@@ -126,7 +126,7 @@ def run_interactive_demo():
     arch_table.add_column("Month 1", style="yellow", width=30)
     arch_table.add_column("Month 3", style="green", width=30)
     arch_table.add_row("Database Access", "Direct Python imports", "MCP Server (RDS Data API)")
-    arch_table.add_row("Capacity", "50 orders/day", "200 orders/day")
+    arch_table.add_row("Capacity", "50 orders/day", "5,000 orders/day")
     arch_table.add_row("Agent Tools", "Direct DB functions", "MCP auto-discovered tools")
     arch_table.add_row("Abstraction", "Tight coupling", "Loose coupling via MCP")
     console.print(arch_table)
@@ -182,7 +182,7 @@ def run_interactive_demo():
     Be friendly and conversational. Use emojis occasionally.
     The stream_id is: fitness_stream_morning_001
     
-    Architecture: Month 3 - MCP-mediated database access (200 orders/day capacity)"""
+    Architecture: Month 3 - MCP-mediated database access (5,000 orders/day capacity)"""
         )
         
         # Process with MCP agent
@@ -224,7 +224,7 @@ def run_interactive_demo():
     perf_table.add_column("Month 1 (Direct)", style="yellow", width=20)
     perf_table.add_column("Month 3 (MCP)", style="green", width=20)
     perf_table.add_row("Avg Response Time", "~2.0s", "~3.5s")
-    perf_table.add_row("Daily Capacity", "50 orders", "200 orders")
+    perf_table.add_row("Daily Capacity", "50 orders", "5,000 orders")
     perf_table.add_row("Connection Pooling", "Manual", "MCP managed")
     perf_table.add_row("Error Handling", "Basic", "MCP abstracted")
     perf_table.add_row("Scalability", "Limited", "Horizontal")
