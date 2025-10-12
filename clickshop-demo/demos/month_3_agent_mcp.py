@@ -292,7 +292,7 @@ def run_interactive_demo():
     perf_table.add_column("Metric", style="cyan", width=25)
     perf_table.add_column("Month 1 (Direct)", style="yellow", width=20)
     perf_table.add_column("Month 3 (MCP)", style="green", width=20)
-    perf_table.add_row("Avg Response Time", "~2.0s", "~2.5s")
+    perf_table.add_row("Avg Response Time", "~2.0s", "~3.5s")
     perf_table.add_row("Daily Capacity", "50 orders", "200 orders")
     perf_table.add_row("Connection Pooling", "Manual", "MCP managed")
     perf_table.add_row("Error Handling", "Basic", "MCP abstracted")
@@ -314,6 +314,7 @@ def run_interactive_demo():
     
     console.print("\n[bold yellow]📡 All database operations routed through MCP server![/bold yellow]")
     console.print("[bold red]⚠️  READ-ONLY MODE: Orders are simulated, not written to database[/bold red]")
+    console.print("[yellow]💡 Best Practice: Use MCP for reads + secure API endpoints for writes[/yellow]")
     console.print("[dim]Configuration: mcp-config.json[/dim]")
     console.print("[dim]Server: awslabs.postgres-mcp-server via uvx[/dim]\n")
 
