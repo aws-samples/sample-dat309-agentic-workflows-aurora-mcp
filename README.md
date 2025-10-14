@@ -27,7 +27,7 @@
 
 This demo shows the evolution from single agent to multi-agent architecture using the **ClickShop** use case - a live shopping platform built by two friends using "vibe coding."
 
-> **⚠️ Important Notice:** The examples in this repository are for demonstration and educational purposes only. They demonstrate concepts and techniques but are not intended for direct use in production environments. Always apply proper security, testing, and compliance procedures before using in production.
+> **⚠️ Important Notice: For demonstration and educational purposes only. Not intended for production use.
 
 ---
 
