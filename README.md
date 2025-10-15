@@ -1,508 +1,448 @@
-# ClickShop Agent Evolution Demo
+# ClickShop: Agentic Architecture Evolution Demo
 
 <div align="center">
 
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![AWS](https://img.shields.io/badge/AWS-Bedrock-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)
-![Aurora](https://img.shields.io/badge/Amazon-Aurora-527FFF?style=for-the-badge&logo=amazon-rds&logoColor=white)
-![Claude](https://img.shields.io/badge/Claude-Sonnet_4.5-8E75B2?style=for-the-badge&logo=anthropic&logoColor=white)
-![MCP](https://img.shields.io/badge/MCP-Protocol-00A67E?style=for-the-badge&logo=protocol&logoColor=white)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![AWS Bedrock](https://img.shields.io/badge/AWS-Bedrock-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
+[![Aurora PostgreSQL](https://img.shields.io/badge/Amazon-Aurora-527FFF?style=for-the-badge&logo=amazon-rds&logoColor=white)](https://aws.amazon.com/rds/aurora/)
+[![Claude](https://img.shields.io/badge/Claude-Sonnet_4.5-8E75B2?style=for-the-badge&logo=anthropic&logoColor=white)](https://www.anthropic.com/claude)
+[![MCP](https://img.shields.io/badge/MCP-Protocol-00A67E?style=for-the-badge)](https://modelcontextprotocol.io)
 
-![License](https://img.shields.io/badge/License-MIT--0-green?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Educational-blue?style=for-the-badge)
-![Architecture](https://img.shields.io/badge/Architecture-Multi--Agent-green?style=for-the-badge)
 
-**Frameworks & Tools**
+**A production-oriented demonstration of scaling agentic systems from MVP to 50K orders/day**
 
-![Strands](https://img.shields.io/badge/Strands-Framework-blueviolet?style=flat-square)
-![boto3](https://img.shields.io/badge/boto3-AWS_SDK-orange?style=flat-square)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17+-336791?style=flat-square&logo=postgresql&logoColor=white)
-![pgvector](https://img.shields.io/badge/pgvector-Embeddings-4169E1?style=flat-square)
+[Overview](#overview) • [Architecture](#architecture-evolution) • [Quick Start](#quick-start) • [Demos](#running-the-demos) • [Resources](#technical-resources)
 
 </div>
 
 ---
 
-## 📖 Overview
+## Overview
 
-This demo shows the evolution from single agent to multi-agent architecture using the **ClickShop** use case - a live shopping platform built by two friends using "vibe coding."
+**ClickShop** demonstrates the architectural evolution of agentic systems through three production-grade implementations. Built for AWS re:Invent 2025 (DAT309 Chalk Talk), this project showcases scaling patterns from a weekend MVP to enterprise-scale multi-agent orchestration with semantic search capabilities.
 
-> \*\*⚠️ Important Notice: For demonstration and educational purposes only. Not intended for production use.
+> **⚠️ Educational Use Only**: This demonstration is designed for learning purposes and illustrates production patterns without production-level error handling, monitoring, or security hardening.
 
----
+### The ClickShop Story
 
-## 🎭 Story Arc
-
-**The Journey:**
-Two friends created ClickShop in a weekend using Claude and "vibe coding." Six months later, they're processing 50K orders/day - still just two friends, still vibe coding. This is their architectural journey.
-
-### 📊 Evolution Timeline
-
-<table>
-<tr>
-<th>Month 1: Single Agent</th>
-<th>Month 3: Agent + MCP</th>
-<th>Month 6: Multi-Agent</th>
-</tr>
-<tr>
-<td>
-
-**Scale:** 50 orders/day  
-**Architecture:** Monolithic agent  
-**Response Time:** ~2 seconds  
-**Database:** Direct psycopg2  
-**Status:** "Just make it work"
-
-</td>
-<td>
-
-**Scale:** 5,000 orders/day  
-**Architecture:** MCP tools  
-**Response Time:** ~1 second  
-**Database:** RDS Data API  
-**Status:** "Starting to scale"
-
-</td>
-<td>
-
-**Scale:** 50,000 orders/day  
-**Architecture:** Supervisor pattern  
-**Response Time:** ~200ms  
-**Database:** Aurora + pgvector  
-**Status:** "Ready for anything"
-
-</td>
-</tr>
-</table>
+A live-streaming shopping platform that evolved from 50 orders/day to 50,000 orders/day through three architectural iterations—demonstrating how thoughtful design enables exponential scaling without complete rewrites.
 
 ---
 
-## 🚀 Quick Start
+## Architecture Evolution
 
-### Prerequisites
+### Performance & Scale Comparison
 
-<table>
-<tr>
-<td>
+| Metric              | Month 1: Single Agent | Month 3: Agent + MCP | Month 6: Multi-Agent |
+| ------------------- | --------------------- | -------------------- | -------------------- |
+| **Daily Capacity**  | 50 orders             | 5,000 orders         | 50,000 orders        |
+| **Response Time**   | ~2.0s                 | ~3.5s                | ~200ms               |
+| **Architecture**    | Monolithic            | MCP-mediated         | Supervisor pattern   |
+| **Database Access** | Direct (`psycopg3`)   | RDS Data API (MCP)   | MCP + pgvector       |
+| **Search Type**     | Exact match           | Exact match          | Semantic (vector)    |
+| **Coupling**        | Tight                 | Loose (MCP)          | Loose + Specialized  |
 
-**Required**
-
-- Python 3.11 or higher
-- AWS Account with Bedrock access
-- Claude Sonnet 4 model access
-- AWS CLI configured
-
-</td>
-<td>
-
-**Recommended**
-
-- Virtual environment (venv)
-- AWS credentials with admin access
-- Familiarity with agent frameworks
-- Understanding of MCP protocol
-
-</td>
-</tr>
-</table>
-
-### Installation
-
-```bash
-# 1. Navigate to the demo directory
-cd clickshop-demo
-
-# 2. Run the setup script
-./scripts/setup.sh
-
-# 3. Activate the virtual environment
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# 4. Configure AWS credentials
-cp .env.example .env
-# Edit .env with your AWS credentials
-
-# 5. Run demos
-python run_demo.py
-```
-
----
-
-## 🎬 Running the Demos
-
-### 🎯 Interactive Menu (Recommended)
-
-```bash
-python run_demo.py
-```
-
-This launches an interactive menu where you can select which demo to run.
-
-### 📦 Month 1: Single Agent
-
-```bash
-python -m demos.month_1_single_agent
-```
+### Technical Architecture Details
 
 <details>
-<summary><strong>What it demonstrates</strong></summary>
+<summary><strong>Month 1: Single Agent Architecture</strong></summary>
 
-- ✅ Basic agentic loop with ReAct pattern
-- ✅ Chain of Thought (CoT) reasoning
-- ✅ Asking clarifying questions
-- ✅ Sequential tool execution
-- ✅ Aurora PostgreSQL integration
-- ✅ Direct database access (psycopg2)
-- ✅ Manual connection pooling
+**Capacity:** 50 orders/day | **Response Time:** ~2.0s
 
-**Key Concepts:**
+**Architecture:**
 
-- Single agent handles all tasks
-- Tight coupling to database
-- Simple but not scalable
-- Perfect for MVPs and prototypes
+- **1 Agent:** Monolithic agent handles all responsibilities
+- **4 Custom Tools:**
+  - `identify_product_from_stream()` - Product discovery
+  - `check_product_inventory()` - Real-time inventory verification
+  - `calculate_order_total()` - Price calculation with tax/shipping
+  - `process_customer_order()` - Order persistence and workflow
+- **Database:** Direct Aurora PostgreSQL access via `psycopg3`
+- **Pattern:** Tight coupling with inline database operations
+
+**Key Characteristics:**
+
+- ReAct pattern with Chain of Thought reasoning
+- Sequential tool execution
+- Manual connection pooling
+- Ideal for MVPs and prototypes
 
 </details>
 
-### 🔧 Month 3: Agent + MCP
-
-```bash
-python -m demos.month_3_agent_mcp
-```
-
 <details>
-<summary><strong>What it demonstrates</strong></summary>
+<summary><strong>Month 3: MCP-Powered Architecture</strong></summary>
 
-- ✅ MCP server integration for database access
-- ✅ Tool-based specialization
-- ✅ RDS Data API for serverless scaling
-- ✅ IAM-based authentication
-- ✅ Connection pooling abstraction
-- ✅ Read-only mode with simulated writes
+**Capacity:** 5,000 orders/day | **Response Time:** ~3.5s
 
-**Key Concepts:**
+**Architecture:**
 
-- Database abstraction via MCP
-- Better separation of concerns
+- **1 Agent:** Single agent with MCP integration
+- **MCP Tools:** Auto-discovered from `awslabs.postgres-mcp-server`
+  - `query` - SQL queries via RDS Data API
+- **1 Custom Tool:**
+  - `create_order()` - Order processing logic
+- **Database:** Aurora PostgreSQL accessed via MCP (stdio transport)
+- **Pattern:** Loose coupling through Model Context Protocol
+
+**Key Improvements:**
+
+- Database abstraction layer via standardized MCP protocol
+- RDS Data API for serverless scaling
+- IAM-based authentication
 - Horizontal scaling capability
-- Production-ready architecture
+- Connection pooling handled by MCP server
 
-**MCP Implementation:**
+**Implementation:**
 
 ```python
 from mcp import stdio_client, StdioServerParameters
 from strands.tools.mcp import MCPClient
 
-# Create MCP client with stdio transport
 mcp_client = MCPClient(lambda: stdio_client(
     StdioServerParameters(
         command="uvx",
         args=[
             "awslabs.postgres-mcp-server@latest",
-            "--resource_arn", "arn:aws:rds:...",
-            "--secret_arn", "arn:aws:secretsmanager:...",
+            "--resource_arn", "arn:aws:rds:region:account:cluster:cluster-id",
+            "--secret_arn", "arn:aws:secretsmanager:region:account:secret:secret-name",
             "--database", "postgres",
             "--region", "us-west-2",
-            "--readonly", "True",
+            "--readonly", "True"
         ]
     )
 ))
-
-# Use MCP client in Agent
-with mcp_client:
-    tools = mcp_client.list_tools_sync()
-    agent = Agent(
-        model=bedrock_model,
-        tools=tools + [custom_tool]
-    )
-    agent("Your query here")
 ```
 
 </details>
 
-### 🎯 Month 6: Multi-Agent System
+<details>
+<summary><strong>Month 6: Multi-Agent Supervisor Architecture</strong></summary>
+
+**Capacity:** 50,000 orders/day | **Response Time:** ~200ms
+
+**Architecture:**
+
+- **4 Specialized Agents:**
+  1. **Supervisor Agent** 🎯 - Workflow orchestration (no tools)
+  2. **Search Agent** 🔍 - Semantic product discovery
+     - Tool: `semantic_product_search()` (pgvector-powered)
+  3. **Product Agent** 📋 - Product information and inventory
+     - Tools: `get_product_details()`, `check_inventory_status()`
+  4. **Order Agent** 🛒 - Order processing and confirmation
+     - Tool: `simulate_order_placement()`
+- **Database:** Aurora PostgreSQL + pgvector extension
+- **Search:** Vector embeddings with HNSW index (cosine similarity)
+- **Pattern:** Supervisor orchestration with specialized agents
+
+**Key Improvements:**
+
+- Parallel agent execution for sub-200ms response times
+- Semantic search using vector embeddings
+- Single Responsibility Principle per agent
+- Natural language product discovery
+- Horizontal and vertical scaling capabilities
+
+**Semantic Search Implementation:**
+
+```python
+# Vector embedding generation and similarity search
+CREATE INDEX ON products USING hnsw (embedding vector_cosine_ops);
+
+# Natural language search: "comfortable running shoes"
+# Matches semantically similar products, not just keywords
+```
+
+</details>
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+**Required:**
+
+- Python 3.11+
+- AWS Account with Amazon Bedrock access
+- Claude Sonnet 4 model access in Bedrock
+- AWS CLI configured with credentials
+
+**Recommended:**
+
+- Familiarity with agentic frameworks (Strands, LangChain)
+- Understanding of Model Context Protocol (MCP)
+- Basic PostgreSQL and vector search knowledge
+
+### Installation
+
+```bash
+# Clone and navigate to repository
+cd clickshop-demo
+
+# Run automated setup
+./scripts/setup.sh
+
+# Activate virtual environment
+source venv/bin/activate  # macOS/Linux
+# venv\Scripts\activate    # Windows
+
+# Configure AWS credentials
+cp .env.example .env
+# Edit .env with your AWS credentials and region
+
+# Verify installation
+python run_demo.py
+```
+
+### Environment Configuration
+
+```bash
+# .env file structure
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_REGION=us-west-2
+BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-5-20250929-v1:0
+```
+
+---
+
+## Running the Demos
+
+### Interactive Demo Launcher
+
+```bash
+python run_demo.py
+```
+
+Select from the interactive menu to run any architecture demonstration.
+
+### Individual Demo Execution
+
+#### Month 1: Single Agent (Monolithic)
+
+```bash
+python -m demos.month_1_single_agent
+```
+
+**Demonstrates:**
+
+- Basic agentic loop with ReAct pattern
+- Chain of Thought (CoT) reasoning
+- Sequential tool execution
+- Direct database access patterns
+- Manual connection management
+
+#### Month 3: Agent + MCP (Scaling)
+
+```bash
+python -m demos.month_3_agent_mcp
+```
+
+**Demonstrates:**
+
+- MCP server integration for database abstraction
+- RDS Data API for serverless compute
+- IAM-based authentication
+- Tool auto-discovery from MCP servers
+- Read-only database operations via MCP
+
+#### Month 6: Multi-Agent System (Production)
 
 ```bash
 python -m demos.month_6_multi_agent
 ```
 
-<details>
-<summary><strong>What it demonstrates</strong></summary>
+**Demonstrates:**
 
-- ✅ Supervisor pattern for orchestration
-- ✅ Specialized agents (Search, Product, Order)
-- ✅ Semantic search with pgvector
-- ✅ Agent-based task delegation
-- ✅ Parallel execution
-- ✅ Sub-200ms response time
-
-**Key Concepts:**
-
-- Supervisor orchestrates specialized agents
-- Each agent has single responsibility
-- Semantic search for better matching
-- High-performance distributed system
-
-</details>
+- Supervisor pattern for agent orchestration
+- Specialized agents with single responsibilities
+- Semantic search with pgvector (0.8.0+)
+- Parallel agent execution
+- HNSW vector indexing for similarity search
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 clickshop-demo/
-├── run_demo.py                 # 🎯 Main entry point
-├── requirements.txt            # 📦 Python dependencies
-├── .env.example               # 🔐 Environment template
+├── run_demo.py                    # Main entry point with interactive menu
+├── requirements.txt               # Python dependencies
+├── .env.example                   # Environment variable template
 │
-├── demos/                     # 🎬 Demo implementations
-│   ├── month_1_single_agent.py    # Month 1: Single agent
-│   ├── month_3_agent_mcp.py       # Month 3: MCP integration
-│   └── month_6_multi_agent.py     # Month 6: Multi-agent system
+├── demos/                         # Demo implementations
+│   ├── month_1_single_agent.py   # Monolithic agent (50 orders/day)
+│   ├── month_3_agent_mcp.py      # MCP integration (5K orders/day)
+│   └── month_6_multi_agent.py    # Multi-agent (50K orders/day)
 │
-├── lib/                       # 📚 Core library modules
-│   └── aurora_db.py              # Database operations
+├── lib/                           # Core library modules
+│   └── aurora_db.py              # Database operations and utilities
 │
-├── scripts/                   # 🛠️ Utility scripts
-│   └── setup.sh                  # Installation script
+├── scripts/                       # Automation scripts
+│   └── setup.sh                  # Environment setup
 │
-└── data/                      # 📊 Static data files
+└── data/                          # Static data
     └── products.json             # Product catalog
 ```
 
 ---
 
-## 🔧 Technologies Used
+## Technical Stack
 
-<table>
-<tr>
-<th>Technology</th>
-<th>Purpose</th>
-<th>Version/Details</th>
-</tr>
-<tr>
-<td><strong>Strands Framework</strong></td>
-<td>Agent orchestration and management</td>
-<td>Latest stable</td>
-</tr>
-<tr>
-<td><strong>Amazon Bedrock</strong></td>
-<td>Claude Sonnet 4 LLM access</td>
-<td>claude-sonnet-4-5-20250929</td>
-</tr>
-<tr>
-<td><strong>Amazon Aurora</strong></td>
-<td>Serverless PostgreSQL for data persistence</td>
-<td>PostgreSQL 17+ compatible</td>
-</tr>
-<tr>
-<td><strong>MCP Protocol</strong></td>
-<td>Standardized tool integration</td>
-<td>awslabs.postgres-mcp-server</td>
-</tr>
-<tr>
-<td><strong>pgvector</strong></td>
-<td>Vector embeddings for semantic search</td>
-<td>0.8.0+</td>
-</tr>
-<tr>
-<td><strong>Python</strong></td>
-<td>Primary development language</td>
-<td>3.11+</td>
-</tr>
-<tr>
-<td><strong>boto3</strong></td>
-<td>AWS SDK for Python</td>
-<td>Latest stable</td>
-</tr>
-</table>
+| Component           | Technology                  | Purpose                                              |
+| ------------------- | --------------------------- | ---------------------------------------------------- |
+| **Agent Framework** | Strands                     | Agent orchestration, tool management, execution flow |
+| **LLM Runtime**     | Amazon Bedrock              | Claude Sonnet 4 model hosting and inference          |
+| **Database**        | Amazon Aurora PostgreSQL    | Transactional data storage with serverless v2        |
+| **Vector Search**   | pgvector 0.8.0+             | Semantic search with HNSW indexing                   |
+| **Protocol**        | Model Context Protocol      | Standardized tool/resource integration               |
+| **MCP Server**      | awslabs.postgres-mcp-server | PostgreSQL access via RDS Data API                   |
+| **SDK**             | boto3                       | AWS service integration                              |
+| **Language**        | Python 3.11+                | Implementation language                              |
 
 ---
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
-### 🔴 Import Errors
+### AWS Authentication Issues
 
 ```bash
-# Ensure virtual environment is activated
-source venv/bin/activate
+# Verify AWS credentials
+aws sts get-caller-identity
 
-# Reinstall dependencies
+# Verify Bedrock access
+aws bedrock list-foundation-models --region us-west-2
+
+# Test Bedrock model invocation
+aws bedrock-runtime invoke-model \
+    --model-id us.anthropic.claude-sonnet-4-5-20250929-v1:0 \
+    --body '{"anthropic_version":"bedrock-2023-05-31","max_tokens":100,"messages":[{"role":"user","content":"Hello"}]}' \
+    --region us-west-2 \
+    output.json
+```
+
+### Python Environment Issues
+
+```bash
+# Recreate virtual environment
+rm -rf venv
+python3.11 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt --upgrade
 ```
 
-### 🔐 AWS Credentials Issues
+### MCP Server Connection Issues
 
 ```bash
-# Verify your credentials
-aws sts get-caller-identity
+# Verify MCP server installation
+uvx awslabs.postgres-mcp-server@latest --version
 
-# Check Bedrock model access
-aws bedrock list-foundation-models --region us-west-2
-
-# Test Bedrock invocation
-aws bedrock-runtime invoke-model \
-    --model-id us.anthropic.claude-sonnet-4-20250514-v1:0 \
-    --body '{"prompt":"Hello","max_tokens":10}' \
-    --region us-west-2 \
-    output.txt
-```
-
-### ⚙️ Setup Script Permission Error
-
-```bash
-chmod +x scripts/setup.sh
+# Test MCP server connectivity
+uvx awslabs.postgres-mcp-server@latest \
+    --resource_arn "arn:aws:rds:region:account:cluster:cluster-id" \
+    --secret_arn "arn:aws:secretsmanager:region:account:secret:secret-name" \
+    --database "postgres" \
+    --region "us-west-2" \
+    --readonly "True"
 ```
 
 ---
 
-## 📚 Additional Resources
+## Technical Resources
 
-<table>
-<tr>
-<td width="33%">
+### Documentation & Specifications
 
-### 🔗 Strands Framework
+| Resource                                                                           | Description                                     |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------- |
+| [Strands Framework](https://docs.strands.ai)                                       | Agent framework documentation and API reference |
+| [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/)                             | AWS managed LLM service documentation           |
+| [Model Context Protocol](https://modelcontextprotocol.io)                          | MCP specification and implementation guides     |
+| [pgvector Extension](https://github.com/pgvector/pgvector)                         | PostgreSQL vector similarity search             |
+| [Aurora PostgreSQL](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/) | Serverless database documentation               |
 
-- [Documentation](https://docs.strands.ai)
-- [GitHub](https://github.com/strands-ai/strands-framework)
-- [Examples](https://github.com/strands-ai/examples)
+### AWS Blogs & Technical Articles
 
-</td>
-<td width="33%">
+**[Supercharging Vector Search with pgvector 0.8.0 on Aurora PostgreSQL](https://aws.amazon.com/blogs/database/supercharging-vector-search-performance-and-relevance-with-pgvector-0-8-0-on-amazon-aurora-postgresql/)**  
+Deep dive into pgvector 0.8.0 improvements including HNSW indexing, scalar quantization, and performance optimizations for semantic search workloads.
 
-### ☁️ Amazon Bedrock
-
-- [Documentation](https://docs.aws.amazon.com/bedrock/)
-- [Model Access](https://console.aws.amazon.com/bedrock/)
-- [Pricing](https://aws.amazon.com/bedrock/pricing/)
-
-</td>
-<td width="33%">
-
-### 🔌 Model Context Protocol
-
-- [Specification](https://modelcontextprotocol.io)
-- [GitHub](https://github.com/modelcontextprotocol)
-- [Servers](https://github.com/awslabs/postgres-mcp-server)
-
-</td>
-</tr>
-</table>
-
-### 📝 AWS Blogs & Articles
-
-<table>
-<tr>
-<td width="50%">
-
-#### 🔍 Vector Search with pgvector
-
-**[Supercharging Vector Search Performance with pgvector 0.8.0 on Amazon Aurora PostgreSQL](https://aws.amazon.com/blogs/database/supercharging-vector-search-performance-and-relevance-with-pgvector-0-8-0-on-amazon-aurora-postgresql/)**
-
-Learn about the latest pgvector improvements and how to optimize semantic search performance on Aurora PostgreSQL.
-
-</td>
-<td width="50%">
-
-#### 🔧 MCP Servers for AWS
-
-**[Supercharging AWS Database Development with AWS MCP Servers](https://aws.amazon.com/blogs/database/supercharging-aws-database-development-with-aws-mcp-servers/)**
-
-Discover how to use Model Context Protocol servers to build better database-connected applications with AI agents.
-
-</td>
-</tr>
-</table>
+**[Supercharging AWS Database Development with MCP Servers](https://aws.amazon.com/blogs/database/supercharging-aws-database-development-with-aws-mcp-servers/)**  
+Guide to using Model Context Protocol servers for building AI agent applications with standardized database access patterns.
 
 ---
 
-## 🎯 Key Takeaways
+## Key Learnings & Best Practices
 
-### 📈 Architecture Evolution
+### Architectural Principles
 
-| Month | Architecture            | Daily Capacity | Response Time | Key Feature          |
-| ----- | ----------------------- | -------------- | ------------- | -------------------- |
-| **1** | Monolithic single agent | 50 orders      | ~2.0s         | Direct DB access     |
-| **3** | Tool-based with MCP     | 5,000 orders   | ~1.0s         | Database abstraction |
-| **6** | Multi-agent supervisor  | 50,000 orders  | ~0.2s         | Parallel execution   |
+1. **Start Monolithic, Evolve Deliberately**  
+   Begin with a single agent to validate product-market fit. Introduce complexity only when metrics demonstrate the need.
 
-### ✨ Best Practices
+2. **Abstract Early, Scale Later**  
+   Introduce MCP for database abstraction before scaling bottlenecks emerge. Protocol-driven design enables horizontal scaling.
 
-<table>
-<tr>
-<td>
+3. **Specialize Agents by Responsibility**  
+   Multi-agent systems should follow Single Responsibility Principle. Each agent should have one clear purpose with dedicated tools.
 
-**🏗️ Architecture**
+4. **Use Supervisor Pattern for Orchestration**  
+   Complex workflows require a supervisor agent that delegates to specialists rather than monolithic agents handling everything.
 
-- Use MCP for standardized data access
-- Implement supervisor pattern for complex workflows
-- Specialize agents for specific tasks
-- Design for horizontal scaling
+### Performance Optimization
 
-</td>
-<td>
+- **Semantic Search**: pgvector with HNSW indexing dramatically improves search relevance and reduces latency
+- **Parallel Execution**: Supervisor pattern enables concurrent agent operations for sub-second response times
+- **Connection Pooling**: MCP servers handle connection lifecycle, eliminating manual pool management
+- **IAM Authentication**: Credential management via AWS IAM reduces operational overhead
 
-**⚡ Performance**
+### Security Considerations
 
-- Leverage semantic search for better UX
-- Use parallel execution where possible
-- Implement proper connection pooling
-- Cache frequently accessed data
-
-</td>
-<td>
-
-**🔐 Security**
-
-- Use IAM-based authentication
-- Rotate credentials regularly
-- Implement least privilege access
-- Monitor and audit agent actions
-
-</td>
-</tr>
-</table>
-
-### 💡 The "Vibe Coding" Philosophy
-
-> **Remember:** The goal isn't just to scale - it's to scale while maintaining development velocity and developer happiness. That's the "vibe coding" philosophy! 🚀
-
-**Core Principles:**
-
-- 🎯 Start simple, evolve as needed
-- 🔄 Iterate based on real requirements
-- 🤝 Keep the team small and focused
-- 📊 Let metrics guide architecture decisions
-- 🎨 Maintain code quality and readability
+- Use IAM roles and policies for database access (no hardcoded credentials)
+- Implement least-privilege access patterns for each agent/tool
+- Enable audit logging for all agent actions
+- Use AWS Secrets Manager for credential rotation
 
 ---
 
-## 📋 Requirements
+## Dependencies
 
 ```txt
-# Core Dependencies
+# Core Framework
 python>=3.11
 strands-framework>=1.0.0
 boto3>=1.34.0
-psycopg2-binary>=2.9.9
+
+# Database
+psycopg3>=3.1.0
+psycopg3-binary>=3.1.0
+
+# Vector Search (Month 6)
+sentence-transformers>=2.2.0
+pgvector>=0.8.0
+
+# MCP Protocol (Month 3, 6)
+mcp>=0.1.0
+
+# Utilities
 python-dotenv>=1.0.0
-
-# Visualization
 rich>=13.7.0
-
-# AWS Services
-aws-cli>=2.15.0
 ```
 
 ---
 
 <div align="center">
 
-**Built with ❤️ using vibe coding**
+**AWS re:Invent 2025 | DAT309 Chalk Talk**
 
-[![AWS](https://img.shields.io/badge/Powered_by-AWS-FF9900?style=flat&logo=amazon-aws)](https://aws.amazon.com)
+**Built with production-grade patterns for educational purposes**
 
-**© 2025 Shayon Sanyal | AWS re:Invent 2025 | DAT309 Chalk Talk**
+[![Powered by AWS](https://img.shields.io/badge/Powered_by-AWS-FF9900?style=flat&logo=amazon-aws)](https://aws.amazon.com)
+[![Architecture](https://img.shields.io/badge/Multi--Agent-Architecture-green?style=flat)](https://github.com)
+
+---
+
+Copyright © 2025 Shayon Sanyal, Amazon Web Services
+
+Licensed under MIT-0 (MIT No Attribution)
 
 </div>
