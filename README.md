@@ -27,7 +27,7 @@
 
 This demo shows the evolution from single agent to multi-agent architecture using the **ClickShop** use case - a live shopping platform built by two friends using "vibe coding."
 
-> **⚠️ Important Notice: For demonstration and educational purposes only. Not intended for production use.
+> \*\*⚠️ Important Notice: For demonstration and educational purposes only. Not intended for production use.
 
 ---
 
@@ -497,17 +497,12 @@ aws-cli>=2.15.0
 
 ---
 
-## 👤 Author
-
-**Shayon Sanyal**  
-_Principal Solutions Architect, AWS_
-
----
-
 <div align="center">
 
 **Built with ❤️ using vibe coding**
 
 [![AWS](https://img.shields.io/badge/Powered_by-AWS-FF9900?style=flat&logo=amazon-aws)](https://aws.amazon.com)
+
+**© 2025 Shayon Sanyal | AWS re:Invent 2025 | DAT309 Chalk Talk**
 
 </div>
