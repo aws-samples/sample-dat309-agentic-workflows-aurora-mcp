@@ -63,14 +63,9 @@ mcp_client = MCPClient(lambda: stdio_client(
 # ============================================================================
 
 @tool
-def create_order(
-    product_id: str,
-    customer_id: str,
-    size: str,
-    base_price: float,
-    tax: float,
-    total_amount: float,
-    stream_id: str = "fitness_stream_morning_001"
+def create_order(product_id: str, customer_id: str, size: str,
+base_price: float, tax: float, total_amount: float,
+stream_id: str = "fitness_stream_morning_001"
 ) -> dict:
     """
     Create order for customer.
