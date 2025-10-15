@@ -166,7 +166,7 @@ CREATE INDEX ON products USING hnsw (embedding vector_cosine_ops);
 
 - Python 3.11+
 - AWS Account with Amazon Bedrock access
-- Claude Sonnet 4 model access in Bedrock
+- Claude Sonnet 4.5 model access in Bedrock
 - AWS CLI configured with credentials
 
 **Recommended:**
@@ -294,7 +294,7 @@ clickshop-demo/
 | Component           | Technology                  | Purpose                                              |
 | ------------------- | --------------------------- | ---------------------------------------------------- |
 | **Agent Framework** | Strands                     | Agent orchestration, tool management, execution flow |
-| **LLM Runtime**     | Amazon Bedrock              | Claude Sonnet 4 model hosting and inference          |
+| **LLM Runtime**     | Amazon Bedrock              | Claude Sonnet 4.5 model hosting and inference        |
 | **Database**        | Amazon Aurora PostgreSQL    | Transactional data storage with serverless v2        |
 | **Vector Search**   | pgvector 0.8.0+             | Semantic search with HNSW indexing                   |
 | **Protocol**        | Model Context Protocol      | Standardized tool/resource integration               |
