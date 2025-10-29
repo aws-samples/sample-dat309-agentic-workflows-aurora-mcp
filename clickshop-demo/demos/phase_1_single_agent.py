@@ -52,19 +52,25 @@ def identify_product_from_stream(stream_id: str) -> dict:
     """
     print(f"🔍 Searching stream {stream_id}...")
     
-    # Direct Aurora query via psycopg3
-    product = get_product("shoe_001")
-    
-    if not product:
-        return {"error": "Product not found"}
-    
-    return {
-        "product_id": product['product_id'],
-        "name": product['name'],
-        "price": float(product['price']),
-        "brand": product['brand'],
-        "description": product['description']
-    }
+    try:
+        # Direct Aurora query via psycopg3
+        product = get_product("shoe_001")
+        
+        if not product:
+            return {"error": "Product not found"}
+        
+        print(f"✅ Found: {product['name']}")
+        
+        return {
+            "product_id": product['product_id'],
+            "name": product['name'],
+            "price": float(product['price']),
+            "brand": product['brand'],
+            "description": product['description']
+        }
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return {"error": str(e)}
 
 @tool
 def check_product_inventory(product_id: str, size: str = None) -> dict:
@@ -78,10 +84,14 @@ def check_product_inventory(product_id: str, size: str = None) -> dict:
     """
     print(f"📦 Checking inventory for size {size}...")
     
-    # Direct Aurora query
-    inventory = check_inventory(product_id, size)
-    
-    return inventory
+    try:
+        # Direct Aurora query
+        inventory = check_inventory(product_id, size)
+        print(f"✅ Inventory checked")
+        return inventory
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return {"error": str(e)}
 
 @tool
 def calculate_order_total(product_id: str) -> dict:
@@ -95,21 +105,27 @@ def calculate_order_total(product_id: str) -> dict:
     """
     print("💰 Calculating total...")
     
-    product = get_product(product_id)
-    if not product:
-        return {"error": "Product not found"}
-    
-    base_price = float(product['price'])
-    tax = round(base_price * 0.08, 2)
-    shipping = 0.00 if base_price > 50 else 9.99
-    total = round(base_price + tax + shipping, 2)
-    
-    return {
-        "base_price": base_price,
-        "tax": tax,
-        "shipping": shipping,
-        "total": total
-    }
+    try:
+        product = get_product(product_id)
+        if not product:
+            return {"error": "Product not found"}
+        
+        base_price = float(product['price'])
+        tax = round(base_price * 0.08, 2)
+        shipping = 0.00 if base_price > 50 else 9.99
+        total = round(base_price + tax + shipping, 2)
+        
+        print(f"✅ Total: ${total}")
+        
+        return {
+            "base_price": base_price,
+            "tax": tax,
+            "shipping": shipping,
+            "total": total
+        }
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return {"error": str(e)}
 
 @tool
 def process_customer_order(product_id: str, customer_id: str, size: str, total_amount: float) -> dict:
@@ -123,30 +139,34 @@ def process_customer_order(product_id: str, customer_id: str, size: str, total_a
     """
     print("🛒 Processing order...")
     
-    product = get_product(product_id)
-    base_price = float(product['price'])
-    tax = round(base_price * 0.08, 2)
-    
-    # Single transaction: create order + update inventory
-    order = create_order(
-        product_id=product_id,
-        customer_id=customer_id,
-        size=size,
-        base_price=base_price,
-        tax=tax,
-        total=total_amount,
-        stream_id="fitness_stream_morning_001",
-        processed_by="SingleAgent"
-    )
-    
-    print(f"✅ Order created: {order['order_id']}")
-    
-    return {
-        "order_id": order['order_id'],
-        "status": order['status'],
-        "total": float(order['total_amount']),
-        "estimated_delivery": "2-3 business days"
-    }
+    try:
+        product = get_product(product_id)
+        base_price = float(product['price'])
+        tax = round(base_price * 0.08, 2)
+        
+        # Single transaction: create order + update inventory
+        order = create_order(
+            product_id=product_id,
+            customer_id=customer_id,
+            size=size,
+            base_price=base_price,
+            tax=tax,
+            total=total_amount,
+            stream_id="fitness_stream_morning_001",
+            processed_by="SingleAgent"
+        )
+        
+        print(f"✅ Order created: {order['order_id']}")
+        
+        return {
+            "order_id": order['order_id'],
+            "status": order['status'],
+            "total": float(order['total_amount']),
+            "estimated_delivery": "2-3 business days"
+        }
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return {"error": str(e)}
 
 # ═══════════════════════════════════════════════════════════════════════════
 # SINGLE AGENT DEFINITION
@@ -196,9 +216,11 @@ def run_interactive_demo():
     console.print("  • Tight coupling\n")
     
     # Get input
+    console.print("[dim]Press Enter for default: 'I want those running shoes!'[/dim]")
     customer_request = input("👤 You: ").strip() or "I want those running shoes!"
     console.print(f"[yellow]👤 You: {customer_request}[/yellow]\n")
     
+    console.print("[dim]Press Enter for default: 'CUST-123'[/dim]")
     customer_id = input("👤 Customer ID: ").strip() or "CUST-123"
     console.print(f"[yellow]Using: {customer_id}[/yellow]\n")
     
@@ -209,6 +231,7 @@ def run_interactive_demo():
     # Handle size follow-up
     if "size" in str(response).lower():
         console.print()
+        console.print("[dim]Press Enter for default: 'Size 10'[/dim]")
         size_input = input("👤 You: ").strip() or "Size 10"
         console.print(f"[yellow]👤 You: {size_input}[/yellow]\n")
         clickshop_agent(size_input)

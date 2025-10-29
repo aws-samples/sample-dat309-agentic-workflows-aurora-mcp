@@ -120,6 +120,7 @@ def run_interactive_demo():
     console.print("  ✅ Read-only mode\n")
     
     # Get input
+    console.print("[dim]Press Enter for default: 'I want those running shoes!'[/dim]")
     customer_request = input("👤 You: ").strip() or "I want those running shoes!"
     console.print(f"[yellow]👤 You: {customer_request}[/yellow]\n")
     
@@ -163,12 +164,14 @@ Be friendly! Stream ID: fitness_stream_morning_001"""
         # Handle size follow-up
         if "size" in str(response).lower():
             console.print()
+            console.print("[dim]Press Enter for default: 'Size 10'[/dim]")
             size_input = input("👤 You: ").strip() or "Size 10"
             console.print(f"[yellow]👤 You: {size_input}[/yellow]\n")
             clickshop_mcp_agent(size_input)
     
     # Get customer ID
-    customer_id = input("\n👤 Customer ID: ").strip() or "CUST-123"
+    console.print("[dim]Press Enter for default: 'CUST-123'[/dim]")
+    customer_id = input("👤 Customer ID: ").strip() or "CUST-123"
     console.print(f"[yellow]Using: {customer_id}[/yellow]\n")
     
     console.print("[bold green]✅ Phase 2 Complete![/bold green]")

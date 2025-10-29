@@ -129,15 +129,19 @@ def simulate_order_placement(product_id: str, customer_id: str, size: str, total
     """Process order (read-only demo mode)."""
     print(f"🛒 Processing order for {customer_id}")
     
-    order_id = f"M3-{int(time.time())}-{customer_id[:4]}"
-    print(f"✅ Order created: {order_id}")
-    
-    return {
-        "order_id": order_id,
-        "status": "confirmed",
-        "total": total,
-        "estimated_delivery": "2-3 business days"
-    }
+    try:
+        order_id = f"M3-{int(time.time())}-{customer_id[:4]}"
+        print(f"✅ Order created: {order_id}")
+        
+        return {
+            "order_id": order_id,
+            "status": "confirmed",
+            "total": total,
+            "estimated_delivery": "2-3 business days"
+        }
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return {"error": str(e)}
 
 # ═══════════════════════════════════════════════════════════════════════════
 # SPECIALIZED AGENTS - Each with Single Responsibility
@@ -258,6 +262,7 @@ def run_interactive_demo():
     console.print("  • Single Responsibility Principle\n")
     
     # Get input
+    console.print("[dim]Press Enter for default: 'I want running shoes!'[/dim]")
     customer_request = input("👤 You: ").strip() or "I want running shoes!"
     console.print(f"[yellow]👤 You: {customer_request}[/yellow]\n")
     
@@ -278,9 +283,11 @@ def run_interactive_demo():
     console.print("[green]✓[/green] Details retrieved\n")
     
     # Step 3: Get size
+    console.print("[dim]Press Enter for default: '10'[/dim]")
     size_input = input("👤 Size: ").strip() or "10"
     console.print(f"[yellow]Size: {size_input}[/yellow]\n")
     
+    console.print("[dim]Press Enter for default: 'CUST-123'[/dim]")
     customer_id = input("👤 Customer ID: ").strip() or "CUST-123"
     console.print(f"[yellow]Using: {customer_id}[/yellow]\n")
     
