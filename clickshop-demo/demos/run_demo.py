@@ -50,17 +50,17 @@ def show_menu():
 
 def run_phase_1():
     """Run Phase 1 demo"""
-    from demos.phase_1_single_agent import run_interactive_demo
+    from phase_1_single_agent import run_interactive_demo
     run_interactive_demo()
 
 def run_phase_2():
     """Run Phase 2 demo"""
-    from demos.phase_2_agent_mcp import run_interactive_demo
+    from phase_2_agent_mcp import run_interactive_demo
     run_interactive_demo()
 
 def run_phase_3():
     """Run Phase 3 demo"""
-    from demos.phase_3_multi_agent import run_interactive_demo
+    from phase_3_multi_agent import run_interactive_demo
     run_interactive_demo()
 
 def main():

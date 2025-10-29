@@ -35,7 +35,7 @@ A live-streaming shopping platform that evolved from 50 orders/day to 50,000 ord
 
 ### Performance & Scale Comparison
 
-| Metric              | Month 1: Single Agent | Month 3: Agent + MCP | Month 6: Multi-Agent |
+| Metric              | Phase 1: Single Agent | Phase 2: Agent + MCP | Phase 3: Multi-Agent |
 | ------------------- | --------------------- | -------------------- | -------------------- |
 | **Daily Capacity**  | 50 orders             | 5,000 orders         | 50,000 orders        |
 | **Response Time**   | ~2.0s                 | ~3.5s                | ~200ms               |
@@ -47,7 +47,7 @@ A live-streaming shopping platform that evolved from 50 orders/day to 50,000 ord
 ### Technical Architecture Details
 
 <details>
-<summary><strong>Month 1: Single Agent Architecture</strong></summary>
+<summary><strong>Phase 1: Single Agent Architecture</strong></summary>
 
 **Capacity:** 50 orders/day | **Response Time:** ~2.0s
 
@@ -72,7 +72,7 @@ A live-streaming shopping platform that evolved from 50 orders/day to 50,000 ord
 </details>
 
 <details>
-<summary><strong>Month 3: MCP-Powered Architecture</strong></summary>
+<summary><strong>Phase 2: MCP-Powered Architecture</strong></summary>
 
 **Capacity:** 5,000 orders/day | **Response Time:** ~3.5s
 
@@ -118,7 +118,7 @@ mcp_client = MCPClient(lambda: stdio_client(
 </details>
 
 <details>
-<summary><strong>Month 6: Multi-Agent Supervisor Architecture</strong></summary>
+<summary><strong>Phase 3: Multi-Agent Supervisor Architecture</strong></summary>
 
 **Capacity:** 50,000 orders/day | **Response Time:** ~200ms
 
@@ -193,7 +193,7 @@ cp .env.example .env
 # Edit .env with your AWS credentials and region
 
 # Verify installation
-python run_demo.py
+python -m demos.run_demo
 ```
 
 ### Environment Configuration
@@ -213,17 +213,17 @@ BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-5-20250929-v1:0
 ### Interactive Demo Launcher
 
 ```bash
-python run_demo.py
+python -m demos.run_demo
 ```
 
 Select from the interactive menu to run any architecture demonstration.
 
 ### Individual Demo Execution
 
-#### Month 1: Single Agent (Monolithic)
+#### Phase 1: Single Agent (Monolithic)
 
 ```bash
-python -m demos.month_1_single_agent
+python -m demos.phase_1_single_agent
 ```
 
 **Demonstrates:**
@@ -234,10 +234,10 @@ python -m demos.month_1_single_agent
 - Direct database access patterns
 - Manual connection management
 
-#### Month 3: Agent + MCP (Scaling)
+#### Phase 2: Agent + MCP (Scaling)
 
 ```bash
-python -m demos.month_3_agent_mcp
+python -m demos.phase_2_agent_mcp
 ```
 
 **Demonstrates:**
@@ -248,10 +248,10 @@ python -m demos.month_3_agent_mcp
 - Tool auto-discovery from MCP servers
 - Read-only database operations via MCP
 
-#### Month 6: Multi-Agent System (Production)
+#### Phase 3: Multi-Agent System (Production)
 
 ```bash
-python -m demos.month_6_multi_agent
+python -m demos.phase_3_multi_agent
 ```
 
 **Demonstrates:**
@@ -268,14 +268,14 @@ python -m demos.month_6_multi_agent
 
 ```
 clickshop-demo/
-├── run_demo.py                    # Main entry point with interactive menu
 ├── requirements.txt               # Python dependencies
 ├── .env.example                   # Environment variable template
 │
 ├── demos/                         # Demo implementations
-│   ├── month_1_single_agent.py   # Monolithic agent (50 orders/day)
-│   ├── month_3_agent_mcp.py      # MCP integration (5K orders/day)
-│   └── month_6_multi_agent.py    # Multi-agent (50K orders/day)
+│   ├── run_demo.py               # Main entry point with interactive menu
+│   ├── phase_1_single_agent.py   # Monolithic agent (50 orders/day)
+│   ├── phase_2_agent_mcp.py      # MCP integration (5K orders/day)
+│   └── phase_3_multi_agent.py    # Multi-agent (50K orders/day)
 │
 ├── lib/                           # Core library modules
 │   └── aurora_db.py              # Database operations and utilities
@@ -416,11 +416,11 @@ boto3>=1.34.0
 psycopg3>=3.1.0
 psycopg3-binary>=3.1.0
 
-# Vector Search (Month 6)
+# Vector Search (Phase 3)
 sentence-transformers>=2.2.0
 pgvector>=0.8.0
 
-# MCP Protocol (Month 3, 6)
+# MCP Protocol (Phase 2, 3)
 mcp>=0.1.0
 
 # Utilities

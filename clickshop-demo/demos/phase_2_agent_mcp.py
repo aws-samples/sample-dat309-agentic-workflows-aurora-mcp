@@ -1,88 +1,86 @@
 """
-ClickShop - Month 3: MCP-Powered Agent with Aurora PostgreSQL
-Evolution from direct DB access to MCP architecture
-5,000 orders/day, database operations via MCP server
+╔══════════════════════════════════════════════════════════════════════════════╗
+║ PHASE 2: MCP-Powered Architecture                                            ║
+║ Capacity: 5,000 orders/day | Response Time: ~3.5s                            ║
+║                                                                              ║
+║ Pattern: Single agent + Model Context Protocol for database abstraction      ║
+║ Perfect for: Scaling beyond MVP, adding abstraction layers                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 """
 import os
-import sys
 import time
-import logging
-from pathlib import Path
 from dotenv import load_dotenv
 from mcp import stdio_client, StdioServerParameters
 from strands import Agent, tool
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
-from strands.handlers.callback_handler import PrintingCallbackHandler
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 load_dotenv()
 console = Console()
 
-# ============================================================================
-# CONFIGURE STRANDS LOGGING
-# ============================================================================
-
-logging.getLogger("strands").setLevel(logging.WARNING)
-logging.basicConfig(
-    format="%(levelname)s | %(message)s",
-    handlers=[logging.StreamHandler()]
-)
-
-# Initialize Bedrock model
+# ═══════════════════════════════════════════════════════════════════════════
+# BEDROCK MODEL CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════════
 bedrock_model = BedrockModel(
-    model_id=os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-5-20250929-v1:0"),
+    model_id=os.getenv("BEDROCK_MODEL_ID"),
     region_name=os.getenv("BEDROCK_REGION", "us-west-2"),
-    temperature=0.3,
+    temperature=0.3
 )
 
-# ============================================================================
-# MCP CLIENT SETUP
-# ============================================================================
+# ═══════════════════════════════════════════════════════════════════════════
+# MCP CLIENT SETUP - The Key Architectural Change
+# ═══════════════════════════════════════════════════════════════════════════
+# Model Context Protocol provides standardized database access
+# Benefits:
+#   1. Database abstraction - swap implementations without changing agent code
+#   2. RDS Data API - serverless, no connection pooling needed
+#   3. IAM authentication - no hardcoded credentials
+#   4. Auto-discovered tools - MCP server exposes database operations as tools
 
 mcp_client = MCPClient(lambda: stdio_client(
     StdioServerParameters(
-        command="uvx",
+        command="uvx",  # Run MCP server via uvx (Python package runner)
         args=[
-            "awslabs.postgres-mcp-server@latest",
+            "awslabs.postgres-mcp-server@latest",  # AWS Labs PostgreSQL MCP server
             "--resource_arn", "arn:aws:rds:us-west-2:619763002613:cluster:apgpg-pgvector",
             "--secret_arn", "arn:aws:secretsmanager:us-west-2:619763002613:secret:apgpg-pgvector-secret-l847Vi",
             "--database", "postgres",
             "--region", "us-west-2",
-            "--readonly", "True",
+            "--readonly", "True",  # Read-only mode for safety
         ]
     )
 ))
 
-# ============================================================================
-# CUSTOM TOOLS
-# ============================================================================
+# ═══════════════════════════════════════════════════════════════════════════
+# CUSTOM TOOL - Order Processing
+# ═══════════════════════════════════════════════════════════════════════════
+# MCP handles reads (via 'query' tool), we add custom tool for writes
+# This separation is a best practice: MCP for reads, secure API for writes
 
 @tool
-def create_order(product_id: str, customer_id: str, size: str,
-base_price: float, tax: float, total_amount: float,
-stream_id: str = "fitness_stream_morning_001"
+def create_order(
+    product_id: str,
+    customer_id: str,
+    size: str,
+    base_price: float,
+    tax: float,
+    total_amount: float,
+    stream_id: str = "fitness_stream_morning_001"
 ) -> dict:
     """
-    Create order for customer.
+    Create customer order.
     
-    Args:
-        product_id: Product being ordered
-        customer_id: Customer placing order
-        size: Size selected
-        base_price: Base price of product
-        tax: Tax amount
-        total_amount: Total amount
-        stream_id: Stream where order originated
-    
-    Returns:
-        Order confirmation
+    ARCHITECTURE NOTE: Custom tool for write operations
+    - MCP server is read-only (best practice)
+    - Write operations go through secure API endpoints
+    - In production: this would call an API, not simulate
     """
     order_id = f"ORD-{int(time.time())}-{customer_id[:4]}"
+    
+    print(f"✅ Order simulated: {order_id}")
+    print("⚠️  Read-only MCP mode: Order not written to database")
     
     return {
         "order_id": order_id,
@@ -90,167 +88,106 @@ stream_id: str = "fitness_stream_morning_001"
         "total_amount": total_amount,
         "customer_id": customer_id,
         "product_id": product_id,
-        "size": size,
-        "stream_id": stream_id
+        "size": size
     }
 
-# ============================================================================
-# CLICKSHOP MCP AGENT (initialized in run_interactive_demo)
-# ============================================================================
-
-# ============================================================================
-# INTERACTIVE DEMO
-# ============================================================================
+# ═══════════════════════════════════════════════════════════════════════════
+# DEMO RUNNER
+# ═══════════════════════════════════════════════════════════════════════════
 
 def run_interactive_demo():
-    """Run the Month 3 MCP-powered demo"""
+    """Run Phase 2 MCP demo"""
     
-    # Header
     console.print("\n")
     console.print(Panel.fit(
-        "[bold cyan]🛍️  ClickShop - Month 3: MCP-Powered Architecture[/bold cyan]\n"
-        "[yellow]Database operations through MCP server[/yellow]\n"
-        "[green]Scaling to 5,000 orders/day with proper abstraction[/green]",
+        "[bold cyan]🛍️  PHASE 2: MCP-Powered Architecture[/bold cyan]\n"
+        "[yellow]Database abstraction via Model Context Protocol[/yellow]\n"
+        "[green]Capacity: 5,000 orders/day | Response: ~3.5s[/green]",
         border_style="cyan"
     ))
     
-    # MCP Server Status
-    console.print("\n[bold]📡 MCP Server Status:[/bold]")
-    console.print("[green]✅ Aurora PostgreSQL MCP Server: Connected[/green]")
-    console.print("[green]✅ RDS Data API: Active[/green]")
-    console.print("[green]✅ Region: us-west-2[/green]")
-    console.print("[dim]Server: awslabs.postgres-mcp-server@latest (via uvx)[/dim]")
+    console.print("\n[bold]📊 Architecture Evolution:[/bold]")
+    console.print("  Phase 1 → Phase 2:")
+    console.print("  • Direct DB calls → MCP server")
+    console.print("  • psycopg3 → RDS Data API")
+    console.print("  • Manual pooling → MCP managed")
+    console.print("  • Tight coupling → Loose coupling\n")
     
-    # Scenario
-    console.print("\n[bold magenta]📺 Live Stream Scenario:[/bold magenta]")
-    console.print("You're watching [bold cyan]@FitnessGuru's[/bold cyan] live stream")
-    console.print("Stream ID: [yellow]fitness_stream_morning_001[/yellow]")
-    console.print("They're showcasing the [bold]Nike Air Zoom Pegasus[/bold] running shoes")
-    console.print("Current viewers: [green]5,421[/green] | Duration: [yellow]45:32[/yellow]\n")
+    console.print("[bold]📡 MCP Server Status:[/bold]")
+    console.print("  ✅ Aurora PostgreSQL MCP Server")
+    console.print("  ✅ RDS Data API enabled")
+    console.print("  ✅ IAM authentication")
+    console.print("  ✅ Read-only mode\n")
     
-    console.print("[dim]─────────────────────────────────────────────────────────────[/dim]\n")
+    # Get input
+    customer_request = input("👤 You: ").strip() or "I want those running shoes!"
+    console.print(f"[yellow]👤 You: {customer_request}[/yellow]\n")
     
-    # Get customer input
-    console.print("[bold green]💬 Chat with ClickShop MCP Agent![/bold green]")
-    console.print("[dim]Type your message (or press Enter to use: 'I want those shoes!')[/dim]\n")
+    # ═══════════════════════════════════════════════════════════════════════
+    # MCP CLIENT CONTEXT - Auto-discover tools from MCP server
+    # ═══════════════════════════════════════════════════════════════════════
+    # The MCP server exposes database operations as tools
+    # Agent can now use SQL queries without knowing database details
     
-    customer_request = input("👤 You: ").strip()
-    
-    if not customer_request:
-        customer_request = "I want those running shoes! They look amazing for my training."
-        console.print(f"[yellow]👤 You: {customer_request}[/yellow]")
-    
-    console.print()
-    
-    # Create agent with MCP client
     with mcp_client:
+        # Auto-discover tools from MCP server
         mcp_tools = mcp_client.list_tools_sync()
+        console.print(f"[dim]MCP discovered {len(mcp_tools)} tools from server[/dim]\n")
         
+        # Create agent with MCP tools + custom order tool
         clickshop_mcp_agent = Agent(
             model=bedrock_model,
-            tools=mcp_tools + [create_order],
-            callback_handler=PrintingCallbackHandler(),
-            system_prompt="""You are the ClickShop AI assistant - Month 3 MCP-Powered Version!
+            tools=mcp_tools + [create_order],  # MCP tools + custom tool
+            system_prompt="""You are ClickShop AI - Phase 2 MCP-Powered Version!
 
-    IMPORTANT: You have access to Aurora PostgreSQL through an MCP server.
-    
-    Your workflow:
-    1. Use MCP 'query' tool to get product info: SELECT * FROM products WHERE product_id = 'shoe_001'
-    2. Ask customer for size if needed
-    3. Use MCP 'query' tool to check inventory: SELECT * FROM products WHERE product_id = 'shoe_001'
-    4. Calculate total (base_price * 1.08 for tax, +$9.99 shipping if under $50)
-    5. Use create_order() to create the order
-    6. Confirm order to customer
-    
-    Be friendly and conversational. Use emojis occasionally.
-    The stream_id is: fitness_stream_morning_001
-    
-    Architecture: Month 3 - MCP-mediated database access (5,000 orders/day capacity)"""
+IMPORTANT: You have Aurora PostgreSQL access via MCP server.
+
+WORKFLOW:
+1. Use MCP 'query' tool: SELECT * FROM products WHERE product_id = 'shoe_001'
+2. Ask customer for size
+3. Use MCP 'query' tool to check inventory
+4. Calculate total (base_price * 1.08 for tax, +$9.99 shipping if under $50)
+5. Use create_order() to process order
+
+MCP BENEFITS:
+- Database abstraction (can swap DB without code changes)
+- RDS Data API (serverless, auto-scaling)
+- IAM authentication (no credentials in code)
+
+Be friendly! Stream ID: fitness_stream_morning_001"""
         )
         
-        # Process with MCP agent
+        # Process request
         response = clickshop_mcp_agent(customer_request)
-        response_text = str(response)
         
-        # Check for follow-up
-        if "size" in response_text.lower() and "?" in response_text:
-            console.print("\n[dim]─────────────────────────────────────────────────────────────[/dim]\n")
-            console.print("[bold green]💬 Continue the conversation:[/bold green]")
-            console.print("[dim]Type your response (or press Enter for: 'Size 10 please!')[/dim]\n")
-            
-            size_input = input("👤 You: ").strip()
-            
-            if not size_input:
-                size_input = "Size 10 please!"
-                console.print(f"[yellow]👤 You: {size_input}[/yellow]")
-            
+        # Handle size follow-up
+        if "size" in str(response).lower():
             console.print()
-            follow_up = clickshop_mcp_agent(size_input)
+            size_input = input("👤 You: ").strip() or "Size 10"
+            console.print(f"[yellow]👤 You: {size_input}[/yellow]\n")
+            clickshop_mcp_agent(size_input)
     
-    # Get customer ID after size selection
-    console.print("\n[bold green]Customer ID:[/bold green]")
-    console.print("[dim]Enter your customer ID (or press Enter for: 'CUST-123')[/dim]\n")
-    customer_id = input("👤 Customer ID: ").strip()
-    if not customer_id:
-        customer_id = "CUST-123"
-        console.print(f"[yellow]Using customer ID: {customer_id}[/yellow]")
+    # Get customer ID
+    customer_id = input("\n👤 Customer ID: ").strip() or "CUST-123"
+    console.print(f"[yellow]Using: {customer_id}[/yellow]\n")
     
-    # Show completion
-    console.print("\n[dim]─────────────────────────────────────────────────────────────[/dim]")
-    console.print("\n[bold green]✅ MCP Transaction Complete![/bold green]")
-    console.print(f"[cyan]Customer ID: {customer_id}[/cyan]\n")
+    console.print("[bold green]✅ Phase 2 Complete![/bold green]")
     
-    # Architecture evolution
-    console.print("[bold]🏗️  Architecture Evolution:[/bold]")
-    arch_table = Table(show_header=True, box=None)
-    arch_table.add_column("Aspect", style="cyan", width=20)
-    arch_table.add_column("Month 1", style="yellow", width=30)
-    arch_table.add_column("Month 3", style="green", width=30)
-    arch_table.add_row("Database Access", "Direct Python imports", "MCP Server (RDS Data API)")
-    arch_table.add_row("Capacity", "50 orders/day", "5,000 orders/day")
-    arch_table.add_row("Agent Tools", "Direct DB functions", "MCP auto-discovered tools")
-    arch_table.add_row("Abstraction", "Tight coupling", "Loose coupling via MCP")
-    console.print(arch_table)
+    console.print("\n[bold]🎯 MCP Benefits:[/bold]")
+    console.print("  ✓ Database abstraction layer")
+    console.print("  ✓ RDS Data API (serverless)")
+    console.print("  ✓ No connection management")
+    console.print("  ✓ IAM-based security")
+    console.print("  ✓ Horizontal scaling")
+    console.print("  ✓ Tool auto-discovery\n")
     
-    # Performance comparison
-    console.print("\n[bold]⚡ Performance Comparison:[/bold]")
-    perf_table = Table(show_header=True, box=None)
-    perf_table.add_column("Metric", style="cyan", width=25)
-    perf_table.add_column("Month 1 (Direct)", style="yellow", width=20)
-    perf_table.add_column("Month 3 (MCP)", style="green", width=20)
-    perf_table.add_row("Avg Response Time", "~2.0s", "~3.5s")
-    perf_table.add_row("Daily Capacity", "50 orders", "5,000 orders")
-    perf_table.add_row("Connection Pooling", "Manual", "MCP managed")
-    perf_table.add_row("Error Handling", "Basic", "MCP abstracted")
-    perf_table.add_row("Scalability", "Limited", "Horizontal")
-    console.print(perf_table)
-    
-    # MCP Benefits
-    console.print("\n[bold]🎯 Month 3 MCP Benefits:[/bold]")
-    benefits_table = Table(show_header=False, box=None, border_style="green")
-    benefits_table.add_column(style="green", width=5)
-    benefits_table.add_column(style="white")
-    benefits_table.add_row("✅", "Database abstraction via standard protocol")
-    benefits_table.add_row("✅", "RDS Data API for serverless scaling")
-    benefits_table.add_row("✅", "No connection management in agent code")
-    benefits_table.add_row("✅", "Easier to swap database implementations")
-    benefits_table.add_row("✅", "Better security (IAM-based auth)")
-    benefits_table.add_row("✅", "MCP server handles retries and pooling")
-    console.print(benefits_table)
-    
-    console.print("\n[bold yellow]📡 All database operations routed through MCP server![/bold yellow]")
-    console.print("[bold red]⚠️  READ-ONLY MODE: Orders are simulated, not written to database[/bold red]")
-    console.print("[yellow]💡 Best Practice: Use MCP for reads + secure API endpoints for writes[/yellow]")
-    console.print("[dim]Transport: stdio via uvx[/dim]")
-    console.print("[dim]Server: awslabs.postgres-mcp-server@latest[/dim]\n")
+    console.print("[bold]📈 Scaling Improvements:[/bold]")
+    console.print("  • 50 → 5,000 orders/day (100x)")
+    console.print("  • Loose coupling via protocol")
+    console.print("  • Ready for multi-region\n")
 
 if __name__ == "__main__":
     try:
         run_interactive_demo()
     except KeyboardInterrupt:
-        console.print("\n\n[yellow]Demo interrupted. Thanks for trying Month 3![/yellow]\n")
-    except Exception as e:
-        console.print(f"\n\n[bold red]Error:[/bold red] {e}\n")
-        import traceback
-        console.print("[dim]" + traceback.format_exc() + "[/dim]")
-        console.print("\n[dim]Check your MCP server configuration and Aurora connection[/dim]\n")
+        console.print("\n[yellow]Demo interrupted[/yellow]\n")
