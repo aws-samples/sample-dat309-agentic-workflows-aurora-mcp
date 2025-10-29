@@ -124,6 +124,8 @@ def run_interactive_demo():
     customer_request = input("👤 You: ").strip() or "I want those running shoes!"
     console.print(f"[yellow]👤 You: {customer_request}[/yellow]\n")
     
+    console.print("[dim]Initializing MCP server (this may take a moment)...[/dim]\n")
+    
     # ═══════════════════════════════════════════════════════════════════════
     # MCP CLIENT CONTEXT - Auto-discover tools from MCP server
     # ═══════════════════════════════════════════════════════════════════════

@@ -65,6 +65,9 @@ def search_products_semantic(query: str, limit: int = 5) -> List[Tuple[Dict, flo
     Semantic search for products using vector embeddings
     Returns list of (product, similarity_score) tuples
     """
+    import warnings
+    warnings.filterwarnings('ignore', category=FutureWarning)
+    
     from sentence_transformers import SentenceTransformer
     
     # Generate query embedding
@@ -116,11 +119,13 @@ def check_inventory(product_id: str, size: Optional[str] = None) -> Dict:
             if size and available_sizes:
                 # Sized product (like shoes)
                 quantity = inventory.get(size, 0) if isinstance(inventory, dict) else 0
-                # For demo: always show as in stock with reasonable quantity
+                # For demo: ensure size 10 always has stock, others use actual inventory
+                if size == "10":
+                    quantity = max(quantity, 50)
                 return {
-                    "in_stock": True,
+                    "in_stock": quantity > 0,
                     "size": size,
-                    "quantity": max(quantity, 50),
+                    "quantity": quantity,
                     "available_sizes": available_sizes
                 }
             else:
