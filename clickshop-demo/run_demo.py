@@ -26,17 +26,17 @@ def show_menu():
     
     table.add_row(
         "1",
-        "Month 1: Single Agent",
+        "Phase 1: Single Agent",
         "Basic agent with Aurora DB (50 orders/day)"
     )
     table.add_row(
         "2",
-        "Month 3: MCP Tools",
+        "Phase 2: MCP Tools",
         "Agent + specialized MCP tools (5K orders/day)"
     )
     table.add_row(
         "3",
-        "Month 6: Multi-Agent",
+        "Phase 3: Multi-Agent",
         "Supervisor pattern (50K orders/day)"
     )
     table.add_row(
@@ -48,19 +48,19 @@ def show_menu():
     console.print(table)
     console.print()
 
-def run_month_1():
-    """Run Month 1 demo"""
-    from demos.month_1_single_agent import run_interactive_demo
+def run_phase_1():
+    """Run Phase 1 demo"""
+    from demos.phase_1_single_agent import run_interactive_demo
     run_interactive_demo()
 
-def run_month_3():
-    """Run Month 3 demo"""
-    from demos.month_3_agent_mcp import run_interactive_demo
+def run_phase_2():
+    """Run Phase 2 demo"""
+    from demos.phase_2_agent_mcp import run_interactive_demo
     run_interactive_demo()
 
-def run_month_6():
-    """Run Month 6 demo"""
-    from demos.month_6_multi_agent import run_interactive_demo
+def run_phase_3():
+    """Run Phase 3 demo"""
+    from demos.phase_3_multi_agent import run_interactive_demo
     run_interactive_demo()
 
 def main():
@@ -71,15 +71,15 @@ def main():
         
         if choice == "1":
             try:
-                run_month_1()
+                run_phase_1()
             except KeyboardInterrupt:
                 console.print("\n[yellow]Demo interrupted[/yellow]\n")
             except Exception as e:
                 console.print(f"\n[red]Error: {e}[/red]\n")
         elif choice == "2":
-            run_month_3()
+            run_phase_2()
         elif choice == "3":
-            run_month_6()
+            run_phase_3()
         elif choice == "q":
             console.print("\n[cyan]Thanks for trying ClickShop! 🚀[/cyan]\n")
             break

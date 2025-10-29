@@ -1,7 +1,7 @@
 """
 ClickShop - Month 6: Multi-Agent Supervisor with Semantic Search
 Supervisor pattern with specialized agents and vector search
-50,000 orders/day, sub-200ms response time
+50,000 orders/day
 """
 import os
 import sys
