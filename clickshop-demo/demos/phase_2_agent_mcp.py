@@ -60,10 +60,7 @@ mcp_client = MCPClient(lambda: stdio_client(
 # This separation is a best practice: MCP for reads, secure API for writes
 
 @tool
-def create_order(
-    product_id: str,
-    customer_id: str,
-    size: str,
+def create_order(product_id: str, customer_id: str, size: str,
     base_price: float,
     tax: float,
     total_amount: float,

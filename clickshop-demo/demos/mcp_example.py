@@ -6,7 +6,8 @@ from strands.tools.mcp import MCPClient
 mcp_client = MCPClient(lambda: stdio_client(
     StdioServerParameters(
         command="uvx",
-        args=["awslabs.postgres-mcp-server@latest", "--resource_arn", "arn:aws:rds:..."]
+        args=["awslabs.postgres-mcp-server@latest", 
+              "--resource_arn", "arn:aws:rds:..."]
     )
 ))
 
