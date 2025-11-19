@@ -206,7 +206,9 @@ Be clear about order confirmation."""
 
 supervisor_agent = Agent(
     model=bedrock_model,
-    tools=[],  # No tools! Supervisor only delegates
+    tools=[],  # No tools! Supervisor only delegates OR
+    # Agents as Tools OR other orchestration mechanism
+    # tools=[search_agent, product_agent, order_agent],
     system_prompt="""You are the Supervisor for ClickShop Multi-Agent System.
 
 ARCHITECTURE: You coordinate 3 specialized agents:
