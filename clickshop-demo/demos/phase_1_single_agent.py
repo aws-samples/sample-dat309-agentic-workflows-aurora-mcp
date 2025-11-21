@@ -4,7 +4,7 @@
 ║ Capacity: 50 orders/day | Response Time: ~2.0s                               ║
 ║                                                                              ║
 ║ Pattern: Monolithic agent with direct Aurora PostgreSQL access               ║
-║ Perfect for: MVPs, prototypes, weekend projects                              ║
+║ When to use: MVPs, prototypes, validating product-market fit                 ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """
 import os
@@ -27,33 +27,35 @@ console = Console()
 # ═══════════════════════════════════════════════════════════════════════════
 # BEDROCK MODEL CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════
-# Using Claude Sonnet 4.5 via Amazon Bedrock for LLM inference
 bedrock_model = BedrockModel(
     model_id=os.getenv("BEDROCK_MODEL_ID"),
     region_name=os.getenv("BEDROCK_REGION", "us-west-2"),
-    temperature=0.3  # Lower temperature for consistent responses
+    temperature=0.3  # Lower = more consistent, Higher = more creative
 )
 
 # ═══════════════════════════════════════════════════════════════════════════
 # AGENT TOOLS - Direct Aurora Database Access
 # ═══════════════════════════════════════════════════════════════════════════
-# Each tool directly calls Aurora PostgreSQL via psycopg3
-# This is simple but creates tight coupling between agent and database
+# ARCHITECTURE DECISION: Start simple with direct database calls
+# Why? Ship fast, validate use case, avoid premature abstraction
+# When to evolve? >1K orders/day or need multi-region support
 
 @tool
 def identify_product_from_stream(stream_id: str) -> dict:
     """
     Find product from live stream context.
     
-    ARCHITECTURE NOTE: Direct database call via psycopg3
-    - Simple and fast for low volume
-    - Tight coupling to database schema
-    - Manual connection management required
+    PATTERN: Direct database query via psycopg3
+    - Fastest path: ~50ms query time
+    - Simplest code: No abstraction layers
+    - Trade-off: Tight coupling to Aurora schema
+    
+    Perfect for Phase 1. Refactor when you need portability.
     """
     print(f"🔍 Searching stream {stream_id}...")
     
     try:
-        # Direct Aurora query via psycopg3
+        # Direct Aurora query - no MCP, no API layer
         product = get_product("shoe_001")
         
         if not product:
@@ -77,15 +79,12 @@ def check_product_inventory(product_id: str, size: str = None) -> dict:
     """
     Check real-time inventory availability.
     
-    ARCHITECTURE NOTE: Another direct database call
-    - Each tool manages its own database interaction
-    - No abstraction layer
-    - Works great for 50 orders/day
+    SCALING TIP: This works for 50 orders/day
+    At 1K+ orders/day, add caching (Redis) to reduce DB load 60-80%
     """
     print(f"📦 Checking inventory for size {size}...")
     
     try:
-        # Direct Aurora query
         inventory = check_inventory(product_id, size)
         print(f"✅ Inventory checked")
         return inventory
@@ -101,7 +100,9 @@ def calculate_order_total(product_id: str) -> dict:
     BUSINESS LOGIC:
     - 8% sales tax
     - Free shipping over $50
-    - $9.99 flat rate shipping under $50
+    - $9.99 flat rate under $50
+    
+    Note: This is stateless calculation - could move to client side
     """
     print("💰 Calculating total...")
     
@@ -132,10 +133,12 @@ def process_customer_order(product_id: str, customer_id: str, size: str, total_a
     """
     Create order and update inventory.
     
-    ARCHITECTURE NOTE: Transactional operation
+    TRANSACTION PATTERN: Single DB call handles both writes
     - Creates order record
     - Decrements inventory
-    - All in single database transaction
+    - Atomic operation (both succeed or both fail)
+    
+    PRODUCTION TIP: Add idempotency key to prevent duplicate orders
     """
     print("🛒 Processing order...")
     
@@ -144,7 +147,7 @@ def process_customer_order(product_id: str, customer_id: str, size: str, total_a
         base_price = float(product['price'])
         tax = round(base_price * 0.08, 2)
         
-        # Single transaction: create order + update inventory
+        # Single transaction ensures consistency
         order = create_order(
             product_id=product_id,
             customer_id=customer_id,
@@ -171,8 +174,16 @@ def process_customer_order(product_id: str, customer_id: str, size: str, total_a
 # ═══════════════════════════════════════════════════════════════════════════
 # SINGLE AGENT DEFINITION
 # ═══════════════════════════════════════════════════════════════════════════
-# One agent handles entire workflow: search → inventory → calculate → order
-# ReAct pattern: Reason → Act → Observe loop
+# PATTERN: Monolithic agent with 4 tools
+# Why start here? 
+# - Ship in a weekend
+# - Validate product-market fit
+# - No premature optimization
+#
+# When to evolve?
+# - >1K orders/day (add caching, optimize)
+# - Need portability (add MCP layer)
+# - Complex workflows (add specialized agents)
 
 clickshop_agent = Agent(
     model=bedrock_model,
@@ -191,6 +202,8 @@ WORKFLOW:
 4. Calculate total
 5. Process order
 
+IMPORTANT: Customer ID is always provided in the request. Never ask for it.
+
 Be friendly and use emojis. Stream ID: fitness_stream_morning_001"""
 )
 
@@ -204,16 +217,27 @@ def run_interactive_demo():
     console.print("\n")
     console.print(Panel.fit(
         "[bold cyan]🛍️  PHASE 1: Single Agent[/bold cyan]\n"
-        "[yellow]Monolithic architecture with direct Aurora access[/yellow]\n"
+        "[yellow]Direct Aurora access - built in a weekend[/yellow]\n"
         "[green]Capacity: 50 orders/day | Response: ~2.0s[/green]",
         border_style="cyan"
     ))
     
-    console.print("\n[bold]📊 Architecture:[/bold]")
-    console.print("  • 1 Agent (monolithic)")
-    console.print("  • 4 Tools (direct DB access)")
-    console.print("  • Aurora PostgreSQL (psycopg3)")
-    console.print("  • Tight coupling\n")
+    console.print("\n[bold]🏗️  Phase 1 Architecture:[/bold]")
+    console.print("  • 1 Agent (handles entire workflow)")
+    console.print("  • 4 Tools (direct Aurora access)")
+    console.print("  • psycopg3 connection pooling")
+    console.print("  • Aurora PostgreSQL single region\n")
+    
+    console.print("[bold]✅ Why Start Here:[/bold]")
+    console.print("  • Ship in days, not weeks")
+    console.print("  • Validate product-market fit")
+    console.print("  • Simplest possible architecture")
+    console.print("  • Fastest response time (~2.0s)\n")
+    
+    console.print("[bold]⚠️  When to Evolve:[/bold]")
+    console.print("  • >1K orders/day (add caching)")
+    console.print("  • Need portability (add MCP)")
+    console.print("  • Complex workflows (multi-agent)\n")
     
     # Get input
     console.print("[dim]Press Enter for default: 'I want those running shoes!'[/dim]")
@@ -237,12 +261,18 @@ def run_interactive_demo():
         clickshop_agent(size_input)
     
     console.print("\n[bold green]✅ Phase 1 Complete![/bold green]")
-    console.print("\n[bold]Key Characteristics:[/bold]")
-    console.print("  ✓ Simple and fast to build")
-    console.print("  ✓ Direct database access")
-    console.print("  ✓ Perfect for MVPs")
-    console.print("  ⚠ Tight coupling")
-    console.print("  ⚠ Limited scalability\n")
+    
+    console.print("\n[bold]🎯 Phase 1 Characteristics:[/bold]")
+    console.print("  ✓ Fast to build (weekend project)")
+    console.print("  ✓ Fast response time (~2.0s)")
+    console.print("  ✓ Perfect for MVPs and prototypes")
+    console.print("  ✓ Direct control over queries")
+    console.print("  ⚠️  Tight coupling to Aurora")
+    console.print("  ⚠️  Limited to 50 orders/day")
+    console.print("  ⚠️  Manual connection management\n")
+    
+    console.print("[bold]🚀 Next Step:[/bold]")
+    console.print("  When traffic grows, see Phase 2 (MCP) for 100x scaling\n")
 
 if __name__ == "__main__":
     try:

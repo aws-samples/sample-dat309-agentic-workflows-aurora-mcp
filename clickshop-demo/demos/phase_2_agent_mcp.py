@@ -4,7 +4,7 @@
 ║ Capacity: 5,000 orders/day | Response Time: ~3.5s                            ║
 ║                                                                              ║
 ║ Pattern: Single agent + Model Context Protocol for database abstraction      ║
-║ Perfect for: Scaling beyond MVP, adding abstraction layers                   ║
+║ When to use: Scaling beyond 1K orders/day, need portability                  ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """
 import os
@@ -30,25 +30,26 @@ bedrock_model = BedrockModel(
 )
 
 # ═══════════════════════════════════════════════════════════════════════════
-# MCP CLIENT SETUP - The Key Architectural Change
+# MCP CLIENT SETUP - Database Abstraction Layer
 # ═══════════════════════════════════════════════════════════════════════════
-# Model Context Protocol provides standardized database access
-# Benefits:
-#   1. Database abstraction - swap implementations without changing agent code
-#   2. RDS Data API - serverless, no connection pooling needed
-#   3. IAM authentication - no hardcoded credentials
-#   4. Auto-discovered tools - MCP server exposes database operations as tools
+# WHY MCP? Three key benefits:
+# 1. PORTABILITY: Swap databases without changing agent code
+# 2. SCALING: RDS Data API = serverless connections (no pooling headaches)
+# 3. SECURITY: IAM authentication, no credentials in code
+#
+# TRADEOFF: +1.5s latency vs direct connections (~3.5s vs ~2s)
+# Worth it? Yes, if you need abstraction. No, if you need <200ms responses.
 
 mcp_client = MCPClient(lambda: stdio_client(
     StdioServerParameters(
-        command="uvx",  # Run MCP server via uvx (Python package runner)
+        command="uvx",  # uvx = npx for Python
         args=[
-            "awslabs.postgres-mcp-server@latest",  # AWS Labs PostgreSQL MCP server
-            "--resource_arn", "arn:aws:rds:us-west-2:619763002613:cluster:apgpg-pgvector",
-            "--secret_arn", "arn:aws:secretsmanager:us-west-2:619763002613:secret:apgpg-pgvector-secret-l847Vi",
+            "awslabs.postgres-mcp-server@latest",
+            "--resource_arn", "arn:aws:rds:us-west-2:123456789012:cluster:apgpg-pgvector",
+            "--secret_arn", "arn:aws:secretsmanager:us-west-2:123456789012:secret:my-secret-abc123",
             "--database", "postgres",
             "--region", "us-west-2",
-            "--readonly", "True",  # Read-only mode for safety
+            "--readonly", "True",  # Read-only = safe for demos
         ]
     )
 ))
@@ -56,8 +57,9 @@ mcp_client = MCPClient(lambda: stdio_client(
 # ═══════════════════════════════════════════════════════════════════════════
 # CUSTOM TOOL - Order Processing
 # ═══════════════════════════════════════════════════════════════════════════
-# MCP handles reads (via 'query' tool), we add custom tool for writes
-# This separation is a best practice: MCP for reads, secure API for writes
+# PATTERN: MCP for reads, custom tool for writes
+# Why? MCP servers are typically read-only for safety
+# Production: This would call a write API endpoint with auth + validation
 
 @tool
 def create_order(product_id: str, customer_id: str, size: str,
@@ -67,12 +69,13 @@ def create_order(product_id: str, customer_id: str, size: str,
     stream_id: str = "fitness_stream_morning_001"
 ) -> dict:
     """
-    Create customer order.
+    Create customer order (simulated for demo).
     
-    ARCHITECTURE NOTE: Custom tool for write operations
-    - MCP server is read-only (best practice)
-    - Write operations go through secure API endpoints
-    - In production: this would call an API, not simulate
+    PRODUCTION PATTERN:
+    Instead of direct DB writes, call a secure API:
+    - POST /api/orders with auth token
+    - API handles validation, rate limiting, audit logs
+    - Separates read paths (MCP) from write paths (API)
     """
     order_id = f"ORD-{int(time.time())}-{customer_id[:4]}"
     
@@ -103,16 +106,14 @@ def run_interactive_demo():
         border_style="cyan"
     ))
     
-    console.print("\n[bold]📊 Architecture Evolution:[/bold]")
-    console.print("  Phase 1 → Phase 2:")
-    console.print("  • Direct DB calls → MCP server")
-    console.print("  • psycopg3 → RDS Data API")
-    console.print("  • Manual pooling → MCP managed")
-    console.print("  • Tight coupling → Loose coupling\n")
+    console.print("\n[bold]📊 What Changed from Phase 1:[/bold]")
+    console.print("  Before: import psycopg3 → write SQL → manage connections")
+    console.print("  After:  MCP server handles all database details")
+    console.print("  Benefit: Swap Aurora for RDS/Postgres without code changes\n")
     
     console.print("[bold]📡 MCP Server Status:[/bold]")
     console.print("  ✅ Aurora PostgreSQL MCP Server")
-    console.print("  ✅ RDS Data API enabled")
+    console.print("  ✅ RDS Data API (serverless)")
     console.print("  ✅ IAM authentication")
     console.print("  ✅ Read-only mode\n")
     
@@ -121,26 +122,28 @@ def run_interactive_demo():
     customer_request = input("👤 You: ").strip() or "I want those running shoes!"
     console.print(f"[yellow]👤 You: {customer_request}[/yellow]\n")
     
-    console.print("[dim]Initializing MCP server (this may take a moment)...[/dim]\n")
+    console.print("[dim]Initializing MCP server (first run takes ~2s)...[/dim]\n")
     
     # ═══════════════════════════════════════════════════════════════════════
-    # MCP CLIENT CONTEXT - Auto-discover tools from MCP server
+    # MCP CLIENT CONTEXT - Tool Auto-Discovery
     # ═══════════════════════════════════════════════════════════════════════
-    # The MCP server exposes database operations as tools
-    # Agent can now use SQL queries without knowing database details
+    # KEY FEATURE: MCP server exposes database operations as tools
+    # Agent gets: query, get_table_schema, run_embedding, etc.
+    # No manual tool definitions needed!
     
     with mcp_client:
         # Auto-discover tools from MCP server
         mcp_tools = mcp_client.list_tools_sync()
-        console.print(f"[dim]MCP discovered {len(mcp_tools)} tools from server[/dim]\n")
+        console.print(f"[dim]✓ MCP auto-discovered {len(mcp_tools)} tools[/dim]")
+        console.print(f"[dim]  Tools available: query, get_table_schema, run_embedding[/dim]\n")
         
         # Create agent with MCP tools + custom order tool
         clickshop_mcp_agent = Agent(
             model=bedrock_model,
-            tools=mcp_tools + [create_order],  # MCP tools + custom tool
+            tools=mcp_tools + [create_order],  # MCP auto-discovered + custom
             system_prompt="""You are ClickShop AI - Phase 2 MCP-Powered Version!
 
-IMPORTANT: You have Aurora PostgreSQL access via MCP server.
+IMPORTANT: Database access via MCP server tools.
 
 WORKFLOW:
 1. Use MCP 'query' tool: SELECT * FROM products WHERE product_id = 'shoe_001'
@@ -149,10 +152,7 @@ WORKFLOW:
 4. Calculate total (base_price * 1.08 for tax, +$9.99 shipping if under $50)
 5. Use create_order() to process order
 
-MCP BENEFITS:
-- Database abstraction (can swap DB without code changes)
-- RDS Data API (serverless, auto-scaling)
-- IAM authentication (no credentials in code)
+ARCHITECTURE: Phase 2 - MCP abstraction (5K orders/day capacity)
 
 Be friendly! Stream ID: fitness_stream_morning_001"""
         )
@@ -175,18 +175,19 @@ Be friendly! Stream ID: fitness_stream_morning_001"""
     
     console.print("[bold green]✅ Phase 2 Complete![/bold green]")
     
-    console.print("\n[bold]🎯 MCP Benefits:[/bold]")
-    console.print("  ✓ Database abstraction layer")
-    console.print("  ✓ RDS Data API (serverless)")
-    console.print("  ✓ No connection management")
-    console.print("  ✓ IAM-based security")
-    console.print("  ✓ Horizontal scaling")
-    console.print("  ✓ Tool auto-discovery\n")
+    console.print("\n[bold]🎯 Why MCP? Three Key Benefits:[/bold]")
+    console.print("  1. PORTABILITY: Change databases without changing code")
+    console.print("  2. SCALING: RDS Data API handles connection pooling")
+    console.print("  3. SECURITY: IAM auth, no credentials in code\n")
     
-    console.print("[bold]📈 Scaling Improvements:[/bold]")
-    console.print("  • 50 → 5,000 orders/day (100x)")
-    console.print("  • Loose coupling via protocol")
-    console.print("  • Ready for multi-region\n")
+    console.print("[bold]⚖️  When to Use MCP vs Direct:[/bold]")
+    console.print("  Use MCP: Need portability, scaling >1K orders/day")
+    console.print("  Use Direct: Need <200ms response times (see Phase 3)\n")
+    
+    console.print("[bold]📈 Scaling Impact:[/bold]")
+    console.print("  • Phase 1: 50 orders/day")
+    console.print("  • Phase 2: 5,000 orders/day (100x)")
+    console.print("  • Ready for: Multi-region, database migrations\n")
 
 if __name__ == "__main__":
     try:
