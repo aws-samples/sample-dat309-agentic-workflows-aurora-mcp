@@ -48,7 +48,7 @@ def semantic_product_search(query: str, limit: int = 3) -> dict:
     """
     Semantic vector search using pgvector + HNSW indexing.
     
-    WHY THIS MATTERS: "comfortable running shoes" matches "Nike Air Zoom Pegasus"
+    WHY THIS MATTERS: "comfortable running shoes" matches "AeroFit Air Zoom Pegasus"
     even without exact keywords. 70%+ better recall than keyword search.
     
     IMPLEMENTATION:
@@ -83,8 +83,8 @@ def semantic_product_search(query: str, limit: int = 3) -> dict:
         return {
             "products": [{
                 "product_id": "shoe_001",
-                "name": "Nike Air Zoom Pegasus",
-                "brand": "Nike",
+                "name": "AeroFit Air Zoom Pegasus",
+                "brand": "AeroFit",
                 "price": 120.00
             }]
         }
