@@ -8,7 +8,7 @@
 [![Claude](https://img.shields.io/badge/Claude-Sonnet_4.5-8E75B2?style=for-the-badge&logo=anthropic&logoColor=white)](https://www.anthropic.com/claude)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-00A67E?style=for-the-badge)](https://modelcontextprotocol.io)
 
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT_0-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Educational-blue?style=for-the-badge)
 
 **A production-oriented demonstration of scaling agentic systems from MVP to 50K orders/day**
@@ -40,7 +40,7 @@ A live-streaming shopping platform that evolved from 50 orders/day to 50,000 ord
 | **Daily Capacity**  | 50 orders             | 5,000 orders         | 50,000 orders        |
 | **Response Time**   | ~2.0s                 | ~3.5s                | ~200ms               |
 | **Architecture**    | Monolithic            | MCP-mediated         | Supervisor pattern   |
-| **Database Access** | Direct (`psycopg3`)   | RDS Data API (MCP)   | MCP + pgvector       |
+| **Database Access** | Direct (`psycopg3`)   | RDS Data API (MCP)   | Direct (`psycopg3`) + pgvector |
 | **Search Type**     | Exact match           | Exact match          | Semantic (vector)    |
 | **Coupling**        | Tight                 | Loose (MCP)          | Loose + Specialized  |
 
@@ -178,8 +178,9 @@ CREATE INDEX ON products USING hnsw (embedding vector_cosine_ops);
 ### Installation
 
 ```bash
-# Clone and navigate to repository
-cd clickshop-demo
+# Clone repository
+git clone <REPOSITORY_URL>
+cd sample-dat309-agentic-workflows-aurora-mcp/clickshop-demo
 
 # Run automated setup
 ./scripts/setup.sh
