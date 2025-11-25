@@ -203,7 +203,7 @@ python -m demos.run_demo
 AWS_ACCESS_KEY_ID=your_access_key
 AWS_SECRET_ACCESS_KEY=your_secret_key
 AWS_REGION=us-west-2
-BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-5-20250929-v1:0
+BEDROCK_MODEL_ID=global.anthropic.claude-sonnet-4-5-20250929-v1:0
 ```
 
 ---
@@ -317,7 +317,7 @@ aws bedrock list-foundation-models --region us-west-2
 
 # Test Bedrock model invocation
 aws bedrock-runtime invoke-model \
-    --model-id us.anthropic.claude-sonnet-4-5-20250929-v1:0 \
+    --model-id global.anthropic.claude-sonnet-4-5-20250929-v1:0 \
     --body '{"anthropic_version":"bedrock-2023-05-31","max_tokens":100,"messages":[{"role":"user","content":"Hello"}]}' \
     --region us-west-2 \
     output.json
