@@ -35,8 +35,8 @@ bedrock_model = BedrockModel(
 # ═══════════════════════════════════════════════════════════════════════════
 # SPECIALIZED AGENT TOOLS
 # ═══════════════════════════════════════════════════════════════════════════
-# ARCHITECTURE DECISION: 5-7 tools max per agent
-# Why? More tools = slower inference + higher costs
+# ARCHITECTURE DECISION: 10-15 tools max per agent
+# Why? More tools = slower inference + higher costs + context overload
 # Solution: Create specialized agents instead of adding more tools
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -161,7 +161,7 @@ def simulate_order_placement(product_id: str, customer_id: str, size: str, total
 # ═══════════════════════════════════════════════════════════════════════════
 # SPECIALIZED AGENTS - Single Responsibility Principle
 # ═══════════════════════════════════════════════════════════════════════════
-# PATTERN: Each agent has ONE job and 5-7 focused tools
+# PATTERN: Each agent has ONE job and 10-15 focused tools
 # Benefit: Faster inference, lower costs, easier to debug
 
 # ─────────────────────────────────────────────────────────────────────────────
