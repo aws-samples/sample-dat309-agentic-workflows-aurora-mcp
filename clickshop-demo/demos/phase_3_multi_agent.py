@@ -220,7 +220,7 @@ Be clear about order confirmation."""
 # ─────────────────────────────────────────────────────────────────────────────
 # KEY PATTERN: Supervisor has NO tools - only delegates
 # Why? Separation of concerns. Supervisor coordinates, specialists execute.
-# Alternative patterns: Use agents as tools OR frameworks like LangGraph/CrewAI
+# Alternative patterns: Use agents as tools, swarm, graph OR frameworks like LangGraph/CrewAI
 
 supervisor_agent = Agent(
     model=bedrock_model,
