@@ -49,7 +49,7 @@ mcp_client = MCPClient(lambda: stdio_client(
             "--secret_arn", "arn:aws:secretsmanager:us-west-2:123456789012:secret:my-secret-abc123",
             "--database", "postgres",
             "--region", "us-west-2",
-            "--readonly", "True",  # Read-only = safe for demos
+            "--readonly", "True",  # Read-only mode for safety
         ]
     )
 ))
