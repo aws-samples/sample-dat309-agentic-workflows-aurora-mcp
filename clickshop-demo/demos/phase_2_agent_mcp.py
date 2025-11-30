@@ -42,7 +42,7 @@ bedrock_model = BedrockModel(
 
 mcp_client = MCPClient(lambda: stdio_client(
     StdioServerParameters(
-        command="uvx",  # uvx = npx for Python
+        command="uvx",
         args=[
             "awslabs.postgres-mcp-server@latest",
             "--resource_arn", "arn:aws:rds:us-west-2:123456789012:cluster:apgpg-pgvector",
