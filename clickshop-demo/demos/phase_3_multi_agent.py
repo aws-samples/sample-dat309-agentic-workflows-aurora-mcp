@@ -210,7 +210,7 @@ Use simulate_order_placement() to create orders.
 
 PRICING RULES:
 - Tax: base_price * 1.08
-- Shipping: $9.99 if under $50, free if over $50
+- Shipping: $9.99 if under $50, free if $50 or more
 
 Be clear about order confirmation."""
 )
