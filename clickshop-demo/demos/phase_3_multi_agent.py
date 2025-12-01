@@ -218,7 +218,7 @@ Be clear about order confirmation."""
 # ─────────────────────────────────────────────────────────────────────────────
 # SUPERVISOR AGENT - Workflow Orchestrator
 # ─────────────────────────────────────────────────────────────────────────────
-# KEY PATTERN: Supervisor has NO tools - only delegates
+# KEY PATTERN: Supervisor has NO tools - only delegates (Supervisor Pattern)
 # Why? Separation of concerns. Supervisor coordinates, specialists execute.
 # Alternative patterns: Use agents as tools, swarm, graph OR frameworks like LangGraph/CrewAI
 
