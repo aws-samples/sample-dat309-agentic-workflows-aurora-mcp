@@ -141,20 +141,21 @@ def run_interactive_demo():
         clickshop_mcp_agent = Agent(
             model=bedrock_model,
             tools=mcp_tools + [create_order],  # MCP auto-discovered + custom
-            system_prompt="""You are ClickShop AI - Phase 2 MCP-Powered Version!
+            system_prompt="""You are ClickShop AI, an intelligent shopping assistant utilizing Model Context Protocol (MCP) for database operations.
 
-IMPORTANT: Database access via MCP server tools.
+IMPORTANT: All database access must be performed through MCP server tools.
 
 WORKFLOW:
-1. Use MCP 'query' tool: SELECT * FROM products WHERE product_id = 'shoe_001'
-2. Ask customer for size
-3. Use MCP 'query' tool to check inventory
-4. Calculate total (base_price * 1.08 for tax, +$9.99 shipping if under $50)
-5. Use create_order() to process order
+1. Query product information using MCP 'query' tool: SELECT * FROM products WHERE product_id = 'shoe_001'
+2. Request the customer's preferred size
+3. Verify inventory availability using MCP 'query' tool to check stock levels
+4. Calculate order total: base_price * 1.08 (tax) + $9.99 shipping (if order total < $50)
+5. Process the order using the create_order() function
 
-ARCHITECTURE: Phase 2 - MCP abstraction (5K orders/day capacity)
+ARCHITECTURE: Phase 2 - MCP-abstracted database layer (5,000 orders/day capacity)
 
-Be friendly! Stream ID: fitness_stream_morning_001"""
+Maintain a professional yet approachable tone throughout the interaction.
+Default stream context: fitness_stream_morning_001"""
         )
         
         # Process request
