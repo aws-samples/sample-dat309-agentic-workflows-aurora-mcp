@@ -15,8 +15,13 @@
 -- =============================================================================
 
 
--- Track which agents can access each row
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS agent_access TEXT[] DEFAULT '{}';
+-- Track which agents can access each row (ACL per row)
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS agent_access TEXT[] 
+    DEFAULT ARRAY['order_agent', 'supervisor_agent', 'product_agent']; -- New orders visible to these agent types by default
+
+
+-- Tag existing orders
+UPDATE orders SET agent_access = ARRAY['order_agent', 'supervisor_agent', 'product_agent'];
 
 
 -- RLS policy filters based on session context
@@ -38,7 +43,8 @@ SET LOCAL app.agent_type = 'order_agent';
 
 -- Agent's query runs — RLS filters automatically:
 SELECT order_id, customer_id, total_amount FROM orders;
--- ✓ Only sees rows where 'order_agent' is in agent_access
+-- Only sees rows where 'order_agent' is in agent_access array
+-- search_agent would see nothing (not in any order's ACL)
 
 
 -- =============================================================================
@@ -50,6 +56,5 @@ SELECT order_id, customer_id, total_amount FROM orders;
 --   • Your code (MCP server/app) determines agent identity
 --   • Database enforces what that identity can see
 --   • Even if agent writes malicious SQL, RLS still filters
---   • SQL injection can't bypass RLS policies
 --
 -- =============================================================================
