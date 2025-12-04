@@ -58,6 +58,7 @@ def semantic_product_search(query: str, limit: int = 3) -> dict:
     - ~50ms for 10K products
     """
     # Lazy Loading / Deferred Imports / Reduced memory footprint / Tool Isolation
+    # Tool definitions remain lightweight until invoked
     from lib.aurora_db import search_products_semantic
     
     print(f"🔍 Semantic search: '{query}'")
