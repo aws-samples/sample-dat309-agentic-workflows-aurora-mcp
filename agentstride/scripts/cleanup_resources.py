@@ -1,5 +1,5 @@
 """
-Cleanup remaining AWS resources for ClickShop demo.
+Cleanup remaining AWS resources for AgentStride demo.
 Deletes secrets, subnet groups, and security groups.
 """
 import boto3
@@ -9,7 +9,7 @@ console = Console()
 
 
 def cleanup_resources(region: str = "us-east-1"):
-    """Clean up remaining ClickShop resources in the specified region."""
+    """Clean up remaining AgentStride resources in the specified region."""
     console.print(f"\n[bold blue]🧹 Cleaning up resources in {region}[/bold blue]\n")
     
     # Initialize clients

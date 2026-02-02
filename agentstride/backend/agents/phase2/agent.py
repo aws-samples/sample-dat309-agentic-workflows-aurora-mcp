@@ -130,7 +130,7 @@ class Phase2Agent:
     
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the shopping assistant."""
-        return """You are a helpful shopping assistant for ClickShop, an athletic and fitness equipment store.
+        return """You are a helpful shopping assistant for AgentStride, an athletic and fitness equipment store.
 
 You have access to database tools through MCP (Model Context Protocol) that allow you to:
 - Query the products table for product information

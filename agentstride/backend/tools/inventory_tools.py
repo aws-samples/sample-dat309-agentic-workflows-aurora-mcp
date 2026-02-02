@@ -1,5 +1,5 @@
 """
-Inventory Tools for ClickShop agents.
+Inventory Tools for AgentStride agents.
 
 Provides tools for checking product inventory and availability.
 """

@@ -1,5 +1,5 @@
 /**
- * ClickShop - Apple-style parallax scrolling single-page application
+ * AgentStride - Apple-style parallax scrolling single-page application
  * Features: Hero, Products, How It Works, Agent Chat sections
  */
 import { useScrollY } from './hooks/useScrollY';

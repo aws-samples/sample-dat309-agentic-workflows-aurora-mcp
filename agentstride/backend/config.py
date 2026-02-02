@@ -1,5 +1,5 @@
 """
-Configuration settings for ClickShop backend.
+Configuration settings for AgentStride backend.
 
 Centralizes all configurable values that were previously hardcoded.
 """
@@ -85,8 +85,8 @@ class AgentConfig:
     })
 
     order_agents: Dict[int, tuple] = field(default_factory=lambda: {
-        1: ("OrderAgent", "agents/phase1/agent.py"),
-        2: ("OrderAgent", "agents/phase2/agent.py"),
+        1: ("Phase1Agent", "agents/phase1/agent.py"),
+        2: ("Phase2Agent", "agents/phase2/agent.py"),
         3: ("OrderAgent", "agents/phase3/order_agent.py"),
     })
 

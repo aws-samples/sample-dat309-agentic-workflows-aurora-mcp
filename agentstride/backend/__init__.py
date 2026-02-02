@@ -1,5 +1,5 @@
 """
-ClickShop Backend - FastAPI server for the ClickShop demo application.
+AgentStride Backend - FastAPI server for the AgentStride demo application.
 
 This package contains:
 - main.py: FastAPI application entry point

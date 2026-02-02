@@ -1,5 +1,5 @@
 """
-RDS Data API Client for ClickShop.
+RDS Data API Client for AgentStride.
 
 Provides database access through AWS RDS Data API for Aurora Serverless v2.
 This is used when the cluster is in a private VPC and not directly accessible.

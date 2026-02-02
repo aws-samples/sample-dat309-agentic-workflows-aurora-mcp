@@ -1,5 +1,5 @@
 """
-MCP (Model Context Protocol) module for ClickShop.
+MCP (Model Context Protocol) module for AgentStride.
 
 Provides MCP client integration for database operations via awslabs.postgres-mcp-server.
 """

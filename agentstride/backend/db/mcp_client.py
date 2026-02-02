@@ -1,5 +1,5 @@
 """
-MCP Client for ClickShop.
+MCP Client for AgentStride.
 
 Provides database access through the awslabs.postgres-mcp-server
 using RDS Data API for Phase 2 agent.

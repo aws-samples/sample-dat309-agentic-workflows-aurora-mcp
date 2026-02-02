@@ -540,13 +540,73 @@ If you need additional queries during the demo:
 - `breathable clothes for hot weather` - returns results (matches "clothes" keyword)
 - `comfortable running shoes` - returns results (matches "running shoes" keyword)
 
-**Phase 3 (Semantic searches that show the difference):**
+---
 
-- `gear for my first marathon` - finds running shoes, apparel, recovery
-- `help me build core strength` - finds fitness equipment
-- `relieve sore muscles after gym` - finds recovery products
-- `track my fitness progress` - finds watches and accessories
-- `shoes with good arch support` - finds cushioned running shoes
+## Phase 3 Multi-Agent Showcase
+
+Phase 3 uses a **Supervisor pattern** with specialized agents. Here are queries that demonstrate each agent:
+
+### SupervisorAgent → SearchAgent (Semantic Search)
+
+These queries show the SearchAgent handling natural language product discovery:
+
+| Query                            | What it demonstrates                                            |
+| -------------------------------- | --------------------------------------------------------------- |
+| `gear for my first marathon`     | Semantic understanding - finds running shoes, apparel, recovery |
+| `help me build core strength`    | Intent recognition - finds fitness equipment                    |
+| `relieve sore muscles after gym` | Context awareness - finds recovery products                     |
+| `track my fitness progress`      | Cross-category search - finds watches and accessories           |
+| `shoes with good arch support`   | Feature-based search - finds cushioned running shoes            |
+
+**Activity Panel shows:**
+
+1. SupervisorAgent: "Delegating to SearchAgent"
+2. SearchAgent: "Generating query embedding" (Nova Multimodal 1024d)
+3. SearchAgent: "Hybrid search: Semantic + Lexical"
+4. SearchAgent: "pgvector HNSW + tsrank search"
+5. SupervisorAgent: "SearchAgent returned X results"
+
+### SupervisorAgent → ProductAgent (Inventory Check)
+
+These queries show the ProductAgent handling stock and availability:
+
+| Query                                        | What it demonstrates     |
+| -------------------------------------------- | ------------------------ |
+| `Is the Nike Pegasus in stock?`              | Stock availability check |
+| `Do you have the Garmin watch available?`    | Product availability     |
+| `What sizes are available for Brooks Ghost?` | Size inventory           |
+| `Check stock for foam roller`                | Inventory lookup         |
+
+**Activity Panel shows:**
+
+1. SupervisorAgent: "Delegating to ProductAgent"
+2. ProductAgent: "Finding product"
+3. ProductAgent: "Checking inventory"
+4. ProductAgent: "Stock verified"
+5. SupervisorAgent: "ProductAgent returned to Supervisor"
+
+### SupervisorAgent → OrderAgent (Order Processing)
+
+Click the **Order** button on any product to see the OrderAgent:
+
+**Activity Panel shows:**
+
+1. SupervisorAgent: "Processing order request"
+2. OrderAgent: "Looking up product details"
+3. OrderAgent: "Checking inventory"
+4. OrderAgent: "Calculating total"
+5. OrderAgent: "Processing order"
+6. SupervisorAgent: "OrderAgent completed"
+
+### Demo Flow for Multi-Agent Showcase
+
+**Recommended sequence to show all agents:**
+
+1. **SearchAgent**: "gear for my first marathon" → Shows semantic search
+2. **ProductAgent**: "Is the Nike Pegasus in stock?" → Shows inventory check
+3. **OrderAgent**: Click Order on a product → Shows order processing
+
+> "Notice how the Supervisor delegates to different specialized agents based on the type of request. This is the supervisor pattern - each agent has a single responsibility, and the supervisor orchestrates them."
 
 ---
 
@@ -583,3 +643,444 @@ npm run dev
 
 - Check that you're searching for products that exist (running shoes, fitness equipment, recovery, apparel, accessories)
 - Try a simpler query first to verify the system is working
+
+---
+
+## Technical Implementation Reference
+
+This section documents the technical implementation of each phase for code walkthrough during the demo.
+
+### Phase 1: Direct Database Access
+
+**File:** `backend/agents/phase1/agent.py`
+
+```python
+# Strands SDK with Bedrock Model
+from strands import Agent, tool
+from strands.models import BedrockModel
+
+class Phase1Agent:
+    def __init__(self):
+        self.model = BedrockModel(
+            model_id="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            region_name="us-east-1"
+        )
+        self.agent = Agent(
+            model=self.model,
+            tools=[self._lookup_product, self._search_products,
+                   self._check_inventory, self._calculate_total,
+                   self._process_order],
+            system_prompt=self._get_system_prompt()
+        )
+
+    @tool
+    async def _search_products(self, query: str, limit: int = 5):
+        """Keyword-based product search using ILIKE."""
+        sql = "SELECT ... FROM products WHERE name ILIKE %s"
+        # Direct RDS Data API call
+```
+
+**Key Points:**
+
+- Single agent with 5 tools
+- Direct RDS Data API connection
+- Keyword matching only (ILIKE queries)
+- No semantic understanding
+
+### Phase 2: MCP Abstraction Layer
+
+**File:** `backend/agents/phase2/agent.py`
+
+```python
+from strands import Agent
+from strands.models import BedrockModel
+from strands.tools.mcp import MCPClient
+
+class Phase2Agent:
+    def __init__(self):
+        self.model = BedrockModel(...)
+
+        # MCP client for postgres-mcp-server
+        self.mcp_client = MCPClient(
+            server_name="postgres-mcp-server",
+            command="uvx",
+            args=["awslabs.postgres-mcp-server@latest"]
+        )
+
+    async def _initialize_agent(self):
+        await self.mcp_client.connect()
+        mcp_tools = await self.mcp_client.list_tools()
+        # Auto-discover tools from MCP server
+        self.agent = Agent(model=self.model, tools=mcp_tools)
+```
+
+**Key Points:**
+
+- Same keyword search capability as Phase 1
+- Tools auto-discovered from MCP server
+- Standardized interface via Model Context Protocol
+- Still no semantic understanding
+
+### Phase 3: Multi-Agent Orchestration with Hybrid Search
+
+**Files:**
+
+- `backend/agents/phase3/supervisor.py` - Orchestrator
+- `backend/agents/phase3/search_agent.py` - Semantic search
+- `backend/agents/phase3/product_agent.py` - Inventory
+- `backend/agents/phase3/order_agent.py` - Orders
+
+**SupervisorAgent (Orchestrator):**
+
+```python
+class SupervisorAgent:
+    def __init__(self, search_agent, product_agent, order_agent):
+        # Supervisor has delegation tools only (no direct DB access)
+        self.agent = Agent(
+            model=self.model,
+            tools=[self._delegate_to_search,
+                   self._delegate_to_product,
+                   self._delegate_to_order]
+        )
+```
+
+**SearchAgent (Semantic + Lexical):**
+
+```python
+class SearchAgent:
+    def __init__(self):
+        self.bedrock_runtime = boto3.client('bedrock-runtime')
+        self.agent = Agent(
+            model=self.model,
+            tools=[self._semantic_search_tool, self._visual_search_tool]
+        )
+
+    @tool
+    async def _semantic_search_tool(self, query: str, limit: int = 5):
+        """Hybrid search: pgvector + tsvector/tsrank"""
+        # Generate embedding with Nova Multimodal (1024d)
+        embedding = self._generate_text_embedding(query)
+
+        # Hybrid SQL: 70% semantic + 30% lexical
+        sql = """
+            WITH semantic_search AS (
+                SELECT ..., 1 - (embedding <=> %s::vector) as semantic_score
+            ),
+            lexical_search AS (
+                SELECT ..., ts_rank(...) as lexical_score
+            )
+            SELECT ... ORDER BY (0.7 * semantic + 0.3 * lexical) DESC
+        """
+```
+
+**ProductAgent:**
+
+```python
+class ProductAgent:
+    @tool
+    async def _get_details_tool(self, product_id: str):
+        """Get product details by ID."""
+
+    @tool
+    async def _check_inventory_tool(self, product_id: str, size: str = None):
+        """Check inventory status."""
+```
+
+**OrderAgent:**
+
+```python
+class OrderAgent:
+    @tool
+    async def _calculate_total_tool(self, items: List[dict]):
+        """Calculate order total with tax and shipping."""
+
+    @tool
+    async def _process_order_tool(self, customer_id: str, items: List[dict]):
+        """Process and confirm order."""
+```
+
+**Key Points:**
+
+- Supervisor pattern with specialized agents
+- Each agent has focused tools
+- SearchAgent uses Nova Multimodal embeddings (1024d)
+- Hybrid search combines semantic (pgvector) + lexical (tsvector/tsrank)
+- Cross-modal search: same vector space for text and images
+
+---
+
+## Demo Verification Queries
+
+Use these queries to verify the progressive feature story:
+
+| Query                         | Phase 1   | Phase 2   | Phase 3   |
+| ----------------------------- | --------- | --------- | --------- |
+| `gear for my first marathon`  | 0 results | 0 results | 5 results |
+| `help me build core strength` | 0 results | 0 results | 5 results |
+| `relieve sore muscles`        | 0 results | 0 results | 5 results |
+| `running shoes`               | 4 results | 4 results | 5 results |
+| `Nike`                        | 5 results | 5 results | 5 results |
+
+The semantic queries fail in Phase 1/2 (keyword search) but succeed in Phase 3 (hybrid search with embeddings).
+
+---
+
+## Appendix A: Agent Implementation Quick Reference
+
+### Phase 1: Direct RDS Data API
+
+| Component | Agent Name    | File Path                        | Strands Tools                                     |
+| --------- | ------------- | -------------------------------- | ------------------------------------------------- |
+| Search    | `Phase1Agent` | `backend/agents/phase1/agent.py` | `@tool _search_products()` - ILIKE keyword search |
+| Order     | `Phase1Agent` | `backend/agents/phase1/agent.py` | `@tool _process_order()`                          |
+
+**Demo Query:** `gear for my first marathon` → **0 results** (keyword search fails)
+
+**Activity Panel Shows:**
+
+```
+Phase1Agent: Processing with Direct RDS Data API
+Phase1Agent: Direct RDS Data API connection
+Phase1Agent: Text search: gear for my first marathon (ILIKE query)
+Phase1Agent: Found 0 products
+```
+
+**Key Code (line ~250):**
+
+```python
+sql = "SELECT ... FROM products WHERE (name ILIKE %s OR description ILIKE %s)"
+```
+
+---
+
+### Phase 2: MCP Abstraction Layer
+
+| Component | Agent Name    | File Path                        | Strands Tools                           |
+| --------- | ------------- | -------------------------------- | --------------------------------------- |
+| Search    | `Phase2Agent` | `backend/agents/phase2/agent.py` | MCP: `connect_to_database`, `run_query` |
+| Order     | `Phase2Agent` | `backend/agents/phase2/agent.py` | MCP tools (auto-discovered)             |
+
+**Demo Query:** `gear for my first marathon` → **0 results** (still keyword search)
+
+**Activity Panel Shows:**
+
+```
+Phase2Agent: Processing with MCP (postgres-mcp-server)
+Phase2Agent: MCP: connect_to_database
+Phase2Agent: MCP: run_query (ILIKE query)
+Phase2Agent: MCP: Query completed - 0 rows
+```
+
+**Key Code (line ~70):**
+
+```python
+self.mcp_client = MCPClient(
+    server_name="postgres-mcp-server",
+    command="uvx",
+    args=["awslabs.postgres-mcp-server@latest"]
+)
+mcp_tools = await self.mcp_client.list_tools()  # Auto-discover tools
+```
+
+---
+
+### Phase 3: Multi-Agent Orchestration with Hybrid Search
+
+#### SupervisorAgent (Orchestrator)
+
+| Agent Name        | File Path                             | Role                                  |
+| ----------------- | ------------------------------------- | ------------------------------------- |
+| `SupervisorAgent` | `backend/agents/phase3/supervisor.py` | Routes requests to specialized agents |
+
+**Tools:** Delegation only (no direct DB access per requirement 11.5)
+
+- `_delegate_to_search()` → SearchAgent
+- `_delegate_to_product()` → ProductAgent
+- `_delegate_to_order()` → OrderAgent
+
+---
+
+#### SearchAgent (Semantic + Lexical Search)
+
+| Agent Name    | File Path                               | Strands Tools                                                  |
+| ------------- | --------------------------------------- | -------------------------------------------------------------- |
+| `SearchAgent` | `backend/agents/phase3/search_agent.py` | `@tool _semantic_search_tool()`, `@tool _visual_search_tool()` |
+
+**Demo Query:** `gear for my first marathon` → **5 results** (semantic understanding!)
+
+**Activity Panel Shows:**
+
+```
+SupervisorAgent: Processing with Hybrid Search (Semantic + Lexical)
+SupervisorAgent: Delegating to SearchAgent
+SearchAgent: Generating query embedding (Nova Multimodal 1024d)
+SearchAgent: Embedding generated (482ms)
+SearchAgent: Hybrid search: Semantic + Lexical (pgvector + tsvector)
+SearchAgent: pgvector HNSW + tsrank search - Found 5 products
+SupervisorAgent: SearchAgent returned 5 results
+```
+
+**Key Code (line ~180):**
+
+```python
+# Generate embedding with Nova Multimodal
+query_embedding = self._generate_text_embedding(query)
+
+# Hybrid SQL: 70% semantic + 30% lexical
+sql = """
+    WITH semantic_search AS (
+        SELECT ..., 1 - (embedding <=> %s::vector) as semantic_score
+    ),
+    lexical_search AS (
+        SELECT ..., ts_rank(...) as lexical_score
+    )
+    SELECT ... ORDER BY (0.7 * semantic + 0.3 * lexical) DESC
+"""
+```
+
+---
+
+#### ProductAgent (Inventory & Details)
+
+| Agent Name     | File Path                                | Strands Tools                                                |
+| -------------- | ---------------------------------------- | ------------------------------------------------------------ |
+| `ProductAgent` | `backend/agents/phase3/product_agent.py` | `@tool _get_details_tool()`, `@tool _check_inventory_tool()` |
+
+**Demo Query:** `Is the Nike Pegasus in stock?` → Shows inventory check
+
+**Activity Panel Shows:**
+
+```
+SupervisorAgent: Processing with Multi-Agent Orchestration
+SupervisorAgent: Delegating to ProductAgent
+ProductAgent: Finding product
+ProductAgent: Checking inventory (SQL query)
+ProductAgent: Stock verified - 66 units available
+SupervisorAgent: ProductAgent returned to Supervisor
+```
+
+**Key Code (line ~110):**
+
+```python
+@tool
+async def _check_inventory_tool(self, product_id: str, size: str = None):
+    query = "SELECT inventory, available_sizes FROM products WHERE product_id = %s"
+```
+
+---
+
+#### OrderAgent (Order Processing)
+
+| Agent Name   | File Path                              | Strands Tools                                                  |
+| ------------ | -------------------------------------- | -------------------------------------------------------------- |
+| `OrderAgent` | `backend/agents/phase3/order_agent.py` | `@tool _calculate_total_tool()`, `@tool _process_order_tool()` |
+
+**Demo Action:** Click "Order" button on any product
+
+**Activity Panel Shows:**
+
+```
+OrderAgent: Looking up product details
+OrderAgent: Found: Nike Air Zoom Pegasus 41
+OrderAgent: Checking inventory
+OrderAgent: In Stock - 46 units
+OrderAgent: Processing payment
+OrderAgent: Payment authorized
+OrderAgent: Order confirmed
+OrderAgent: Order complete
+```
+
+**Key Code (line ~150):**
+
+```python
+@tool
+async def _process_order_tool(self, customer_id: str, items: List[dict]):
+    # Calculate totals, insert order, insert order items
+    order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+    await self.db.execute("INSERT INTO orders ...")
+```
+
+---
+
+## Appendix B: Demo Flow Cheat Sheet
+
+### Recommended Demo Sequence
+
+1. **Phase 1 - Show Limitation**
+
+   ```
+   Query: "gear for my first marathon"
+   Result: 0 products (keyword search fails)
+   Point: "Phase 1 can't understand semantic intent"
+   ```
+
+2. **Phase 2 - Same Result, Better Architecture**
+
+   ```
+   Query: "gear for my first marathon"
+   Result: 0 products (still keyword search)
+   Point: "MCP provides abstraction, but search is still keyword-based"
+   ```
+
+3. **Phase 3 - Semantic Understanding**
+
+   ```
+   Query: "gear for my first marathon"
+   Result: 5 products (running shoes, apparel, accessories)
+   Point: "Hybrid search understands marathon training intent"
+   ```
+
+4. **Phase 3 - ProductAgent Demo**
+
+   ```
+   Query: "Is the Nike Pegasus in stock?"
+   Result: Inventory check with stock count
+   Point: "Supervisor delegates to specialized ProductAgent"
+   ```
+
+5. **Phase 3 - OrderAgent Demo**
+   ```
+   Action: Click "Order" on any product
+   Result: Full order workflow with confirmation
+   Point: "OrderAgent handles the complete transaction"
+   ```
+
+### Quick Test Commands
+
+```bash
+# Phase 1 - Keyword search (fails for semantic)
+curl -s -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "gear for my first marathon", "phase": 1}'
+
+# Phase 2 - MCP abstraction (still fails)
+curl -s -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "gear for my first marathon", "phase": 2}'
+
+# Phase 3 - Hybrid search (succeeds!)
+curl -s -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "gear for my first marathon", "phase": 3}'
+
+# Phase 3 - ProductAgent (inventory check)
+curl -s -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Is the Nike Pegasus in stock?", "phase": 3}'
+
+# Phase 3 - OrderAgent (place order)
+curl -s -X POST http://localhost:8000/api/chat/order \
+  -H "Content-Type: application/json" \
+  -d '{"product_id": "RUN-001", "size": "10", "quantity": 1, "phase": 3}'
+```
+
+### Key Files to Show During Code Walkthrough
+
+| Phase | File                                     | Key Lines | What to Show                     |
+| ----- | ---------------------------------------- | --------- | -------------------------------- |
+| 1     | `backend/agents/phase1/agent.py`         | 92-120    | `@tool` decorators, ILIKE search |
+| 2     | `backend/agents/phase2/agent.py`         | 70-95     | MCPClient setup, auto-discovery  |
+| 3     | `backend/agents/phase3/supervisor.py`    | 60-90     | Delegation pattern               |
+| 3     | `backend/agents/phase3/search_agent.py`  | 130-180   | Nova embeddings, hybrid SQL      |
+| 3     | `backend/agents/phase3/product_agent.py` | 100-130   | Inventory tools                  |
+| 3     | `backend/agents/phase3/order_agent.py`   | 140-180   | Order processing                 |

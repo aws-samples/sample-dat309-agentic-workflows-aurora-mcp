@@ -90,7 +90,7 @@ class Phase1Agent:
     
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the shopping assistant."""
-        return """You are a helpful shopping assistant for ClickShop, an athletic and fitness equipment store.
+        return """You are a helpful shopping assistant for AgentStride, an athletic and fitness equipment store.
 
 Your capabilities:
 - Look up product details by ID or search for products

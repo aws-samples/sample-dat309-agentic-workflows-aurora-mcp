@@ -1,9 +1,9 @@
 """
-Initialize Aurora PostgreSQL database schema for ClickShop Enhancement
-Includes pgvector for semantic and visual search with Nova 2 Multimodal embeddings (3072 dimensions)
+Initialize Aurora PostgreSQL database schema for AgentStride
+Includes pgvector for semantic and visual search with Nova Multimodal embeddings (1024 dimensions)
 
 Requirements covered:
-- 2.1: products table with embedding (vector 3072 dimensions)
+- 2.1: products table with embedding (vector 1024 dimensions)
 - 2.2: customers table
 - 2.3: orders table
 - 2.4: order_items table
@@ -25,7 +25,7 @@ SECRET_ARN = os.getenv('AURORA_SECRET_ARN')
 DATABASE = os.getenv('AURORA_DATABASE', 'clickshop')
 REGION = os.getenv('BEDROCK_REGION', 'us-east-1')
 
-# Complete database schema for ClickShop Enhancement
+# Complete database schema for AgentStride
 SCHEMA_SQL = """
 -- Enable pgvector extension for embeddings
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -38,9 +38,9 @@ DROP TABLE IF EXISTS products CASCADE;
 DROP TABLE IF EXISTS agent_analytics CASCADE;
 DROP TABLE IF EXISTS inventory_transactions CASCADE;
 
--- Products table with Nova 2 Multimodal embeddings (3072 dimensions)
+-- Products table with Nova Multimodal embeddings (1024 dimensions)
 -- Requirement 2.1: products table with columns: product_id, name, category, price, brand, 
--- description, image_url, available_sizes, inventory, embedding (vector 3072 dimensions), created_at, updated_at
+-- description, image_url, available_sizes, inventory, embedding (vector 1024 dimensions), created_at, updated_at
 CREATE TABLE products (
     product_id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -51,7 +51,7 @@ CREATE TABLE products (
     image_url VARCHAR(500),
     available_sizes JSONB,
     inventory JSONB NOT NULL,
-    embedding vector(3072),  -- Nova 2 Multimodal embedding
+    embedding vector(1024),  -- Nova Multimodal embedding
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -102,9 +102,9 @@ WITH (m = 16, ef_construction = 64);
 
 -- Comments for documentation
 COMMENT ON TABLE products IS 'Product catalog with Nova 2 Multimodal vector embeddings for semantic and visual search';
-COMMENT ON COLUMN products.embedding IS 'Vector embedding for semantic/visual product search (3072-dim Nova 2 Multimodal)';
+COMMENT ON COLUMN products.embedding IS 'Vector embedding for semantic/visual product search (1024-dim Nova Multimodal)';
 COMMENT ON TABLE customers IS 'Customer information for order processing';
-COMMENT ON TABLE orders IS 'Customer orders processed by ClickShop agents';
+COMMENT ON TABLE orders IS 'Customer orders processed by AgentStride agents';
 COMMENT ON TABLE order_items IS 'Individual items within customer orders';
 """
 
@@ -114,7 +114,7 @@ SEMANTIC_SEARCH_FUNCTION_SQL = """
 -- Semantic product search function using cosine similarity
 -- Requirement 2.6: semantic_product_search SQL function for cosine similarity search on product embeddings
 CREATE OR REPLACE FUNCTION semantic_product_search(
-    query_embedding vector(3072),
+    query_embedding vector(1024),
     result_limit integer DEFAULT 5
 ) RETURNS TABLE (
     product_id varchar,
@@ -166,8 +166,8 @@ def execute_sql(client, sql: str, description: str = ""):
 
 
 def initialize_database():
-    """Initialize Aurora database with schema for ClickShop Enhancement using RDS Data API"""
-    console.print("\n[bold blue]🚀 Initializing Aurora PostgreSQL Database for ClickShop Enhancement[/bold blue]")
+    """Initialize Aurora database with schema for AgentStride using RDS Data API"""
+    console.print("\n[bold blue]🚀 Initializing Aurora PostgreSQL Database for AgentStride[/bold blue]")
     console.print(f"Cluster ARN: {CLUSTER_ARN}")
     console.print(f"Database: {DATABASE}\n")
     
@@ -332,7 +332,7 @@ def initialize_database():
         
         table.add_row("Tables Created", ", ".join(tables) if tables else "products, customers, orders, order_items")
         table.add_row("pgvector Extension", vector_version)
-        table.add_row("Embedding Dimension", "1024 (Titan Text Embeddings)")
+        table.add_row("Embedding Dimension", "1024 (Nova Multimodal Embeddings)")
         table.add_row("HNSW Index", "✅ Created")
         table.add_row("semantic_product_search", "✅ Created")
         

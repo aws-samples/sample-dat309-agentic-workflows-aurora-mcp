@@ -12,6 +12,18 @@ import { ChatMessage } from '../hooks/useChat'
 import ProductCard from './ProductCard'
 import OrderConfirmation from './OrderConfirmation'
 
+// Simple markdown renderer for bold text and line breaks
+function renderMarkdown(text: string): React.ReactNode {
+  // Split by **bold** pattern and render
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={`bold-${index}`} style={{ fontWeight: 600 }}>{part.slice(2, -2)}</strong>
+    }
+    return <span key={`text-${index}`}>{part}</span>
+  })
+}
+
 interface ChatInterfaceProps {
   phase: 1 | 2 | 3
   messages: ChatMessage[]
@@ -26,11 +38,24 @@ const phaseConfig = {
   3: { color: 'var(--phase-3)', name: 'Multi-Agent', emoji: '🤖' },
 }
 
-const suggestions = [
-  { icon: Search, text: 'Running shoes under $150' },
-  { icon: Package, text: 'Nike' },
-  { icon: ShoppingBag, text: 'Fitness equipment' },
-]
+// Phase-specific suggestions to showcase different capabilities
+const phaseSuggestions = {
+  1: [
+    { icon: Search, text: 'Running shoes' },
+    { icon: Package, text: 'Nike' },
+    { icon: ShoppingBag, text: 'Fitness equipment' },
+  ],
+  2: [
+    { icon: Search, text: 'Running shoes' },
+    { icon: Package, text: 'Nike' },
+    { icon: ShoppingBag, text: 'Fitness equipment' },
+  ],
+  3: [
+    { icon: Search, text: 'Gear for my first marathon' },  // SearchAgent - semantic
+    { icon: Package, text: 'Is the Nike Pegasus in stock?' },  // ProductAgent - inventory
+    { icon: ShoppingBag, text: 'Help with muscle recovery' },  // SearchAgent - semantic
+  ],
+}
 
 export default function ChatInterface({
   phase,
@@ -132,7 +157,7 @@ export default function ChatInterface({
               <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
                 Try asking:
               </span>
-              {suggestions.map((suggestion, i) => (
+              {phaseSuggestions[phase].map((suggestion, i) => (
                 <motion.button
                   key={i}
                   onClick={() => handleSuggestionClick(suggestion.text)}
@@ -169,7 +194,7 @@ export default function ChatInterface({
                       color: message.role === 'user' ? 'white' : 'var(--text-primary)'
                     }}
                   >
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderMarkdown(message.content)}</p>
                     
                     {message.products && message.products.length > 0 && (
                       <div className="mt-4 grid gap-3">

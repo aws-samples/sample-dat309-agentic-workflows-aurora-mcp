@@ -1,7 +1,7 @@
 """
-Property-based tests for ClickShop Enhancement - Embedding Properties
+Property-based tests for AgentStride - Embedding Properties
 
-# Feature: clickshop-enhancement, Property 1: Embedding Dimension Consistency
+# Feature: agentstride, Property 1: Embedding Dimension Consistency
 
 This module contains property-based tests using Hypothesis to verify
 that all product embeddings conform to the expected 1024 dimensions

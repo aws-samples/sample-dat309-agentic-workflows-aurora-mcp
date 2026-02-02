@@ -1,5 +1,5 @@
 """
-Product Tools for ClickShop agents.
+Product Tools for AgentStride agents.
 
 Provides tools for product lookup and catalog operations.
 """

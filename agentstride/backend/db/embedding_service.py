@@ -1,5 +1,5 @@
 """
-Embedding Service for ClickShop.
+Embedding Service for AgentStride.
 
 Provides Nova Multimodal Embeddings for semantic search.
 Uses amazon.nova-2-multimodal-embeddings-v1:0 with 1024 dimensions.

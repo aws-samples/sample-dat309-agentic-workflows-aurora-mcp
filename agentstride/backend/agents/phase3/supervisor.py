@@ -88,7 +88,7 @@ class SupervisorAgent:
     
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the supervisor."""
-        return """You are a supervisor agent for ClickShop, coordinating specialized agents to help customers.
+        return """You are a supervisor agent for AgentStride, coordinating specialized agents to help customers.
 
 You have three specialized agents you can delegate to:
 1. Search Agent - For finding products via semantic text search or visual image search

@@ -1,5 +1,5 @@
 """
-Embedding Tools for ClickShop agents.
+Embedding Tools for AgentStride agents.
 
 Provides Amazon Nova Multimodal embedding generation for text and images.
 Uses the same model for both modalities enabling cross-modal search.

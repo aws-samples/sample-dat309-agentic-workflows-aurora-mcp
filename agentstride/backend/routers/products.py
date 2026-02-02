@@ -1,5 +1,5 @@
 """
-Products API Router for ClickShop.
+Products API Router for AgentStride.
 
 Handles product catalog retrieval using RDS Data API.
 """

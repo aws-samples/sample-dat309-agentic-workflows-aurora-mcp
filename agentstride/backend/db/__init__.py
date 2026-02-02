@@ -1,5 +1,5 @@
 """
-Database layer for ClickShop.
+Database layer for AgentStride.
 
 Contains:
 - rds_data_client.py: RDS Data API client for Aurora PostgreSQL (Phase 1 & 3)

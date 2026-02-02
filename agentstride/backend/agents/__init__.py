@@ -1,5 +1,5 @@
 """
-Agent implementations for ClickShop.
+Agent implementations for AgentStride.
 
 Contains:
 - phase1/: Single agent with direct database access

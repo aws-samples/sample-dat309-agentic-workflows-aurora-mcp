@@ -1,5 +1,5 @@
 """
-Tool library for ClickShop agents.
+Tool library for AgentStride agents.
 
 Contains:
 - product_tools.py: Product lookup and search tools

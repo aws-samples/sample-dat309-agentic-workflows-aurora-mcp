@@ -50,12 +50,31 @@ export function AgentSection() {
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [followUps, setFollowUps] = useState<string[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [showCart, setShowCart] = useState(false);
-  const [cartAnimation, setCartAnimation] = useState(false);
+  const [phaseTransition, setPhaseTransition] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  // Cart state - setCart is used but cart value not read directly (used in callback)
+  const [, setCart] = useState<CartItem[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_cartAnimation, setCartAnimation] = useState(false);
   const chatEnd = useRef<HTMLDivElement>(null);
   const activityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pc = phaseColors[phase - 1];
+
+  // Check backend connection on mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/health');
+        setConnectionStatus(response.ok ? 'connected' : 'disconnected');
+      } catch {
+        setConnectionStatus('disconnected');
+      }
+    };
+    checkConnection();
+    // Re-check every 30 seconds
+    const interval = setInterval(checkConnection, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Phase-specific delays (ms) - Phase 1 slower to show process, Phase 3 faster
   const phaseDelays = { 1: 600, 2: 450, 3: 350 };
@@ -192,12 +211,13 @@ export function AgentSection() {
       });
     } catch (error) {
       console.error('Chat error:', error);
+      setConnectionStatus('disconnected');
       setMsgs((p) => [
         ...p,
         {
           role: 'bot',
           type: 'text',
-          text: 'Sorry, I encountered an error. Please try again.',
+          text: 'Unable to connect to the backend. Please ensure the server is running on localhost:8000.',
         },
       ]);
       setTyping(false);
@@ -210,6 +230,10 @@ export function AgentSection() {
       clearTimeout(activityTimerRef.current);
       activityTimerRef.current = null;
     }
+    // Trigger phase transition animation
+    setPhaseTransition(true);
+    setTimeout(() => setPhaseTransition(false), 600);
+    
     setPhase((i + 1) as 1 | 2 | 3);
     setMsgs([]);
     setActs([]);
@@ -218,6 +242,30 @@ export function AgentSection() {
     setFollowUps([]);
     setTyping(false);
   };
+
+  // Clear chat helper function
+  const clearChat = () => {
+    setMsgs([]);
+    setActs([]);
+    setPendingActs([]);
+    setCurrentStep(-1);
+    setFollowUps([]);
+    if (activityTimerRef.current) {
+      clearTimeout(activityTimerRef.current);
+      activityTimerRef.current = null;
+    }
+  };
+
+  // Keyboard shortcuts - Escape to clear chat
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && msgs.length > 0) {
+        clearChat();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [msgs.length]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -325,10 +373,6 @@ export function AgentSection() {
     ]);
   };
 
-  // Calculate cart totals
-  const cartTotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-
   // Phase-specific suggestions to demonstrate capabilities and limitations
   const phaseSuggestions: Record<1 | 2 | 3, { works: string[]; breaks: string[]; hint: string }> = {
     1: {
@@ -396,7 +440,10 @@ export function AgentSection() {
                       ? `1.5px solid ${phaseColors[i]}40`
                       : '1.5px solid rgba(255,255,255,0.06)',
                   background: phase === i + 1 ? `${phaseColors[i]}12` : 'rgba(255,255,255,0.02)',
-                  color: phase === i + 1 ? phaseColors[i] : '#475569',
+                  color: phase === i + 1 ? phaseColors[i] : '#64748b',
+                  transform: phase === i + 1 && phaseTransition ? 'scale(1.05)' : 'scale(1)',
+                  boxShadow: phase === i + 1 && phaseTransition ? `0 0 20px ${phaseColors[i]}40` : 'none',
+                  transition: 'all 0.3s ease',
                 }}
               >
                 {label}
@@ -454,22 +501,72 @@ export function AgentSection() {
         <FadeIn delay={0.2}>
           <div className="agent-grid">
             {/* Chat Panel */}
-            <div className="chat-panel">
+            <div 
+              className="chat-panel"
+              style={{
+                transition: 'box-shadow 0.6s ease, border-color 0.6s ease',
+                boxShadow: phaseTransition ? `0 0 30px ${pc}30, inset 0 0 20px ${pc}10` : 'none',
+                borderColor: phaseTransition ? `${pc}40` : 'rgba(255,255,255,0.06)',
+              }}
+            >
               <div className="chat-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
                   <div
                     className="status-dot"
-                    style={{ background: pc, boxShadow: `0 0 8px ${pc}` }}
+                    title={connectionStatus === 'connected' ? 'Backend connected' : connectionStatus === 'checking' ? 'Checking connection...' : 'Backend disconnected'}
+                    style={{ 
+                      background: connectionStatus === 'connected' ? pc : connectionStatus === 'checking' ? '#f59e0b' : '#ef4444', 
+                      boxShadow: `0 0 8px ${connectionStatus === 'connected' ? pc : connectionStatus === 'checking' ? '#f59e0b' : '#ef4444'}` 
+                    }}
                   />
                   <span className="chat-title">Shopping Assistant</span>
+                  {connectionStatus === 'disconnected' && (
+                    <span style={{ 
+                      fontSize: 9, 
+                      color: '#ef4444', 
+                      background: 'rgba(239, 68, 68, 0.1)', 
+                      padding: '2px 6px', 
+                      borderRadius: 4,
+                      fontFamily: 'SF Mono, monospace',
+                    }}>
+                      Offline
+                    </span>
+                  )}
                 </div>
+                {msgs.length > 0 && (
+                  <button
+                    onClick={clearChat}
+                    title="Press Escape to clear"
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: 10,
+                      fontWeight: 500,
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 6,
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                      e.currentTarget.style.color = '#cbd5e1';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                      e.currentTarget.style.color = '#94a3b8';
+                    }}
+                  >
+                    Clear ⎋
+                  </button>
+                )}
               </div>
 
               <div className="chat-messages">
                 {msgs.length === 0 && !typing && (
                   <div className="chat-empty">
                     <div style={{ fontSize: 36, opacity: 0.3 }}>💬</div>
-                    <p style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                    <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>
                       {currentPhaseSuggestions.hint}
                     </p>
 
@@ -526,7 +623,9 @@ export function AgentSection() {
                   <div
                     key={i}
                     className={`message ${m.role}`}
-                    style={m.role === 'user' ? { background: pc } : undefined}
+                    style={m.role === 'user' ? { 
+                      background: `linear-gradient(135deg, ${pc} 0%, ${pc}dd 100%)`,
+                    } : undefined}
                   >
                     {m.role === 'user' ? (
                       m.text
@@ -550,8 +649,18 @@ export function AgentSection() {
                             />
                             <div style={{ flex: 1 }}>
                               <div className="product-result-name">{pr.name}</div>
-                              <div className="product-result-meta">
-                                ${pr.price.toFixed(2)} · {pr.brand}
+                              <div className="product-result-meta" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span>${pr.price.toFixed(2)} · {pr.brand}</span>
+                                <span style={{
+                                  fontSize: 9,
+                                  fontWeight: 600,
+                                  padding: '2px 6px',
+                                  borderRadius: 4,
+                                  background: 'rgba(16, 185, 129, 0.15)',
+                                  color: '#10b981',
+                                }}>
+                                  ✓ In Stock
+                                </span>
                               </div>
                             </div>
                             {pr.similarity && (
@@ -813,8 +922,34 @@ export function AgentSection() {
               <div className="activity-feed">
                 {acts.length === 0 && currentStep < 0 && (
                   <div className="activity-empty">
-                    <div style={{ fontSize: 28 }}>⊘</div>
-                    <div>Waiting for activity</div>
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: 6, 
+                      marginBottom: 12,
+                    }}>
+                      {[0, 1, 2].map((i) => (
+                        <div
+                          key={i}
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: pc,
+                            opacity: 0.4,
+                            animation: `pulse 1.5s ease-in-out ${i * 0.2}s infinite`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div style={{ color: '#64748b' }}>Waiting for activity</div>
+                    <div style={{ 
+                      fontSize: 10, 
+                      color: '#475569', 
+                      marginTop: 4,
+                      fontFamily: 'SF Mono, monospace',
+                    }}>
+                      Send a query to see agent operations
+                    </div>
                   </div>
                 )}
 
@@ -857,7 +992,7 @@ export function AgentSection() {
                             <div style={{
                               fontSize: 9,
                               fontFamily: 'SF Mono, monospace',
-                              color: '#475569',
+                              color: '#94a3b8',
                               marginTop: 2,
                             }}>
                               {a.agent_file}
@@ -883,7 +1018,7 @@ export function AgentSection() {
                           borderLeft: `2px solid ${pc}20`,
                           fontSize: 10,
                           fontFamily: 'SF Mono, monospace',
-                          color: '#64748b',
+                          color: '#94a3b8',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'

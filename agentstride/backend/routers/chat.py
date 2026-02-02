@@ -1,5 +1,5 @@
 """
-Chat API Router for ClickShop.
+Chat API Router for AgentStride.
 
 Handles chat interactions with the AI shopping assistant across all three phases:
 - Phase 1: Direct RDS Data API connection (simple SQL queries)
@@ -582,6 +582,165 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
         return await phase1_search(query, limit)
 
 
+# =============================================================================
+# PHASE 3: ProductAgent - Inventory and Product Details
+# Handles stock checks and detailed product information
+# =============================================================================
+
+async def phase3_inventory_check(query: str) -> tuple[List[Product], List[ActivityEntry], str]:
+    """
+    Phase 3: ProductAgent handles inventory and stock queries.
+    Supervisor delegates to ProductAgent for stock/availability questions.
+    
+    Returns: (products, activities, message)
+    """
+    activities = []
+    start_time = datetime.utcnow()
+    
+    db = get_rds_data_client()
+    
+    # Step 0: Supervisor delegates to ProductAgent
+    activities.append(create_activity(
+        activity_type="reasoning",
+        title="Delegating to ProductAgent",
+        details="Supervisor routing inventory request to specialized agent",
+        agent_name="SupervisorAgent",
+        agent_file="agents/phase3/supervisor.py"
+    ))
+    
+    # Extract product name from query
+    query_lower = query.lower()
+    
+    # Try to find the product mentioned
+    activities.append(create_activity(
+        activity_type="search",
+        title="ProductAgent: Finding product",
+        details="Searching for mentioned product",
+        agent_name="ProductAgent",
+        agent_file="agents/phase3/product_agent.py"
+    ))
+    
+    # Search for the product by name similarity
+    sql = """
+        SELECT product_id, name, brand, price, description, 
+               image_url, category, available_sizes, inventory
+        FROM products
+        WHERE LOWER(name) LIKE %s OR LOWER(brand) LIKE %s
+        LIMIT 1
+    """
+    
+    # Extract key terms from query
+    search_terms = []
+    for word in query_lower.split():
+        if word not in ['is', 'the', 'in', 'stock', 'available', 'do', 'you', 'have', 'check', 'what', 'sizes', 'for']:
+            search_terms.append(word)
+    
+    results = []
+    for term in search_terms:
+        results = await db.execute(sql, (f'%{term}%', f'%{term}%'))
+        if results:
+            break
+    
+    search_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+    
+    if not results:
+        activities.append(create_activity(
+            activity_type="result",
+            title="ProductAgent: Product not found",
+            execution_time_ms=search_time,
+            agent_name="ProductAgent",
+            agent_file="agents/phase3/product_agent.py"
+        ))
+        
+        activities.append(create_activity(
+            activity_type="result",
+            title="ProductAgent returned to Supervisor",
+            details="No matching product found",
+            agent_name="SupervisorAgent",
+            agent_file="agents/phase3/supervisor.py"
+        ))
+        
+        return [], activities, "I couldn't find that specific product. Try searching for it by name or category."
+    
+    product = results[0]
+    inventory = product.get('inventory', {})
+    
+    # Check inventory
+    activities.append(create_activity(
+        activity_type="inventory",
+        title=f"ProductAgent: Checking inventory",
+        details=f"Product: {product['name']}",
+        sql_query="SELECT inventory, available_sizes FROM products WHERE product_id = ?",
+        agent_name="ProductAgent",
+        agent_file="agents/phase3/product_agent.py"
+    ))
+    
+    # Calculate total stock
+    if isinstance(inventory, dict):
+        if 'quantity' in inventory:
+            total_stock = inventory['quantity']
+        else:
+            total_stock = sum(inventory.values()) if inventory else 0
+    else:
+        total_stock = 0
+    
+    inventory_time = int((datetime.utcnow() - start_time).total_seconds() * 1000) - search_time
+    
+    activities.append(create_activity(
+        activity_type="result",
+        title=f"ProductAgent: Stock verified",
+        details=f"Total: {total_stock} units available",
+        execution_time_ms=inventory_time,
+        agent_name="ProductAgent",
+        agent_file="agents/phase3/product_agent.py"
+    ))
+    
+    # ProductAgent returns to Supervisor
+    activities.append(create_activity(
+        activity_type="result",
+        title="ProductAgent returned to Supervisor",
+        details=f"Inventory check complete for {product['name']}",
+        agent_name="SupervisorAgent",
+        agent_file="agents/phase3/supervisor.py"
+    ))
+    
+    # Build response message
+    available_sizes = product.get('available_sizes', [])
+    if total_stock > 0:
+        if available_sizes:
+            sizes_str = ', '.join(available_sizes[:5])
+            message = f"**{product['name']}** is in stock! We have {total_stock} units available in sizes: {sizes_str}."
+        else:
+            message = f"**{product['name']}** is in stock with {total_stock} units available."
+    else:
+        message = f"**{product['name']}** is currently out of stock. Would you like me to find similar alternatives?"
+    
+    # Return the product
+    products = [Product(
+        product_id=product['product_id'],
+        name=product['name'],
+        brand=product['brand'] or '',
+        price=float(product['price']),
+        description=product['description'] or '',
+        image_url=product['image_url'] or '',
+        category=product['category'],
+        available_sizes=available_sizes
+    )]
+    
+    return products, activities, message
+
+
+def is_inventory_query(query: str) -> bool:
+    """Check if the query is asking about inventory/stock."""
+    query_lower = query.lower()
+    inventory_patterns = [
+        'in stock', 'available', 'do you have', 'check stock',
+        'inventory', 'how many', 'what sizes', 'size available',
+        'is the', 'is there', 'got any'
+    ]
+    return any(pattern in query_lower for pattern in inventory_patterns)
+
+
 @router.post("", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
     """
@@ -590,9 +749,45 @@ async def chat(request: ChatRequest) -> ChatResponse:
     Routes to appropriate search implementation based on phase:
     - Phase 1: Direct RDS Data API
     - Phase 2: Via MCP abstraction
-    - Phase 3: Hybrid semantic + lexical search
+    - Phase 3: Multi-agent orchestration
+      - SearchAgent: Semantic search queries
+      - ProductAgent: Inventory/stock queries
+      - OrderAgent: Order processing (via /order endpoint)
     """
     activities = []
+
+    # Phase 3: Check if this is an inventory query -> route to ProductAgent
+    if request.phase == 3 and is_inventory_query(request.message):
+        activities.append(create_activity(
+            activity_type="reasoning",
+            title="Processing with Multi-Agent Orchestration",
+            details=f"Query: {request.message[:80]}{'...' if len(request.message) > 80 else ''}",
+            agent_name="SupervisorAgent",
+            agent_file="agents/phase3/supervisor.py"
+        ))
+        
+        try:
+            products, inventory_activities, message = await phase3_inventory_check(request.message)
+            activities.extend(inventory_activities)
+            
+            follow_ups = ["Show me similar products", "What other sizes do you have?", "Find me alternatives"]
+            
+            return ChatResponse(
+                message=message,
+                products=products if products else None,
+                order=None,
+                activities=activities,
+                follow_ups=follow_ups
+            )
+        except Exception as e:
+            activities.append(create_activity(
+                activity_type="error",
+                title="ProductAgent error",
+                details=str(e),
+                agent_name="ProductAgent",
+                agent_file="agents/phase3/product_agent.py"
+            ))
+            # Fall through to regular search
 
     phase_configs = {
         1: ("Phase1Agent", "Direct RDS Data API", phase1_search, "agents/phase1/agent.py"),
@@ -627,7 +822,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         else:
             # Phase-aware no-results message
             if request.phase in [1, 2]:
-                message = "No results found. Phase 1/2 uses keyword matching only. Try specific terms like 'running shoes' or 'Nike', or switch to **Phase 3** for natural language search."
+                message = "No results found. Phase 1/2 uses keyword matching only. Try specific terms like 'running shoes' or 'Nike', or switch to Phase 3 for natural language search."
             else:
                 message = "I couldn't find exact matches. Try different terms or browse our categories."
 
@@ -797,8 +992,8 @@ async def process_order(request: OrderRequest) -> OrderResponse:
 
     # Determine agent config based on phase
     phase_configs = {
-        1: ("OrderAgent", "agents/phase1/agent.py"),
-        2: ("OrderAgent", "agents/phase2/agent.py"),
+        1: ("Phase1Agent", "agents/phase1/agent.py"),
+        2: ("Phase2Agent", "agents/phase2/agent.py"),
         3: ("OrderAgent", "agents/phase3/order_agent.py"),
     }
     agent_name, agent_file = phase_configs[request.phase]

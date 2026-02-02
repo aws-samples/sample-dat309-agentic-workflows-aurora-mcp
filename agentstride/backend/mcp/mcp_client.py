@@ -1,5 +1,5 @@
 """
-MCP (Model Context Protocol) Client for ClickShop.
+MCP (Model Context Protocol) Client for AgentStride.
 
 Provides integration with awslabs.postgres-mcp-server for Phase 2 database operations.
 This enables the same search functionality as Phase 1, but through the MCP protocol.

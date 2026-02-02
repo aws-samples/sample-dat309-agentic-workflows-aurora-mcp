@@ -1,5 +1,5 @@
 """
-Agent Factory for ClickShop.
+Agent Factory for AgentStride.
 
 Creates phase-specific agents based on the requested architecture pattern.
 """

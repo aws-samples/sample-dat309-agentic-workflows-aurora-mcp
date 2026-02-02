@@ -1,5 +1,5 @@
 """
-API Routers for ClickShop Backend.
+API Routers for AgentStride Backend.
 
 Contains route handlers for:
 - chat: Chat endpoints for agent interactions

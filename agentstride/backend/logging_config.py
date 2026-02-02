@@ -1,5 +1,5 @@
 """
-Structured logging configuration for ClickShop backend.
+Structured logging configuration for AgentStride backend.
 
 Provides JSON-formatted logs for production and readable logs for development.
 """

@@ -1,5 +1,5 @@
 """
-Order Tools for ClickShop agents.
+Order Tools for AgentStride agents.
 
 Provides tools for order processing and management.
 """

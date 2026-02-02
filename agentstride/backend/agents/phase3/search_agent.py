@@ -48,8 +48,8 @@ class SearchAgent:
     
     Requirements:
     - 11.2: Search_Agent specialized in semantic and visual product search
-    - 11.6: Performs semantic search using Nova 2 Multimodal embeddings (3072 dims)
-    - 11.7: Generates embedding from image using Nova 2 Multimodal for visual search
+    - 11.6: Performs semantic search using Nova Multimodal embeddings (1024 dims)
+    - 11.7: Generates embedding from image using Nova Multimodal for visual search
     - 11.8: Uses same vector space for text and image embeddings (cross-modal search)
     """
     

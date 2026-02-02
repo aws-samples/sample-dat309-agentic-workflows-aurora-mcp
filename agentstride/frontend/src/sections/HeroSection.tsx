@@ -28,8 +28,8 @@ export function HeroSection({ scrollY }: HeroSectionProps) {
       setTimeout(() => {
         setCurrentImageIndex((prev) => (prev + 1) % backgroundImages.length);
         setIsTransitioning(false);
-      }, 500); // Half of transition duration
-    }, 6000); // Change every 6 seconds
+      }, 400); // Half of transition duration
+    }, 4000); // Change every 4 seconds for more dynamic feel
 
     return () => clearInterval(interval);
   }, []);
@@ -66,10 +66,10 @@ export function HeroSection({ scrollY }: HeroSectionProps) {
           backgroundImage: `url(${backgroundImages[currentImageIndex]})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          opacity: isTransitioning ? 0.06 : 0.12,
-          filter: `blur(${2 + blur * 0.5}px)`,
+          opacity: isTransitioning ? 0.12 : 0.22,
+          filter: `blur(${1.5 + blur * 0.4}px)`,
           transform: `scale(${1.1 + scrollY * 0.0002})`,
-          transition: 'opacity 1s ease-in-out, background-image 0.5s ease-in-out',
+          transition: 'opacity 0.8s ease-in-out, background-image 0.4s ease-in-out',
         }}
       />
 

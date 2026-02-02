@@ -1,5 +1,5 @@
 """
-Pytest configuration for ClickShop Enhancement tests.
+Pytest configuration for AgentStride tests.
 
 Configures Hypothesis settings and shared fixtures for property-based testing.
 """

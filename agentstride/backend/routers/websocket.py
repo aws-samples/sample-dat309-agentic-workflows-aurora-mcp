@@ -1,5 +1,5 @@
 """
-WebSocket Router for ClickShop.
+WebSocket Router for AgentStride.
 
 Handles real-time activity streaming to the frontend.
 """
