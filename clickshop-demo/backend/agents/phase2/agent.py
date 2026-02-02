@@ -63,26 +63,33 @@ class Phase2Agent:
         """
         self.activity_callback = activity_callback or (lambda x: None)
         
-        # Initialize Bedrock model - Claude Sonnet 4.5
+        # Initialize Bedrock model - Claude Sonnet 4.5 (cross-region inference)
         # Requirement 10.3
         self.model = BedrockModel(
-            model_id="anthropic.claude-sonnet-4-5-20250929-v1:0",
+            model_id="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
         
         # Initialize MCP client for postgres-mcp-server
         # Requirement 10.2
+        # The MCP server is configured without connection args - connection is established
+        # via connect_to_database tool with connection_method: "rdsapi"
         self.mcp_client = MCPClient(
             server_name="postgres-mcp-server",
             command="uvx",
-            args=[
-                "awslabs.postgres-mcp-server@latest",
-                "--cluster-arn", os.getenv("AURORA_CLUSTER_ARN", ""),
-                "--secret-arn", os.getenv("AURORA_SECRET_ARN", ""),
-                "--database", os.getenv("AURORA_DATABASE", "clickshop"),
-                "--region", os.getenv("AWS_DEFAULT_REGION", "us-east-1")
-            ]
+            args=["awslabs.postgres-mcp-server@latest"]
         )
+        
+        # Store connection parameters for database connection
+        self.db_config = {
+            "region": os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
+            "database_type": "APG",  # Aurora PostgreSQL
+            "connection_method": "rdsapi",
+            "cluster_identifier": os.getenv("AURORA_CLUSTER_IDENTIFIER", ""),
+            "db_endpoint": os.getenv("AURORA_CLUSTER_ENDPOINT", ""),
+            "database": os.getenv("AURORA_DATABASE", "clickshop"),
+            "port": 5432
+        }
         
         # Create agent - tools will be auto-discovered from MCP server
         # Requirement 10.4
@@ -102,6 +109,17 @@ class Phase2Agent:
             title="MCP server connected",
             details=f"Discovered {len(mcp_tools)} tools from postgres-mcp-server"
         )
+        
+        # Establish database connection via MCP connect_to_database tool
+        # This uses RDS Data API (connection_method: "rdsapi")
+        connect_tool = next((t for t in mcp_tools if t.name == "connect_to_database"), None)
+        if connect_tool:
+            await connect_tool(**self.db_config)
+            self._log_activity(
+                activity_type="mcp",
+                title="Database connection established",
+                details=f"Connected to {self.db_config['database']} via RDS Data API"
+            )
         
         # Create agent with discovered MCP tools
         self.agent = Agent(

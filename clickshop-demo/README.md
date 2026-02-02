@@ -62,9 +62,9 @@ The frontend includes a mock mode toggle for offline demos. When enabled:
 
 ### Phase 1: Direct Database Access
 
-- Single Strands agent with Claude Sonnet 4.5
+- Single Strands agent with Claude Sonnet 4.5 (cross-region inference)
 - RDS Data API for Aurora PostgreSQL access
-- Custom tools for product lookup, inventory, orders
+- Custom tools: lookup_product, search_products, check_inventory, calculate_total, process_order
 
 ### Phase 2: MCP Abstraction
 
@@ -74,11 +74,12 @@ The frontend includes a mock mode toggle for offline demos. When enabled:
 
 ### Phase 3: Multi-Agent System
 
-- Supervisor agent orchestrating specialized agents
-- Search Agent with Nova 2 Multimodal embeddings
+- Supervisor agent orchestrating specialized agents (no direct tools)
+- Search Agent with Amazon Nova Multimodal Embeddings - 1024 dimensions
 - Product Agent for inventory and details
 - Order Agent for processing
-- Visual search capability with image upload
+- Visual search capability with image upload (same embedding model for cross-modal search)
+- pgvector HNSW index for semantic similarity search
 
 ## Project Structure
 
@@ -119,6 +120,6 @@ clickshop-demo/
 
 - **Frontend**: React 18, Tailwind CSS, Framer Motion, TypeScript
 - **Backend**: FastAPI, Strands SDK, RDS Data API
-- **Database**: Aurora PostgreSQL Serverless v2, pgvector
-- **AI**: Amazon Bedrock (Claude Sonnet 4.5, Nova 2 Multimodal)
+- **Database**: Aurora PostgreSQL Serverless v2, pgvector 0.8.0
+- **AI Models**: Amazon Bedrock (Claude Sonnet 4.5), Amazon Nova Multimodal Embeddings
 - **Protocol**: Model Context Protocol (MCP)

@@ -54,11 +54,12 @@ A live-streaming shopping platform that evolved from 50 orders/day to 50,000 ord
 **Architecture:**
 
 - **1 Agent:** Monolithic agent handles all responsibilities
-- **4 Custom Tools:**
-  - `identify_product_from_stream()` - Product discovery
-  - `check_product_inventory()` - Real-time inventory verification
-  - `calculate_order_total()` - Price calculation with tax/shipping
-  - `process_customer_order()` - Order persistence and workflow
+- **5 Custom Tools:**
+  - `_lookup_product()` - Product lookup by ID
+  - `_search_products()` - Text-based product search (ILIKE)
+  - `_check_inventory()` - Real-time inventory verification
+  - `_calculate_total()` - Price calculation with tax/shipping
+  - `_process_order()` - Order persistence and workflow
 - **Database:** Aurora PostgreSQL access via RDS Data API
 - **Pattern:** Tight coupling with inline database operations
 
@@ -66,7 +67,7 @@ A live-streaming shopping platform that evolved from 50 orders/day to 50,000 ord
 
 - ReAct pattern with Chain of Thought reasoning
 - Sequential tool execution
-- Manual connection pooling
+- RDS Data API for serverless database access
 - Ideal for MVPs and prototypes
 
 </details>
@@ -80,9 +81,9 @@ A live-streaming shopping platform that evolved from 50 orders/day to 50,000 ord
 
 - **1 Agent:** Single agent with MCP integration
 - **MCP Tools:** Auto-discovered from `awslabs.postgres-mcp-server`
-  - `query` - SQL queries via RDS Data API
-- **1 Custom Tool:**
-  - `create_order()` - Order processing logic
+  - `run_query` - SQL queries via RDS Data API
+  - `get_table_schema` - Table schema inspection
+  - `connect_to_database` - Database connection management
 - **Database:** Aurora PostgreSQL accessed via MCP (stdio transport)
 - **Pattern:** Loose coupling through Model Context Protocol
 
@@ -97,22 +98,19 @@ A live-streaming shopping platform that evolved from 50 orders/day to 50,000 ord
 **Implementation:**
 
 ```python
-from mcp import stdio_client, StdioServerParameters
 from strands.tools.mcp import MCPClient
 
-mcp_client = MCPClient(lambda: stdio_client(
-    StdioServerParameters(
-        command="uvx",
-        args=[
-            "awslabs.postgres-mcp-server@latest",
-            "--resource_arn", "arn:aws:rds:region:account:cluster:cluster-id",
-            "--secret_arn", "arn:aws:secretsmanager:region:account:secret:secret-name",
-            "--database", "postgres",
-            "--region", "us-east-1",
-            "--readonly", "True"
-        ]
-    )
-))
+# Initialize MCP client - connection established via connect_to_database tool
+mcp_client = MCPClient(
+    server_name="postgres-mcp-server",
+    command="uvx",
+    args=["awslabs.postgres-mcp-server@latest"]
+)
+
+# Connection is established using the connect_to_database tool with:
+# - database_type: "APG" (Aurora PostgreSQL)
+# - connection_method: "rdsapi" (RDS Data API)
+# - cluster_identifier, db_endpoint, database, port, region
 ```
 
 </details>
@@ -125,14 +123,18 @@ mcp_client = MCPClient(lambda: stdio_client(
 **Architecture:**
 
 - **4 Specialized Agents:**
-  1. **Supervisor Agent** 🎯 - Workflow orchestration (no tools)
-  2. **Search Agent** 🔍 - Semantic product discovery
-     - Tool: `semantic_product_search()` (pgvector-powered)
+  1. **Supervisor Agent** 🎯 - Workflow orchestration (delegates only, no direct tools)
+  2. **Search Agent** 🔍 - Semantic and visual product discovery
+     - Tool: `_semantic_search_tool()` - pgvector-powered text search
+     - Tool: `_visual_search_tool()` - Image-based product search
   3. **Product Agent** 📋 - Product information and inventory
-     - Tools: `get_product_details()`, `check_inventory_status()`
+     - Tool: `_get_details_tool()` - Full product information
+     - Tool: `_check_inventory_tool()` - Stock availability
   4. **Order Agent** 🛒 - Order processing and confirmation
-     - Tool: `simulate_order_placement()`
+     - Tool: `_calculate_total_tool()` - Price calculation with tax/shipping
+     - Tool: `_process_order_tool()` - Order creation and confirmation
 - **Database:** Aurora PostgreSQL + pgvector extension
+- **Embeddings:** Amazon Nova Multimodal Embeddings (1024 dimensions)
 - **Search:** Vector embeddings with HNSW index (cosine similarity)
 - **Pattern:** Supervisor orchestration with specialized agents
 
@@ -142,16 +144,19 @@ mcp_client = MCPClient(lambda: stdio_client(
 - Semantic search using vector embeddings
 - Single Responsibility Principle per agent
 - Natural language product discovery
+- Cross-modal search (text and image use same Nova Multimodal model)
 - Horizontal and vertical scaling capabilities
 
 **Semantic Search Implementation:**
 
-```python
-# Vector embedding generation and similarity search
-CREATE INDEX ON products USING hnsw (embedding vector_cosine_ops);
+```sql
+-- HNSW index for fast vector similarity search
+CREATE INDEX ON products USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 128);
 
-# Natural language search: "comfortable running shoes"
-# Matches semantically similar products, not just keywords
+-- Natural language search: "comfortable running shoes"
+-- Matches semantically similar products, not just keywords
+SELECT * FROM semantic_product_search(query_embedding, 5);
 ```
 
 </details>
@@ -179,7 +184,7 @@ CREATE INDEX ON products USING hnsw (embedding vector_cosine_ops);
 
 ```bash
 # Clone repository
-git clone <REPOSITORY_URL>
+git clone https://github.com/aws-samples/sample-dat309-agentic-workflows-aurora-mcp
 cd sample-dat309-agentic-workflows-aurora-mcp/clickshop-demo
 
 # Run automated setup
@@ -194,7 +199,25 @@ cp .env.example .env
 # Edit .env with your AWS credentials and region
 
 # Verify installation
-python -m demos.run_demo
+python scripts/verify_installation.py
+```
+
+### Database Setup
+
+```bash
+# Option 1: Create Aurora cluster via script
+./scripts/create_cluster.sh
+
+# Option 2: Use existing cluster - update .env with your cluster details
+
+# Initialize database schema (creates tables, pgvector extension, HNSW index)
+python scripts/init_aurora_schema.py
+
+# Seed product data with Nova Multimodal embeddings (30 products, 6 categories)
+python scripts/seed_data.py
+
+# Verify semantic search is working
+python scripts/test_semantic_search.py
 ```
 
 ### Environment Configuration
@@ -203,9 +226,61 @@ python -m demos.run_demo
 # .env file structure
 AWS_ACCESS_KEY_ID=your_access_key
 AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=us-east-1
+AWS_DEFAULT_REGION=us-east-1
+
+# Bedrock Configuration
 BEDROCK_MODEL_ID=global.anthropic.claude-sonnet-4-5-20250929-v1:0
+BEDROCK_REGION=us-east-1
+
+# Embedding Configuration (Amazon Nova Multimodal)
+EMBEDDING_MODEL=amazon.nova-2-multimodal-embeddings-v1:0
+EMBEDDING_DIMENSION=1024
+
+# Aurora PostgreSQL Configuration
+AURORA_CLUSTER_ARN=your_aurora_cluster_arn
+AURORA_SECRET_ARN=your_secret_arn
+AURORA_CLUSTER_IDENTIFIER=your_cluster_identifier
+AURORA_CLUSTER_ENDPOINT=your_cluster_endpoint
+AURORA_DATABASE=clickshop
 ```
+
+---
+
+## Web Application
+
+The project includes a full-stack web application for interactive demos:
+
+### Backend (FastAPI)
+
+```bash
+cd clickshop-demo
+source venv/bin/activate
+uvicorn backend.main:app --reload --port 8000
+```
+
+**API Endpoints:**
+
+- `POST /api/chat` - Send message to agent
+- `POST /api/chat/image` - Upload image for visual search (Phase 3)
+- `GET /api/products` - Get product catalog
+- `WebSocket /ws/activity` - Real-time activity stream
+
+### Frontend (React + Vite)
+
+```bash
+cd clickshop-demo/frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173 to view the application.
+
+**Features:**
+
+- Phase selector (1, 2, 3) to switch architectures
+- Real-time activity panel showing agent operations
+- Mock mode for offline demos
+- Visual search with image upload (Phase 3)
 
 ---
 
@@ -272,20 +347,51 @@ clickshop-demo/
 ├── requirements.txt               # Python dependencies
 ├── .env.example                   # Environment variable template
 │
-├── demos/                         # Demo implementations
-│   ├── run_demo.py               # Main entry point with interactive menu
-│   ├── phase_1_single_agent.py   # Monolithic agent (50 orders/day)
-│   ├── phase_2_agent_mcp.py      # MCP integration (5K orders/day)
-│   └── phase_3_multi_agent.py    # Multi-agent (50K orders/day)
+├── backend/                       # FastAPI backend
+│   ├── main.py                   # FastAPI application entry point
+│   ├── agents/                   # Agent implementations
+│   │   ├── phase1/agent.py       # Single agent (50 orders/day)
+│   │   ├── phase2/agent.py       # MCP integration (5K orders/day)
+│   │   └── phase3/               # Multi-agent system (50K orders/day)
+│   │       ├── supervisor.py     # Supervisor agent (orchestration)
+│   │       ├── search_agent.py   # Semantic/visual search
+│   │       ├── product_agent.py  # Product details/inventory
+│   │       └── order_agent.py    # Order processing
+│   ├── db/                       # Database utilities
+│   │   └── rds_data_client.py    # RDS Data API client
+│   ├── routers/                  # API route handlers
+│   └── tools/                    # Shared agent tools
+│       └── embedding_tools.py    # Nova Multimodal embedding utilities
 │
-├── lib/                           # Core library modules
-│   └── aurora_db.py              # Database operations and utilities
+├── frontend/                      # React frontend
+│   ├── src/
+│   │   ├── components/           # UI components
+│   │   ├── hooks/                # Custom React hooks
+│   │   └── sections/             # Page sections
+│   └── package.json
+│
+├── demos/                         # CLI demo implementations
+│   ├── run_demo.py               # Interactive demo launcher
+│   ├── phase_1_single_agent.py   # Phase 1 CLI demo
+│   ├── phase_2_agent_mcp.py      # Phase 2 CLI demo
+│   └── phase_3_multi_agent.py    # Phase 3 CLI demo
 │
 ├── scripts/                       # Automation scripts
-│   └── setup.sh                  # Environment setup
+│   ├── setup.sh                  # Environment setup
+│   ├── create_cluster.sh         # Aurora cluster provisioning
+│   ├── delete_cluster.sh         # Cluster cleanup
+│   ├── init_aurora_schema.py     # Database schema initialization
+│   ├── seed_data.py              # Product data with embeddings
+│   └── test_semantic_search.py   # Search verification
+│
+├── lib/                           # Core library modules
+│   └── aurora_db.py              # Database operations
+│
+├── tests/                         # Test suite
+│   └── test_embedding_properties.py  # Property-based tests
 │
 └── data/                          # Static data
-    └── products.json             # Product catalog
+    └── products.json             # Product catalog (30 products, 6 categories)
 ```
 
 ---
@@ -294,14 +400,18 @@ clickshop-demo/
 
 | Component           | Technology                  | Purpose                                              |
 | ------------------- | --------------------------- | ---------------------------------------------------- |
-| **Agent Framework** | Strands                     | Agent orchestration, tool management, execution flow |
+| **Agent Framework** | Strands SDK                 | Agent orchestration, tool management, execution flow |
 | **LLM Runtime**     | Amazon Bedrock              | Claude Sonnet 4.5 model hosting and inference        |
 | **Database**        | Amazon Aurora PostgreSQL    | Transactional data storage with serverless v2        |
 | **Vector Search**   | pgvector 0.8.0+             | Semantic search with HNSW indexing                   |
+| **Embeddings**      | Amazon Nova Multimodal      | Text and Image embeddings, 1024 dimensions           |
 | **Protocol**        | Model Context Protocol      | Standardized tool/resource integration               |
 | **MCP Server**      | awslabs.postgres-mcp-server | PostgreSQL access via RDS Data API                   |
+| **Backend**         | FastAPI                     | REST API and WebSocket server                        |
+| **Frontend**        | React 18 + Vite             | Interactive web application                          |
+| **Styling**         | Tailwind CSS                | Utility-first CSS framework                          |
 | **SDK**             | boto3                       | AWS service integration                              |
-| **Language**        | Python 3.11+                | Implementation language                              |
+| **Language**        | Python 3.11+ / TypeScript   | Backend and frontend implementation                  |
 
 ---
 
@@ -338,15 +448,11 @@ pip install -r requirements.txt --upgrade
 
 ```bash
 # Verify MCP server installation
-uvx awslabs.postgres-mcp-server@latest --version
+uvx awslabs.postgres-mcp-server@latest --help
 
-# Test MCP server connectivity
-uvx awslabs.postgres-mcp-server@latest \
-    --resource_arn "arn:aws:rds:region:account:cluster:cluster-id" \
-    --secret_arn "arn:aws:secretsmanager:region:account:secret:secret-name" \
-    --database "postgres" \
-    --region "us-east-1" \
-    --readonly "True"
+# The MCP server connects via the connect_to_database tool
+# with connection_method: "rdsapi" for RDS Data API access
+# No command-line connection arguments needed - connection is established programmatically
 ```
 
 ---
@@ -407,11 +513,15 @@ Guide to using Model Context Protocol servers for building AI agent applications
 
 ## Dependencies
 
+### Python (Backend)
+
 ```txt
 # Core Framework
 python>=3.11
 strands-agents>=0.1.0
 boto3>=1.34.0
+fastapi>=0.109.0
+uvicorn>=0.27.0
 
 # Vector Search (Phase 3)
 numpy>=1.24.0
@@ -424,6 +534,19 @@ rich>=13.7.0
 # Testing
 pytest>=7.4.0
 hypothesis>=6.100.0
+```
+
+### Node.js (Frontend)
+
+```json
+{
+  "react": "^18.2.0",
+  "react-dom": "^18.2.0",
+  "framer-motion": "^11.0.0",
+  "tailwindcss": "^3.4.0",
+  "typescript": "^5.3.0",
+  "vite": "^5.0.0"
+}
 ```
 
 ---

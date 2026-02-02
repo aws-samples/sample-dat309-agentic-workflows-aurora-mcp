@@ -68,9 +68,9 @@ class SupervisorAgent:
         self.order_agent = order_agent
         self.activity_callback = activity_callback or (lambda x: None)
         
-        # Initialize Bedrock model - Claude Sonnet 4.5
+        # Initialize Bedrock model - Claude Sonnet 4.5 (cross-region inference)
         self.model = BedrockModel(
-            model_id="anthropic.claude-sonnet-4-5-20250929-v1:0",
+            model_id="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
         

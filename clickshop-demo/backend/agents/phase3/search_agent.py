@@ -36,9 +36,9 @@ class ActivityEntry(BaseModel):
     agent_name: Optional[str] = None
 
 
-# Embedding Configuration - Titan Text Embeddings v2 (1024 dimensions)
-# Using 1024 dims due to HNSW index limit of 2000 dimensions
-EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "amazon.titan-embed-text-v2:0")
+# Amazon Nova Multimodal Embeddings Configuration (1024 dimensions)
+# Same model used for both text and image embeddings (cross-modal search)
+EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "amazon.nova-2-multimodal-embeddings-v1:0")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
 
 
@@ -121,14 +121,21 @@ When searching:
     
     def _generate_text_embedding(self, text: str) -> List[float]:
         """
-        Generate embedding for text using Amazon Titan Text Embeddings v2.
+        Generate embedding for text using Amazon Nova Multimodal Embeddings.
         
-        Requirement 11.6: Uses Titan Text Embeddings (1024 dims)
+        Requirement 11.6: Uses Nova Multimodal Embeddings (1024 dims)
         """
         request_body = {
-            "inputText": text,
-            "dimensions": EMBEDDING_DIMENSION,
-            "normalize": True
+            "schemaVersion": "nova-multimodal-embed-v1",
+            "taskType": "SINGLE_EMBEDDING",
+            "singleEmbeddingParams": {
+                "embeddingPurpose": "TEXT_RETRIEVAL",
+                "embeddingDimension": EMBEDDING_DIMENSION,
+                "text": {
+                    "truncationMode": "END",
+                    "value": text
+                }
+            }
         }
         
         response = self.bedrock_runtime.invoke_model(
@@ -139,36 +146,44 @@ When searching:
         )
         
         response_body = json.loads(response['body'].read())
-        return response_body['embedding']
+        return response_body['embeddings'][0]['embedding']
     
     def _generate_image_embedding(self, image_bytes: bytes) -> List[float]:
         """
-        Generate embedding for image using Amazon Titan Multimodal Embeddings.
+        Generate embedding for image using Amazon Nova Multimodal Embeddings.
         
         Requirement 11.7: Generates embedding from image for visual search
-        Note: Uses Titan Multimodal for images (supports 1024 dims)
+        Uses same Nova Multimodal model for cross-modal search (1024 dims)
         """
         import base64
         
         image_base64 = base64.b64encode(image_bytes).decode('utf-8')
         
-        # Use Titan Multimodal Embeddings for images
+        # Use Nova Multimodal Embeddings for images (same model as text)
         request_body = {
-            "inputImage": image_base64,
-            "embeddingConfig": {
-                "outputEmbeddingLength": EMBEDDING_DIMENSION
+            "schemaVersion": "nova-multimodal-embed-v1",
+            "taskType": "SINGLE_EMBEDDING",
+            "singleEmbeddingParams": {
+                "embeddingPurpose": "IMAGE_RETRIEVAL",
+                "embeddingDimension": EMBEDDING_DIMENSION,
+                "image": {
+                    "format": "jpeg",  # Will be auto-detected
+                    "source": {
+                        "bytes": image_base64
+                    }
+                }
             }
         }
         
         response = self.bedrock_runtime.invoke_model(
-            modelId="amazon.titan-embed-image-v1",
+            modelId=EMBEDDING_MODEL_ID,
             body=json.dumps(request_body),
             contentType="application/json",
             accept="application/json"
         )
         
         response_body = json.loads(response['body'].read())
-        return response_body['embedding']
+        return response_body['embeddings'][0]['embedding']
     
     @tool
     async def _semantic_search_tool(self, query: str, limit: int = 5) -> List[dict]:
@@ -201,7 +216,7 @@ When searching:
         """
         Perform semantic product search using text embedding.
         
-        Requirement 11.6: Semantic search using Titan Text Embeddings (1024 dims)
+        Requirement 11.6: Semantic search using Nova Multimodal Embeddings (1024 dims)
         
         Args:
             query: Search query text
@@ -272,8 +287,8 @@ When searching:
         """
         Perform visual product search using image embedding.
         
-        Requirement 11.7: Visual search using Titan Multimodal image embeddings
-        Requirement 11.8: Same vector space for cross-modal search
+        Requirement 11.7: Visual search using Nova Multimodal image embeddings
+        Requirement 11.8: Same vector space for cross-modal search (same model for text and images)
         
         Args:
             image_bytes: Image data as bytes
