@@ -386,9 +386,9 @@ export function AgentSection() {
       hint: 'Phase 2 uses MCP but still keyword-based. Try natural language →',
     },
     3: {
-      works: ['Comfortable shoes for standing all day', 'Good for marathon training', 'Help with recovery after workouts'],
+      works: ['Gear for my first marathon', 'Is the Nike Pegasus in stock?', 'What sizes do you have for foam rollers?'],
       breaks: [],
-      hint: 'Phase 3 uses hybrid semantic + lexical search. Try natural language!',
+      hint: 'Phase 3 uses multi-agent orchestration. Watch the Activity Panel!',
     },
   };
 
