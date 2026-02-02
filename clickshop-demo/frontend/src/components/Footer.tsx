@@ -19,8 +19,7 @@ export function Footer() {
           fontFamily: "'SF Pro Text', sans-serif",
         }}
       >
-        <span style={{ color: '#64748b', fontWeight: 500 }}>ClickShop</span> — Agentic Commerce
-        Demo · Built by Shayon Sanyal, Principal Specialist SA, AWS
+        <span style={{ color: '#64748b', fontWeight: 500 }}>ClickShop</span> — Agentic Commerce Demo
         <br />
         <span style={{ fontFamily: "'SF Mono', monospace", fontSize: 11 }}>
           Aurora PostgreSQL 17.5 · pgvector 0.8 · Strands SDK · Nova Multimodal · Claude Sonnet 4.5 · MCP
