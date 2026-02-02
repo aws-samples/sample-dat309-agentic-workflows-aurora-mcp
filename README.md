@@ -286,58 +286,10 @@ Open http://localhost:5173 to view the application.
 
 ---
 
-## Running the Demos
+## Demo Script
 
-### Interactive Demo Launcher
+See [DEMO_SCRIPT.md](agentstride/DEMO_SCRIPT.md) for a complete 60-minute walkthrough with talking points, representative queries, and code highlights.
 
-```bash
-python -m demos.run_demo
-```
-
-Select from the interactive menu to run any architecture demonstration.
-
-### Individual Demo Execution
-
-#### Phase 1: Single Agent (Monolithic)
-
-```bash
-python -m demos.phase_1_single_agent
-```
-
-**Demonstrates:**
-
-- Basic agentic loop with ReAct pattern
-- Chain of Thought (CoT) reasoning
-- Sequential tool execution
-- Direct database access patterns
-- Manual connection management
-
-#### Phase 2: Agent + MCP (Scaling)
-
-```bash
-python -m demos.phase_2_agent_mcp
-```
-
-**Demonstrates:**
-
-- MCP server integration for database abstraction
-- RDS Data API for serverless compute
-- IAM-based authentication
-- Tool auto-discovery from MCP servers
-- Read-only database operations via MCP
-
-#### Phase 3: Multi-Agent System (Production)
-
-```bash
-python -m demos.phase_3_multi_agent
-```
-
-**Demonstrates:**
-
-- Supervisor pattern for agent orchestration
-- Specialized agents with single responsibilities
-- Semantic search with pgvector (0.8.0+)
-- Parallel agent execution
 - HNSW vector indexing for similarity search
 
 ---
@@ -348,35 +300,34 @@ python -m demos.phase_3_multi_agent
 agentstride/
 ├── requirements.txt               # Python dependencies
 ├── .env.example                   # Environment variable template
+├── DEMO_SCRIPT.md                 # 60-minute demo walkthrough
 │
 ├── backend/                       # FastAPI backend
 │   ├── main.py                   # FastAPI application entry point
+│   ├── config.py                 # Centralized configuration
+│   ├── search_utils.py           # Shared search utilities
 │   ├── agents/                   # Agent implementations
-│   │   ├── phase1/agent.py       # Single agent (50 orders/day)
-│   │   ├── phase2/agent.py       # MCP integration (5K orders/day)
-│   │   └── phase3/               # Multi-agent system (50K orders/day)
+│   │   ├── phase1/agent.py       # Single agent (direct RDS)
+│   │   ├── phase2/agent.py       # MCP integration
+│   │   └── phase3/               # Multi-agent system
 │   │       ├── supervisor.py     # Supervisor agent (orchestration)
 │   │       ├── search_agent.py   # Semantic/visual search
 │   │       ├── product_agent.py  # Product details/inventory
 │   │       └── order_agent.py    # Order processing
 │   ├── db/                       # Database utilities
-│   │   └── rds_data_client.py    # RDS Data API client
+│   │   ├── rds_data_client.py    # RDS Data API client
+│   │   ├── mcp_client.py         # MCP client
+│   │   └── embedding_service.py  # Nova embeddings
 │   ├── routers/                  # API route handlers
 │   └── tools/                    # Shared agent tools
-│       └── embedding_tools.py    # Nova Multimodal embedding utilities
 │
 ├── frontend/                      # React frontend
 │   ├── src/
 │   │   ├── components/           # UI components
 │   │   ├── hooks/                # Custom React hooks
-│   │   └── sections/             # Page sections
+│   │   ├── sections/             # Page sections
+│   │   └── types/                # TypeScript types
 │   └── package.json
-│
-├── demos/                         # CLI demo implementations
-│   ├── run_demo.py               # Interactive demo launcher
-│   ├── phase_1_single_agent.py   # Phase 1 CLI demo
-│   ├── phase_2_agent_mcp.py      # Phase 2 CLI demo
-│   └── phase_3_multi_agent.py    # Phase 3 CLI demo
 │
 ├── scripts/                       # Automation scripts
 │   ├── setup.sh                  # Environment setup
@@ -392,8 +343,10 @@ agentstride/
 ├── tests/                         # Test suite
 │   └── test_embedding_properties.py  # Property-based tests
 │
-└── data/                          # Static data
-    └── products.json             # Product catalog (30 products, 6 categories)
+├── data/                          # Static data
+│   └── products.json             # Product catalog
+│
+└── sample-images/                 # Visual search demo images
 ```
 
 ---
