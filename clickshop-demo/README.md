@@ -1,4 +1,6 @@
-# ClickShop Demo - Agentic e-Commerce Application
+# AgentStride - Ask. Shop. Done.
+
+> Shopping, powered by agents.
 
 A modern web application demonstrating agentic e-commerce with three architectural approaches: from simple prototypes to production-ready multi-agent systems.
 

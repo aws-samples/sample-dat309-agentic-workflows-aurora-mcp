@@ -1,4 +1,4 @@
-# ClickShop Demo Script
+# AgentStride Demo Script
 
 ## Building Agentic e-Commerce Applications with Aurora PostgreSQL and MCP
 
@@ -46,7 +46,7 @@ npm run dev
 **Verify everything works:**
 
 - Open http://localhost:5173 in your browser
-- You should see the ClickShop homepage
+- You should see the AgentStride homepage
 - Try a quick search to make sure the backend responds
 
 ---
@@ -55,7 +55,7 @@ npm run dev
 
 ### What to Say:
 
-> "Welcome everyone. Today I'm going to show you how to build agentic applications using Aurora PostgreSQL. We're going to look at a demo called ClickShop, which is an agentic shopping assistant."
+> "Welcome everyone. Today I'm going to show you how to build agentic applications using Aurora PostgreSQL. We're going to look at a demo called AgentStride, which is an agentic shopping assistant."
 
 > "What makes this interesting is that we're going to see three different architectural patterns for connecting AI agents to your database. Each pattern represents a real evolution that teams go through as they build and scale agentic AI applications."
 

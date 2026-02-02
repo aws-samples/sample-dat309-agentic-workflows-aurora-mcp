@@ -1,4 +1,4 @@
-# ClickShop: Agentic Architecture Evolution Demo
+# AgentStride: Ask. Shop. Done.
 
 <div align="center">
 
@@ -21,11 +21,11 @@
 
 ## Overview
 
-**ClickShop** demonstrates the architectural evolution of agentic systems through three production-grade implementations. Built for AWS re:Invent 2025 (DAT309 Chalk Talk), this project showcases scaling patterns from a weekend MVP to enterprise-scale multi-agent orchestration with semantic search capabilities.
+**AgentStride** demonstrates the architectural evolution of agentic systems through three production-grade implementations. Built for AWS re:Invent 2025 (DAT309 Chalk Talk), this project showcases scaling patterns from a weekend MVP to enterprise-scale multi-agent orchestration with semantic search capabilities.
 
 > **⚠️ Educational Use Only**: This demonstration is designed for learning purposes and illustrates production patterns without production-level error handling, monitoring, or security hardening.
 
-### The ClickShop Story
+### The AgentStride Story
 
 A live-streaming shopping platform that evolved from 50 orders/day to 50,000 orders/day through three architectural iterations—demonstrating how thoughtful design enables exponential scaling without complete rewrites.
 

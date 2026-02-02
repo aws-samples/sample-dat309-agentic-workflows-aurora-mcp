@@ -48,7 +48,7 @@ export function StickyNav({ scrollY }: StickyNavProps) {
           transition: 'opacity 0.3s',
         }}
       >
-        ClickShop
+        AgentStride
       </span>
 
       {/* Nav links */}
