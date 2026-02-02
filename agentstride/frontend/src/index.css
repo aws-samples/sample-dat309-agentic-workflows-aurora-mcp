@@ -365,14 +365,14 @@ body {
 .phase-flow {
   font-size: 12px;
   font-family: 'SF Mono', monospace;
-  color: #475569;
+  color: #94a3b8;
   margin-bottom: 16px;
   padding: 6px 0;
 }
 
 .phase-desc {
   font-size: 15px;
-  color: #94a3b8;
+  color: #cbd5e1;
   line-height: 1.7;
   margin: 0 0 20px;
   font-family: 'SF Pro Text', sans-serif;

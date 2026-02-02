@@ -9,7 +9,6 @@ interface Phase {
   title: string;
   subtitle: string;
   color: string;
-  time: string;
   scale: string;
   desc: string;
   code: string;
@@ -23,7 +22,6 @@ const phases: Phase[] = [
     title: 'Single Agent',
     subtitle: 'The Prototype',
     color: '#3b82f6',
-    time: '~100ms',
     scale: '50 orders/day',
     desc: 'One Strands agent with direct database access via RDS Data API. Simple, fast to build — every tool is hardcoded and the agent manages all operations directly.',
     code: `agent = Agent(
@@ -39,12 +37,11 @@ result = agent("Find comfortable running shoes")`,
     title: 'Agent + MCP',
     subtitle: 'The Standard',
     color: '#a855f7',
-    time: '~100ms',
     scale: '5K orders/day',
     desc: 'The agent discovers database capabilities through MCP instead of hardcoding them. RDS Data API eliminates connection management. Aurora Serverless v2 scales to zero when idle.',
     code: `mcp = MCPClient(awslabs.postgres_mcp_server)
   → resource_arn: agentstride-demo
-  → Serverless v2 (0–64 ACUs)
+  → Serverless v2 (0.5–64 ACUs)
   → RDS Data API + IAM auth
   → Zero connection management`,
     tags: ['MCP', 'RDS Data API', 'Serverless v2', 'IAM Auth', 'Secrets Manager'],
@@ -55,7 +52,6 @@ result = agent("Find comfortable running shoes")`,
     title: 'Multi-Agent',
     subtitle: 'Production',
     color: '#10b981',
-    time: '~350ms',
     scale: '50K orders/day',
     desc: 'A supervisor routes to specialized agents. Search uses Nova Multimodal embeddings stored in pgvector — the same index handles both text queries and product image uploads.',
     code: `# Text AND image → same 1024-dim vector space
@@ -164,7 +160,6 @@ export function HowItWorksSection() {
                       ))}
                     </div>
                     <div className="phase-metrics">
-                      <span>⏱ {p.time}</span>
                       <span>↗ {p.scale}</span>
                     </div>
                   </div>
