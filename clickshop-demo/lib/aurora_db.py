@@ -180,22 +180,31 @@ def search_products_semantic(query: str, limit: int = 5) -> List[Tuple[Dict, flo
     
     Returns list of (product, similarity_score) tuples
     """
-    # Generate query embedding using Nova Multimodal
+    # Generate query embedding using Amazon Nova Multimodal Embeddings
     bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
     
+    request_body = {
+        "schemaVersion": "nova-multimodal-embed-v1",
+        "taskType": "SINGLE_EMBEDDING",
+        "singleEmbeddingParams": {
+            "embeddingPurpose": "TEXT_RETRIEVAL",
+            "embeddingDimension": 1024,
+            "text": {
+                "truncationMode": "END",
+                "value": query
+            }
+        }
+    }
+    
     response = bedrock.invoke_model(
-        modelId="amazon.nova-embed-text-v1:0",
-        body=json.dumps({
-            "inputText": query,
-            "dimensions": 1024,
-            "normalize": True
-        }),
+        modelId="amazon.nova-2-multimodal-embeddings-v1:0",
+        body=json.dumps(request_body),
         contentType="application/json",
         accept="application/json"
     )
     
     response_body = json.loads(response['body'].read())
-    query_embedding = response_body['embedding']
+    query_embedding = response_body['embeddings'][0]['embedding']
     embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
     
     # Search using pgvector

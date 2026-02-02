@@ -108,7 +108,7 @@ export function HeroSection({ scrollY }: HeroSectionProps) {
             fontWeight: 600,
             letterSpacing: '0.2em',
             textTransform: 'uppercase',
-            color: 'rgba(148,163,184,0.7)',
+            color: 'rgba(251,191,36,0.9)',
             marginBottom: 24,
             fontFamily: "'SF Mono', 'Fira Code', monospace",
           }}
@@ -126,11 +126,7 @@ export function HeroSection({ scrollY }: HeroSectionProps) {
             letterSpacing: '-0.04em',
             margin: '0 0 24px',
             fontFamily: "'SF Pro Display', -apple-system, sans-serif",
-            background: 'linear-gradient(135deg, #f8fafc 0%, #94a3b8 50%, #f8fafc 100%)',
-            backgroundSize: '200% 200%',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            animation: 'shimmer 6s ease-in-out infinite',
+            color: '#ffffff',
           }}
         >
           ClickShop
@@ -141,7 +137,7 @@ export function HeroSection({ scrollY }: HeroSectionProps) {
           style={{
             fontSize: 24,
             fontWeight: 500,
-            color: 'rgba(248,250,252,0.9)',
+            color: 'rgba(248,250,252,0.95)',
             marginBottom: 16,
             fontFamily: "'SF Pro Display', -apple-system, sans-serif",
           }}
@@ -153,14 +149,14 @@ export function HeroSection({ scrollY }: HeroSectionProps) {
         <p
           style={{
             fontSize: 17,
-            color: 'rgba(148,163,184,0.8)',
+            color: 'rgba(226,232,240,0.9)',
             lineHeight: 1.7,
             maxWidth: 560,
             margin: '0 auto 40px',
             fontFamily: "'SF Pro Text', -apple-system, sans-serif",
           }}
         >
-          An AI-powered shopping experience that understands what you're looking for — 
+          An agentic shopping experience that understands what you're looking for — 
           using semantic search, multimodal embeddings, and intelligent agents.
         </p>
 

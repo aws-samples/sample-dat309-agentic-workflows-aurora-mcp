@@ -45,34 +45,34 @@ PRODUCTS = [
     },
     {
         "product_id": "RUN-002",
-        "name": "Adidas Ultraboost Light",
-        "category": "Running Shoes",
-        "price": 189.99,
-        "brand": "Adidas",
-        "description": "Ultra-lightweight running shoe with BOOST midsole for incredible energy return. Primeknit+ upper adapts to your foot shape. Continental rubber outsole for superior grip.",
-        "image_url": "https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?w=400&h=300&fit=crop",  # White Adidas Ultraboost
+        "name": "Nike Blazer Mid '77",
+        "category": "Training Shoes",
+        "price": 119.99,
+        "brand": "Nike",
+        "description": "Classic Nike Blazer Mid with bold gradient colorway. Lightweight cushioning for all-day comfort. High-top design for ankle support.",
+        "image_url": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&h=300&fit=crop",  # Colorful Nike shoe
         "available_sizes": ["7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12"],
         "inventory": {"7": 8, "8": 14, "9": 20, "10": 22, "11": 12, "12": 7}
     },
     {
         "product_id": "RUN-003",
-        "name": "Brooks Ghost 16",
+        "name": "Nike Vomero 18",
         "category": "Running Shoes",
         "price": 149.99,
-        "brand": "Brooks",
-        "description": "Smooth transitions and soft cushioning for neutral runners. DNA LOFT v2 cushioning provides a soft yet responsive feel. Engineered mesh upper for breathability.",
-        "image_url": "https://images.unsplash.com/photo-1597045566677-8cf032ed6634?w=400&h=300&fit=crop",  # Blue running shoe
+        "brand": "Nike",
+        "description": "Smooth transitions and soft cushioning for neutral runners. ZoomX foam provides a soft yet responsive feel. Engineered mesh upper for breathability.",
+        "image_url": "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&h=300&fit=crop",  # White/grey Nike running shoe
         "available_sizes": ["7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "13"],
         "inventory": {"7": 6, "8": 10, "9": 16, "10": 14, "11": 8, "12": 5, "13": 3}
     },
     {
         "product_id": "RUN-004",
-        "name": "ASICS Gel-Nimbus 26",
+        "name": "Nike Air Max 1",
         "category": "Running Shoes",
-        "price": 179.99,
-        "brand": "ASICS",
-        "description": "Premium cushioning for long-distance comfort. FF BLAST PLUS ECO cushioning with PureGEL technology. Knit upper with internal support for a secure fit.",
-        "image_url": "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=400&h=300&fit=crop",  # Gray running shoe
+        "price": 149.99,
+        "brand": "Nike",
+        "description": "Iconic Nike Air Max 1 with visible Air cushioning. Premium leather and mesh upper for breathability. Classic orange and white colorway. Waffle outsole for traction.",
+        "image_url": "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=400&h=300&fit=crop",  # Orange/white Nike Air Max 1
         "available_sizes": ["7", "8", "8.5", "9", "9.5", "10", "10.5", "11", "12"],
         "inventory": {"7": 4, "8": 9, "9": 13, "10": 15, "11": 7, "12": 4}
     },
@@ -112,23 +112,23 @@ PRODUCTS = [
     },
     {
         "product_id": "TRN-003",
-        "name": "Under Armour Project Rock 6",
+        "name": "Nike SB Dunk Low",
         "category": "Training Shoes",
-        "price": 159.99,
-        "brand": "Under Armour",
-        "description": "Dwayne Johnson's signature training shoe. TriBase technology for ground contact. UA HOVR cushioning for energy return. Durable rubber outsole.",
-        "image_url": "https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=400&h=300&fit=crop",  # Black athletic shoe
+        "price": 119.99,
+        "brand": "Nike",
+        "description": "Classic Nike SB Dunk Low with clean white colorway. Padded collar for comfort. Zoom Air insole for impact protection. Durable rubber outsole with herringbone pattern.",
+        "image_url": "https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=400&h=300&fit=crop",  # White Nike sneaker
         "available_sizes": ["8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "13"],
         "inventory": {"8": 8, "9": 12, "10": 18, "11": 14, "12": 9, "13": 4}
     },
     {
         "product_id": "TRN-004",
-        "name": "NOBULL Trainer+",
+        "name": "Nike Air Max 90",
         "category": "Training Shoes",
-        "price": 169.99,
-        "brand": "NOBULL",
-        "description": "Minimalist design for functional fitness. SuperFabric upper resists abrasion. Outsole lug pattern for multi-surface traction. Carbon fiber plate for stability.",
-        "image_url": "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=400&h=300&fit=crop",  # Minimalist training shoe
+        "price": 139.99,
+        "brand": "Nike",
+        "description": "Iconic Nike Air Max 90 with visible Air cushioning. Premium leather and mesh upper for breathability. Waffle outsole for traction. Classic colorway with bold design.",
+        "image_url": "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&h=300&fit=crop",  # White Nike Air Max
         "available_sizes": ["7", "8", "9", "10", "11", "12"],
         "inventory": {"7": 4, "8": 8, "9": 11, "10": 12, "11": 6, "12": 3}
     },

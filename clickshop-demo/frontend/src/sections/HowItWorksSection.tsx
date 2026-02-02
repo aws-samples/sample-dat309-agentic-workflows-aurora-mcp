@@ -23,7 +23,7 @@ const phases: Phase[] = [
     title: 'Single Agent',
     subtitle: 'The Prototype',
     color: '#3b82f6',
-    time: '~2s',
+    time: '~100ms',
     scale: '50 orders/day',
     desc: 'One Strands agent with direct database access via RDS Data API. Simple, fast to build — every tool is hardcoded and the agent manages all operations directly.',
     code: `agent = Agent(
@@ -39,7 +39,7 @@ result = agent("Find comfortable running shoes")`,
     title: 'Agent + MCP',
     subtitle: 'The Standard',
     color: '#a855f7',
-    time: '~3.5s',
+    time: '~100ms',
     scale: '5K orders/day',
     desc: 'The agent discovers database capabilities through MCP instead of hardcoding them. RDS Data API eliminates connection management. Aurora Serverless v2 scales to zero when idle.',
     code: `mcp = MCPClient(awslabs.postgres_mcp_server)
@@ -55,7 +55,7 @@ result = agent("Find comfortable running shoes")`,
     title: 'Multi-Agent',
     subtitle: 'Production',
     color: '#10b981',
-    time: '~200ms',
+    time: '~350ms',
     scale: '50K orders/day',
     desc: 'A supervisor routes to specialized agents. Search uses Nova Multimodal embeddings stored in pgvector — the same index handles both text queries and product image uploads.',
     code: `# Text AND image → same 1024-dim vector space
@@ -116,12 +116,12 @@ export function HowItWorksSection() {
                   style={{
                     fontSize: 64,
                     fontWeight: 800,
-                    color: `${p.color}40`,
+                    color: p.color,
                     fontFamily: "'SF Pro Display', sans-serif",
                     lineHeight: 1,
                     flexShrink: 0,
                     minWidth: 80,
-                    textShadow: `0 0 40px ${p.color}30`,
+                    textShadow: `0 0 40px ${p.color}60`,
                   }}
                 >
                   {p.num}

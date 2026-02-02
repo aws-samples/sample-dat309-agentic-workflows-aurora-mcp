@@ -27,9 +27,9 @@ const phaseConfig = {
 }
 
 const suggestions = [
-  { icon: Search, text: 'Show me running shoes under $150' },
-  { icon: Package, text: 'Check inventory for Nike products' },
-  { icon: ShoppingBag, text: 'I need workout gear for the gym' },
+  { icon: Search, text: 'Running shoes under $150' },
+  { icon: Package, text: 'Nike' },
+  { icon: ShoppingBag, text: 'Fitness equipment' },
 ]
 
 export default function ChatInterface({

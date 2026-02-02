@@ -1,7 +1,7 @@
 /**
  * API client for ClickShop backend
  */
-import type { Product, ProductListResponse, ChatRequest, ChatResponse } from '../types';
+import type { Product, ProductListResponse, ChatRequest, ChatResponse, OrderRequest, OrderResponse } from '../types';
 
 const API_BASE = 'http://localhost:8000/api';
 
@@ -61,4 +61,23 @@ export async function searchProducts(query: string, phase: 1 | 2 | 3 = 3): Promi
     message: query,
     phase,
   });
+}
+
+/**
+ * Process an order for a product
+ */
+export async function processOrder(request: OrderRequest): Promise<OrderResponse> {
+  const response = await fetch(`${API_BASE}/chat/order`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Order request failed: ${response.statusText}`);
+  }
+
+  return response.json();
 }

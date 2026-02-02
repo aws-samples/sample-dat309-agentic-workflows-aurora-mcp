@@ -19,7 +19,7 @@ export interface ProductListResponse {
   total: number;
 }
 
-export type ActivityType = 'search' | 'embedding' | 'tool_call' | 'database' | 'error' | 'inventory' | 'order' | 'delegation' | 'mcp';
+export type ActivityType = 'search' | 'embedding' | 'tool_call' | 'database' | 'error' | 'inventory' | 'order' | 'delegation' | 'mcp' | 'reasoning' | 'result';
 
 export interface ActivityEntry {
   id: string;
@@ -30,11 +30,13 @@ export interface ActivityEntry {
   sql_query?: string;
   execution_time_ms?: number;
   agent_name?: string;
+  agent_file?: string;
   // Aliases for camelCase access
   type?: ActivityType;
   agentName?: string;
   executionTimeMs?: number;
   sqlQuery?: string;
+  agentFile?: string;
 }
 
 export interface OrderItem {
@@ -68,6 +70,7 @@ export interface ChatResponse {
   products?: Product[];
   order?: Order;
   activities: ActivityEntry[];
+  follow_ups?: string[];
 }
 
 export interface Message {
@@ -76,6 +79,7 @@ export interface Message {
   text: string;
   products?: Product[];
   order?: Order;
+  follow_ups?: string[];
 }
 
 // Alias for backward compatibility
@@ -86,4 +90,17 @@ export interface PhaseInfo {
   name: string;
   description: string;
   color: string;
+}
+
+export interface OrderRequest {
+  product_id: string;
+  size?: string;
+  quantity?: number;
+  phase: 1 | 2 | 3;
+}
+
+export interface OrderResponse {
+  message: string;
+  order?: Order;
+  activities: ActivityEntry[];
 }

@@ -6,6 +6,9 @@ strands-agents-tools>=0.1.0
 boto3>=1.34.0
 botocore>=1.34.0
 
+# MCP (Model Context Protocol) for Phase 2
+mcp>=0.1.0
+
 # FastAPI Backend
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0

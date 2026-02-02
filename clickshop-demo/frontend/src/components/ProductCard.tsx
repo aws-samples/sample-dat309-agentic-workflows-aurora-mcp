@@ -23,9 +23,11 @@ const phaseColors = {
 }
 
 export default function ProductCard({ product, phase, onAddToCart }: ProductCardProps) {
-  const [selectedSize, setSelectedSize] = useState<string | undefined>(
-    product.available_sizes?.[0]
-  )
+  // Default to size 11 if available, otherwise first available size
+  const defaultSize = product.available_sizes?.includes('11') 
+    ? '11' 
+    : product.available_sizes?.[0]
+  const [selectedSize, setSelectedSize] = useState<string | undefined>(defaultSize)
   const color = phaseColors[phase]
 
   const getSimilarityBadge = (similarity: number) => {

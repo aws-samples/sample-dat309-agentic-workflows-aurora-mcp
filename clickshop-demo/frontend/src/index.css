@@ -102,6 +102,26 @@ body {
   }
 }
 
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes stepPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 /* ───────────── Hero Section ───────────── */
 .hero-btn-primary {
   padding: 14px 36px;
@@ -174,13 +194,13 @@ body {
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.9);
   font-family: 'SF Pro Text', sans-serif;
   transition: color 0.2s;
 }
 
 .nav-link:hover {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 1);
 }
 
 /* ───────────── Product Cards ───────────── */
@@ -366,7 +386,7 @@ body {
   border-left: 3px solid;
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 12.5px;
-  color: #94a3b8;
+  color: #e2e8f0;
   line-height: 1.9;
   white-space: pre-wrap;
   margin-bottom: 20px;

@@ -1,1 +1,0 @@
-"""ClickShop demo modules"""

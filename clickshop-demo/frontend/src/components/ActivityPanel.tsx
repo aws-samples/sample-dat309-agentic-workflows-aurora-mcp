@@ -75,6 +75,18 @@ const activityConfig: Record<ActivityType, {
     color: '#ef4444',
     emoji: '❌',
   },
+  reasoning: {
+    icon: <Sparkles className="w-4 h-4" />,
+    label: 'Reasoning',
+    color: '#a855f7',
+    emoji: '💭',
+  },
+  result: {
+    icon: <Activity className="w-4 h-4" />,
+    label: 'Result',
+    color: '#22c55e',
+    emoji: '✅',
+  },
 }
 
 const phaseConfig = {
@@ -93,7 +105,7 @@ function ActivityItem({ activity, index }: { activity: ActivityEntry; index: num
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05 }}
       className="rounded-xl overflow-hidden"
-      style={{ backgroundColor: 'var(--bg-tertiary)' }}
+      style={{ backgroundColor: 'var(--bg-tertiary)' } as React.CSSProperties}
     >
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -150,7 +162,7 @@ function ActivityItem({ activity, index }: { activity: ActivityEntry; index: num
           <motion.div
             animate={{ rotate: isExpanded ? 180 : 0 }}
             transition={{ duration: 0.2 }}
-            style={{ color: 'var(--text-muted)' }}
+            style={{ color: 'var(--text-muted)' } as React.CSSProperties}
           >
             <ChevronDown className="w-4 h-4" />
           </motion.div>
@@ -233,7 +245,7 @@ export default function ActivityPanel({ activities, phase }: ActivityPanelProps)
             <div className="relative mb-4">
               <motion.div
                 className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                style={{ backgroundColor: 'var(--bg-tertiary)' } as React.CSSProperties}
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
               >
@@ -249,7 +261,7 @@ export default function ActivityPanel({ activities, phase }: ActivityPanelProps)
                     backgroundColor: config.color,
                     top: '50%',
                     left: '50%',
-                  }}
+                  } as React.CSSProperties}
                   animate={{
                     x: [0, 30 * Math.cos((i * 2 * Math.PI) / 3), 0],
                     y: [0, 30 * Math.sin((i * 2 * Math.PI) / 3), 0],

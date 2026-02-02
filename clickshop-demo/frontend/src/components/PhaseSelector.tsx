@@ -29,7 +29,7 @@ const phases: PhaseData[] = [
     description: 'Single agent talks directly to the database. Fast to build, perfect for prototypes.',
     accentColor: 'var(--phase-1)',
     capacity: 'MVP',
-    responseTime: '~2s',
+    responseTime: '~100ms',
   },
   {
     id: 2,
@@ -37,7 +37,7 @@ const phases: PhaseData[] = [
     description: 'Agent uses Model Context Protocol for database abstraction. Production-ready pattern.',
     accentColor: 'var(--phase-2)',
     capacity: 'Production',
-    responseTime: '~3s',
+    responseTime: '~100ms',
   },
   {
     id: 3,
@@ -45,7 +45,7 @@ const phases: PhaseData[] = [
     description: 'Supervisor orchestrates specialized agents. Semantic search, visual search, and more.',
     accentColor: 'var(--phase-3)',
     capacity: 'Enterprise',
-    responseTime: '~200ms',
+    responseTime: '~350ms',
   },
 ]
 
