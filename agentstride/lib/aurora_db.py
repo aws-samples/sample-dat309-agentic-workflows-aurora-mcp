@@ -1,5 +1,5 @@
 """
-Aurora PostgreSQL database operations for ClickShop
+Aurora PostgreSQL database operations for AgentStride
 Uses RDS Data API for serverless database access
 
 ARCHITECTURE NOTES:

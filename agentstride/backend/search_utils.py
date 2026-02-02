@@ -1,5 +1,5 @@
 """
-Shared search utilities for ClickShop.
+Shared search utilities for AgentStride.
 
 Provides common search logic used by Phase 1 and Phase 2 to eliminate code duplication.
 """

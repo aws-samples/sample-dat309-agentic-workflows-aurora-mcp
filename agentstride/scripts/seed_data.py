@@ -1,5 +1,5 @@
 """
-Seed data script for ClickShop Enhancement
+Seed data script for AgentStride
 Populates Aurora PostgreSQL with 30 products across 6 categories
 Generates 1024-dimensional embeddings using Amazon Nova Multimodal Embeddings
 
@@ -449,7 +449,7 @@ def seed_database():
     - 2.7: Populate 30 products across 6 categories
     - 2.8: Generate 1024-dimensional embeddings using Amazon Nova Multimodal Embeddings
     """
-    console.print("\n[bold blue]🌱 Seeding ClickShop Database[/bold blue]")
+    console.print("\n[bold blue]🌱 Seeding AgentStride Database[/bold blue]")
     console.print(f"[cyan]Embedding Model: {EMBEDDING_MODEL_ID}[/cyan]")
     console.print(f"[cyan]Embedding Dimension: {EMBEDDING_DIMENSION}[/cyan]")
     console.print(f"[cyan]Region: {BEDROCK_REGION}[/cyan]\n")

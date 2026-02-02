@@ -1,7 +1,7 @@
 """
-ClickShop Backend - FastAPI Application
+AgentStride Backend - FastAPI Application
 
-Main entry point for the ClickShop demo backend server.
+Main entry point for the AgentStride demo backend server.
 Provides REST API endpoints for chat interactions, product catalog,
 and WebSocket streaming for real-time agent activity updates.
 
@@ -45,20 +45,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Handles startup and shutdown events for the FastAPI application.
     """
     # Startup
-    print("Starting ClickShop Backend...")
+    print("Starting AgentStride Backend...")
     print(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
     print(f"AWS Region: {os.getenv('AWS_DEFAULT_REGION', 'us-east-1')}")
     
     yield
     
     # Shutdown
-    print("Shutting down ClickShop Backend...")
+    print("Shutting down AgentStride Backend...")
 
 
 # Create FastAPI application
 app = FastAPI(
-    title="ClickShop Backend",
-    description="Backend API for the ClickShop live-streaming shopping demo",
+    title="AgentStride Backend",
+    description="Backend API for the AgentStride agentic shopping demo",
     version="1.0.0",
     lifespan=lifespan,
     responses={

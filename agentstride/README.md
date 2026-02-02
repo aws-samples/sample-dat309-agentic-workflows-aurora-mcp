@@ -16,7 +16,7 @@ A modern web application demonstrating agentic e-commerce with three architectur
 ### Backend Setup
 
 ```bash
-cd clickshop-demo
+cd agentstride
 
 # Create virtual environment
 python -m venv venv
@@ -40,7 +40,7 @@ uvicorn backend.main:app --reload --port 8000
 ### Frontend Setup
 
 ```bash
-cd clickshop-demo/frontend
+cd agentstride/frontend
 
 # Install dependencies
 npm install
@@ -107,7 +107,7 @@ The frontend includes a mock mode toggle for offline demos. When enabled:
 ## Project Structure
 
 ```
-clickshop-demo/
+agentstride/
 ├── backend/
 │   ├── main.py              # FastAPI application
 │   ├── config.py            # Centralized configuration

@@ -1,4 +1,4 @@
-# Verification Script for ClickShop Dependencies
+# Verification Script for AgentStride Dependencies
 
 import sys
 

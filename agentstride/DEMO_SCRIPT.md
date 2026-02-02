@@ -31,7 +31,7 @@ Open two terminal windows:
 **Terminal 1 - Backend:**
 
 ```bash
-cd clickshop-demo
+cd agentstride
 source venv/bin/activate
 uvicorn backend.main:app --reload --port 8000
 ```
@@ -39,7 +39,7 @@ uvicorn backend.main:app --reload --port 8000
 **Terminal 2 - Frontend:**
 
 ```bash
-cd clickshop-demo/frontend
+cd agentstride/frontend
 npm run dev
 ```
 
@@ -561,7 +561,7 @@ curl http://localhost:8000/api/products?limit=1
 
 # Restart if needed
 pkill -f uvicorn
-cd clickshop-demo
+cd agentstride
 source venv/bin/activate
 uvicorn backend.main:app --reload --port 8000
 ```
@@ -569,7 +569,7 @@ uvicorn backend.main:app --reload --port 8000
 **If the frontend won't load:**
 
 ```bash
-cd clickshop-demo/frontend
+cd agentstride/frontend
 npm run dev
 ```
 

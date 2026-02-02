@@ -1,4 +1,4 @@
-"""ClickShop library modules"""
+"""AgentStride library modules"""
 from .aurora_db import *
 
 __all__ = [

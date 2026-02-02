@@ -13,6 +13,8 @@
 
 **A production-oriented demonstration of scaling agentic systems from MVP to 50K orders/day**
 
+**Shopping, powered by agents.**
+
 [Overview](#overview) • [Architecture](#architecture-evolution) • [Quick Start](#quick-start) • [Demos](#running-the-demos) • [Resources](#technical-resources)
 
 </div>
@@ -185,7 +187,7 @@ SELECT * FROM semantic_product_search(query_embedding, 5);
 ```bash
 # Clone repository
 git clone https://github.com/aws-samples/sample-dat309-agentic-workflows-aurora-mcp
-cd sample-dat309-agentic-workflows-aurora-mcp/clickshop-demo
+cd sample-dat309-agentic-workflows-aurora-mcp/agentstride
 
 # Run automated setup
 ./scripts/setup.sh
@@ -253,7 +255,7 @@ The project includes a full-stack web application for interactive demos:
 ### Backend (FastAPI)
 
 ```bash
-cd clickshop-demo
+cd agentstride
 source venv/bin/activate
 uvicorn backend.main:app --reload --port 8000
 ```
@@ -268,7 +270,7 @@ uvicorn backend.main:app --reload --port 8000
 ### Frontend (React + Vite)
 
 ```bash
-cd clickshop-demo/frontend
+cd agentstride/frontend
 npm install
 npm run dev
 ```
@@ -343,7 +345,7 @@ python -m demos.phase_3_multi_agent
 ## Project Structure
 
 ```
-clickshop-demo/
+agentstride/
 ├── requirements.txt               # Python dependencies
 ├── .env.example                   # Environment variable template
 │
