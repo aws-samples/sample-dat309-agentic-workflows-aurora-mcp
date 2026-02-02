@@ -9,11 +9,11 @@
 set -e
 
 # Configuration
-CLUSTER_IDENTIFIER="clickshop-demo"
+CLUSTER_IDENTIFIER="agentstride-demo"
 REGION="${AWS_DEFAULT_REGION:-us-east-1}"
-SECRET_NAME="clickshop-demo-credentials"
-SUBNET_GROUP_NAME="clickshop-demo-subnet-group"
-SG_NAME="clickshop-demo-sg"
+SECRET_NAME="agentstride-demo-credentials"
+SUBNET_GROUP_NAME="agentstride-demo-subnet-group"
+SG_NAME="agentstride-demo-sg"
 
 # Colors for output
 RED='\033[0;31m'

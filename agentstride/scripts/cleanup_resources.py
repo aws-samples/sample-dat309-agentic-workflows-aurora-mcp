@@ -21,7 +21,7 @@ def cleanup_resources(region: str = "us-east-1"):
     console.print("[yellow]Deleting Secrets Manager secret...[/yellow]")
     try:
         secretsmanager.delete_secret(
-            SecretId="clickshop-demo-credentials",
+            SecretId="agentstride-demo-credentials",
             ForceDeleteWithoutRecovery=True
         )
         console.print("[green]✅ Secret deleted[/green]")
@@ -33,7 +33,7 @@ def cleanup_resources(region: str = "us-east-1"):
     # Delete subnet group
     console.print("[yellow]Deleting DB subnet group...[/yellow]")
     try:
-        rds.delete_db_subnet_group(DBSubnetGroupName="clickshop-demo-subnet-group")
+        rds.delete_db_subnet_group(DBSubnetGroupName="agentstride-demo-subnet-group")
         console.print("[green]✅ Subnet group deleted[/green]")
     except rds.exceptions.DBSubnetGroupNotFoundFault:
         console.print("[dim]Subnet group already deleted or not found[/dim]")
@@ -44,7 +44,7 @@ def cleanup_resources(region: str = "us-east-1"):
     console.print("[yellow]Deleting security group...[/yellow]")
     try:
         response = ec2.describe_security_groups(
-            Filters=[{"Name": "group-name", "Values": ["clickshop-demo-sg"]}]
+            Filters=[{"Name": "group-name", "Values": ["agentstride-demo-sg"]}]
         )
         if response["SecurityGroups"]:
             sg_id = response["SecurityGroups"][0]["GroupId"]

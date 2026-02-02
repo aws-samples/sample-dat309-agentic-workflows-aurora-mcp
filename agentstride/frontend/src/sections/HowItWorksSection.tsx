@@ -43,7 +43,7 @@ result = agent("Find comfortable running shoes")`,
     scale: '5K orders/day',
     desc: 'The agent discovers database capabilities through MCP instead of hardcoding them. RDS Data API eliminates connection management. Aurora Serverless v2 scales to zero when idle.',
     code: `mcp = MCPClient(awslabs.postgres_mcp_server)
-  → resource_arn: clickshop-demo
+  → resource_arn: agentstride-demo
   → Serverless v2 (0–64 ACUs)
   → RDS Data API + IAM auth
   → Zero connection management`,

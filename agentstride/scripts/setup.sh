@@ -4,7 +4,7 @@
 
 set -e
 
-# Change to script's parent directory (clickshop-demo)
+# Change to script's parent directory (agentstride)
 cd "$(dirname "$0")/.."
 
 echo "🛍️  ClickShop Complete Setup"

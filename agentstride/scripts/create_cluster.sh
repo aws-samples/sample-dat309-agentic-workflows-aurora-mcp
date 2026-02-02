@@ -13,14 +13,14 @@
 set -e
 
 # Configuration
-CLUSTER_IDENTIFIER="clickshop-demo"
+CLUSTER_IDENTIFIER="agentstride-demo"
 DB_NAME="clickshop"
 DB_USERNAME="clickshop_admin"
 REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 ENGINE_VERSION="17.5"
 MIN_CAPACITY=0
 MAX_CAPACITY=64
-SECRET_NAME="clickshop-demo-credentials"
+SECRET_NAME="agentstride-demo-credentials"
 
 # Colors for output
 RED='\033[0;31m'
@@ -187,7 +187,7 @@ log_success "Using subnets: $SUBNET_IDS"
 # Step 3: Create DB subnet group
 log_info "Creating DB subnet group..."
 
-SUBNET_GROUP_NAME="clickshop-demo-subnet-group"
+SUBNET_GROUP_NAME="agentstride-demo-subnet-group"
 
 # Check if subnet group exists
 if aws rds describe-db-subnet-groups --db-subnet-group-name "$SUBNET_GROUP_NAME" --region "$REGION" &> /dev/null; then
@@ -204,7 +204,7 @@ fi
 # Step 4: Create security group
 log_info "Creating security group..."
 
-SG_NAME="clickshop-demo-sg"
+SG_NAME="agentstride-demo-sg"
 
 # Check if security group exists
 EXISTING_SG=$(aws ec2 describe-security-groups \
