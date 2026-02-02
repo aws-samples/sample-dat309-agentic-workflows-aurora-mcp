@@ -101,21 +101,6 @@ export function HeroSection({ scrollY }: HeroSectionProps) {
           padding: '0 24px',
         }}
       >
-        {/* Tech stack breadcrumb */}
-        <div
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            color: 'rgba(251,191,36,0.9)',
-            marginBottom: 24,
-            fontFamily: "'SF Mono', 'Fira Code', monospace",
-          }}
-        >
-          Aurora PostgreSQL · MCP · pgvector · Nova Multimodal
-        </div>
-
         {/* Headline with shimmer */}
         <h1
           className="hero-headline"
