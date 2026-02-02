@@ -28,7 +28,7 @@ console = Console()
 # ═══════════════════════════════════════════════════════════════════════════
 bedrock_model = BedrockModel(
     model_id=os.getenv("BEDROCK_MODEL_ID"),
-    region_name=os.getenv("BEDROCK_REGION", "us-west-2"),
+    region_name=os.getenv("BEDROCK_REGION", "us-east-1"),
     temperature=0.3
 )
 

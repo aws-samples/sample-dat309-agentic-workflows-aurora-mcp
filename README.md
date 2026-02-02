@@ -35,14 +35,14 @@ A live-streaming shopping platform that evolved from 50 orders/day to 50,000 ord
 
 ### Performance & Scale Comparison
 
-| Metric              | Phase 1: Single Agent | Phase 2: Agent + MCP | Phase 3: Multi-Agent |
-| ------------------- | --------------------- | -------------------- | -------------------- |
-| **Daily Capacity**  | 50 orders             | 5,000 orders         | 50,000 orders        |
-| **Response Time**   | ~2.0s                 | ~3.5s                | ~200ms               |
-| **Architecture**    | Monolithic            | MCP-mediated         | Supervisor pattern   |
-| **Database Access** | Direct (`psycopg3`)   | RDS Data API (MCP)   | Direct (`psycopg3`) + pgvector |
-| **Search Type**     | Exact match           | Exact match          | Semantic (vector)    |
-| **Coupling**        | Tight                 | Loose (MCP)          | Loose + Specialized  |
+| Metric              | Phase 1: Single Agent | Phase 2: Agent + MCP | Phase 3: Multi-Agent    |
+| ------------------- | --------------------- | -------------------- | ----------------------- |
+| **Daily Capacity**  | 50 orders             | 5,000 orders         | 50,000 orders           |
+| **Response Time**   | ~2.0s                 | ~3.5s                | ~200ms                  |
+| **Architecture**    | Monolithic            | MCP-mediated         | Supervisor pattern      |
+| **Database Access** | RDS Data API          | RDS Data API (MCP)   | RDS Data API + pgvector |
+| **Search Type**     | Exact match           | Exact match          | Semantic (vector)       |
+| **Coupling**        | Tight                 | Loose (MCP)          | Loose + Specialized     |
 
 ### Technical Architecture Details
 
@@ -59,7 +59,7 @@ A live-streaming shopping platform that evolved from 50 orders/day to 50,000 ord
   - `check_product_inventory()` - Real-time inventory verification
   - `calculate_order_total()` - Price calculation with tax/shipping
   - `process_customer_order()` - Order persistence and workflow
-- **Database:** Direct Aurora PostgreSQL access via `psycopg3`
+- **Database:** Aurora PostgreSQL access via RDS Data API
 - **Pattern:** Tight coupling with inline database operations
 
 **Key Characteristics:**
@@ -108,7 +108,7 @@ mcp_client = MCPClient(lambda: stdio_client(
             "--resource_arn", "arn:aws:rds:region:account:cluster:cluster-id",
             "--secret_arn", "arn:aws:secretsmanager:region:account:secret:secret-name",
             "--database", "postgres",
-            "--region", "us-west-2",
+            "--region", "us-east-1",
             "--readonly", "True"
         ]
     )
@@ -203,7 +203,7 @@ python -m demos.run_demo
 # .env file structure
 AWS_ACCESS_KEY_ID=your_access_key
 AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=us-west-2
+AWS_REGION=us-east-1
 BEDROCK_MODEL_ID=global.anthropic.claude-sonnet-4-5-20250929-v1:0
 ```
 
@@ -314,13 +314,13 @@ clickshop-demo/
 aws sts get-caller-identity
 
 # Verify Bedrock access
-aws bedrock list-foundation-models --region us-west-2
+aws bedrock list-foundation-models --region us-east-1
 
 # Test Bedrock model invocation
 aws bedrock-runtime invoke-model \
     --model-id global.anthropic.claude-sonnet-4-5-20250929-v1:0 \
     --body '{"anthropic_version":"bedrock-2023-05-31","max_tokens":100,"messages":[{"role":"user","content":"Hello"}]}' \
-    --region us-west-2 \
+    --region us-east-1 \
     output.json
 ```
 
@@ -345,7 +345,7 @@ uvx awslabs.postgres-mcp-server@latest \
     --resource_arn "arn:aws:rds:region:account:cluster:cluster-id" \
     --secret_arn "arn:aws:secretsmanager:region:account:secret:secret-name" \
     --database "postgres" \
-    --region "us-west-2" \
+    --region "us-east-1" \
     --readonly "True"
 ```
 
@@ -410,23 +410,20 @@ Guide to using Model Context Protocol servers for building AI agent applications
 ```txt
 # Core Framework
 python>=3.11
-strands-framework>=1.0.0
+strands-agents>=0.1.0
 boto3>=1.34.0
 
-# Database
-psycopg3>=3.1.0
-psycopg3-binary>=3.1.0
-
 # Vector Search (Phase 3)
-sentence-transformers>=2.2.0
-pgvector>=0.8.0
-
-# MCP Protocol (Phase 2, 3)
-mcp>=0.1.0
+numpy>=1.24.0
 
 # Utilities
 python-dotenv>=1.0.0
+pydantic>=2.0.0
 rich>=13.7.0
+
+# Testing
+pytest>=7.4.0
+hypothesis>=6.100.0
 ```
 
 ---

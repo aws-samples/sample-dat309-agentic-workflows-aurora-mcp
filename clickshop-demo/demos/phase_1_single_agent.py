@@ -29,7 +29,7 @@ console = Console()
 # ═══════════════════════════════════════════════════════════════════════════
 bedrock_model = BedrockModel(
     model_id=os.getenv("BEDROCK_MODEL_ID"),
-    region_name=os.getenv("BEDROCK_REGION", "us-west-2"),
+    region_name=os.getenv("BEDROCK_REGION", "us-east-1"),
     temperature=0.3  # Lower = more consistent, Higher = more creative
 )
 
@@ -45,7 +45,7 @@ def identify_product_from_stream(stream_id: str) -> dict:
     """
     Find product from live stream context.
     
-    PATTERN: Direct database query via psycopg3
+    PATTERN: Direct database query via RDS Data API
     - Fastest path: ~50ms query time
     - Simplest code: No abstraction layers
     - Trade-off: Tight coupling to Aurora schema
@@ -226,7 +226,7 @@ def run_interactive_demo():
     console.print("\n[bold]🏗️  Phase 1 Architecture:[/bold]")
     console.print("  • 1 Agent (handles entire workflow)")
     console.print("  • 4 Tools (direct Aurora access)")
-    console.print("  • psycopg3 connection pooling")
+    console.print("  • RDS Data API (no connection management)")
     console.print("  • Aurora PostgreSQL single region\n")
     
     console.print("[bold]✅ Why Start Here:[/bold]")

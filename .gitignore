@@ -1,1 +1,29 @@
+# Environment
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+.hypothesis/
+
+# Node.js
+node_modules/
+dist/
+.npm
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Kiro specs (local development)
+.kiro/

@@ -1,4 +1,4 @@
-# Fixed Verification Script for ClickShop Dependencies
+# Verification Script for ClickShop Dependencies
 
 import sys
 
@@ -22,33 +22,12 @@ try:
 except ImportError as e:
     packages_status.append(("❌ Boto3", f"NOT INSTALLED"))
 
-# psycopg3
-try:
-    import psycopg
-    packages_status.append(("✅ psycopg3", psycopg.__version__))
-except ImportError as e:
-    packages_status.append(("❌ psycopg3", f"NOT INSTALLED"))
-
-# pgvector
-try:
-    import pgvector
-    packages_status.append(("✅ pgvector", "installed"))
-except ImportError as e:
-    packages_status.append(("❌ pgvector", f"NOT INSTALLED"))
-
 # numpy
 try:
     import numpy
     packages_status.append(("✅ numpy", numpy.__version__))
 except ImportError as e:
     packages_status.append(("❌ numpy", f"NOT INSTALLED"))
-
-# sentence-transformers
-try:
-    from sentence_transformers import SentenceTransformer
-    packages_status.append(("✅ sentence-transformers", "installed"))
-except ImportError as e:
-    packages_status.append(("❌ sentence-transformers", f"NOT INSTALLED"))
 
 # rich
 try:
@@ -71,12 +50,19 @@ try:
 except ImportError as e:
     packages_status.append(("❌ pydantic", f"NOT INSTALLED"))
 
-# sqlalchemy
+# FastAPI
 try:
-    import sqlalchemy
-    packages_status.append(("✅ sqlalchemy", sqlalchemy.__version__))
+    import fastapi
+    packages_status.append(("✅ FastAPI", fastapi.__version__))
 except ImportError as e:
-    packages_status.append(("❌ sqlalchemy", f"NOT INSTALLED"))
+    packages_status.append(("❌ FastAPI", f"NOT INSTALLED"))
+
+# Hypothesis (for property-based testing)
+try:
+    import hypothesis
+    packages_status.append(("✅ Hypothesis", hypothesis.__version__))
+except ImportError as e:
+    packages_status.append(("❌ Hypothesis", f"NOT INSTALLED"))
 
 # Print results
 print("=" * 70)
@@ -90,7 +76,7 @@ failed = [status for status in packages_status if "❌" in status[0]]
 if not failed:
     print("\n🎉 All dependencies installed successfully!")
     print("\n✅ You're ready to proceed with:")
-    print("   1. Aurora connection test")
+    print("   1. Aurora connection test (RDS Data API)")
     print("   2. Database schema initialization")
     print("   3. Running demos")
 else:

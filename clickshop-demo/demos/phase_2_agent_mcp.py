@@ -25,7 +25,7 @@ console = Console()
 # ═══════════════════════════════════════════════════════════════════════════
 bedrock_model = BedrockModel(
     model_id=os.getenv("BEDROCK_MODEL_ID"),
-    region_name=os.getenv("BEDROCK_REGION", "us-west-2"),
+    region_name=os.getenv("BEDROCK_REGION", "us-east-1"),
     temperature=0.3
 )
 
@@ -45,10 +45,10 @@ mcp_client = MCPClient(lambda: stdio_client(
         command="uvx",
         args=[
             "awslabs.postgres-mcp-server@latest",
-            "--resource_arn", "arn:aws:rds:us-west-2:123456789012:cluster:apgpg-pgvector",
-            "--secret_arn", "arn:aws:secretsmanager:us-west-2:123456789012:secret:my-secret-abc123",
-            "--database", "postgres",
-            "--region", "us-west-2",
+            "--resource_arn", os.getenv("AURORA_CLUSTER_ARN", "arn:aws:rds:us-east-1:123456789012:cluster:clickshop-demo"),
+            "--secret_arn", os.getenv("AURORA_SECRET_ARN", "arn:aws:secretsmanager:us-east-1:123456789012:secret:clickshop-secret"),
+            "--database", os.getenv("AURORA_DATABASE", "clickshop"),
+            "--region", os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
             "--readonly", "True",  # Read-only mode for safety
         ]
     )
@@ -107,7 +107,7 @@ def run_interactive_demo():
     ))
     
     console.print("\n[bold]📊 What Changed from Phase 1:[/bold]")
-    console.print("  Before: import psycopg3 → write SQL → manage connections")
+    console.print("  Before: RDS Data API with hardcoded tools")
     console.print("  After:  MCP server handles all database details")
     console.print("  Benefit: Swap Aurora for RDS/Postgres without code changes\n")
     

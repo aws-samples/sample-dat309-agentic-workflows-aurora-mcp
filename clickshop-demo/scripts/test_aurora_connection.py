@@ -1,76 +1,95 @@
-"""Test Aurora PostgreSQL connection"""
+"""Test Aurora PostgreSQL connection via RDS Data API"""
 import os
 import sys
+import json
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-print("Testing Aurora PostgreSQL connection with psycopg3...")
-print(f"Host: {os.getenv('AURORA_HOST')}")
-print(f"Database: {os.getenv('AURORA_DATABASE')}")
-print(f"Port: {os.getenv('AURORA_PORT')}")
+print("Testing Aurora PostgreSQL connection with RDS Data API...")
+print(f"Cluster ARN: {os.getenv('AURORA_CLUSTER_ARN', 'Not set')[:80]}...")
+print(f"Database: {os.getenv('AURORA_DATABASE', 'clickshop')}")
+print(f"Region: {os.getenv('AWS_DEFAULT_REGION', 'us-east-1')}")
 print()
 
 # Check if credentials are loaded
-if not os.getenv('AURORA_HOST'):
-    print("❌ Error: .env file not found or not configured")
-    print("Please create .env file with Aurora credentials")
+if not os.getenv('AURORA_CLUSTER_ARN'):
+    print("❌ Error: AURORA_CLUSTER_ARN not set in .env file")
+    print("Please configure .env file with Aurora credentials")
+    sys.exit(1)
+
+if not os.getenv('AURORA_SECRET_ARN'):
+    print("❌ Error: AURORA_SECRET_ARN not set in .env file")
+    print("Please configure .env file with Secrets Manager ARN")
     sys.exit(1)
 
 try:
-    import psycopg
+    import boto3
     
-    # Connect using psycopg3
-    conn = psycopg.connect(
-        host=os.getenv('AURORA_HOST'),
-        port=os.getenv('AURORA_PORT'),
-        dbname=os.getenv('AURORA_DATABASE'),
-        user=os.getenv('AURORA_USERNAME'),
-        password=os.getenv('AURORA_PASSWORD'),
-        connect_timeout=10
+    # Initialize RDS Data API client
+    rds_data = boto3.client(
+        'rds-data',
+        region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
     )
     
-    print("✅ Connection successful!")
+    cluster_arn = os.getenv('AURORA_CLUSTER_ARN')
+    secret_arn = os.getenv('AURORA_SECRET_ARN')
+    database = os.getenv('AURORA_DATABASE', 'clickshop')
     
-    # Test query
-    with conn.cursor() as cur:
-        cur.execute("SELECT version();")
-        version = cur.fetchone()[0]
-        print(f"✅ PostgreSQL version: {version[:60]}...")
-        
-        # Check for pgvector extension
-        cur.execute("""
+    # Test connection with version query
+    response = rds_data.execute_statement(
+        resourceArn=cluster_arn,
+        secretArn=secret_arn,
+        database=database,
+        sql="SELECT version();"
+    )
+    
+    version = response['records'][0][0]['stringValue']
+    print("✅ Connection successful!")
+    print(f"✅ PostgreSQL version: {version[:60]}...")
+    
+    # Check for pgvector extension
+    response = rds_data.execute_statement(
+        resourceArn=cluster_arn,
+        secretArn=secret_arn,
+        database=database,
+        sql="""
             SELECT EXISTS (
                 SELECT 1 FROM pg_extension WHERE extname = 'vector'
             );
-        """)
-        has_vector = cur.fetchone()[0]
-        
-        if has_vector:
-            print("✅ pgvector extension is installed")
-            
-            # Get vector extension version
-            cur.execute("SELECT extversion FROM pg_extension WHERE extname = 'vector';")
-            vector_version = cur.fetchone()[0]
-            print(f"✅ pgvector version: {vector_version}")
-        else:
-            print("⚠️  pgvector extension not installed (will install in next step)")
+        """
+    )
     
-    conn.close()
-    print("\n🎉 Aurora PostgreSQL is ready to use!")
+    has_vector = response['records'][0][0]['booleanValue']
+    
+    if has_vector:
+        print("✅ pgvector extension is installed")
+        
+        # Get vector extension version
+        response = rds_data.execute_statement(
+            resourceArn=cluster_arn,
+            secretArn=secret_arn,
+            database=database,
+            sql="SELECT extversion FROM pg_extension WHERE extname = 'vector';"
+        )
+        vector_version = response['records'][0][0]['stringValue']
+        print(f"✅ pgvector version: {vector_version}")
+    else:
+        print("⚠️  pgvector extension not installed (will install in next step)")
+    
+    print("\n🎉 Aurora PostgreSQL is ready to use via RDS Data API!")
     
 except ImportError:
-    print("❌ psycopg3 not installed")
-    print("Run: pip install 'psycopg[binary,pool]'")
+    print("❌ boto3 not installed")
+    print("Run: pip install boto3")
     sys.exit(1)
     
 except Exception as e:
     print(f"❌ Connection failed: {e}")
     print("\nTroubleshooting:")
     print("1. Verify Aurora cluster is running")
-    print("2. Check security group allows your IP")
-    print("3. Confirm credentials in .env are correct")
-    print("4. Test with psql CLI:")
-    print(f"   psql -h {os.getenv('AURORA_HOST')} -U {os.getenv('AURORA_USERNAME')} -d {os.getenv('AURORA_DATABASE')}")
+    print("2. Check that Data API is enabled on the cluster")
+    print("3. Confirm AURORA_CLUSTER_ARN and AURORA_SECRET_ARN in .env are correct")
+    print("4. Verify IAM permissions for rds-data:ExecuteStatement")
     sys.exit(1)

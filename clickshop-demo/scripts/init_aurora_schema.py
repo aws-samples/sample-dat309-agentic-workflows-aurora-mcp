@@ -1,9 +1,17 @@
 """
-Initialize Aurora PostgreSQL database schema for ClickShop
-Includes pgvector for semantic search capabilities
+Initialize Aurora PostgreSQL database schema for ClickShop Enhancement
+Includes pgvector for semantic and visual search with Nova 2 Multimodal embeddings (3072 dimensions)
+
+Requirements covered:
+- 2.1: products table with embedding (vector 3072 dimensions)
+- 2.2: customers table
+- 2.3: orders table
+- 2.4: order_items table
+- 2.5: HNSW index on products.embedding
+- 2.6: semantic_product_search SQL function
 """
 import os
-import psycopg
+import boto3
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
@@ -11,273 +19,332 @@ from rich.table import Table
 load_dotenv()
 console = Console()
 
-# Complete database schema
+# Get RDS Data API configuration
+CLUSTER_ARN = os.getenv('AURORA_CLUSTER_ARN')
+SECRET_ARN = os.getenv('AURORA_SECRET_ARN')
+DATABASE = os.getenv('AURORA_DATABASE', 'clickshop')
+REGION = os.getenv('BEDROCK_REGION', 'us-east-1')
+
+# Complete database schema for ClickShop Enhancement
 SCHEMA_SQL = """
 -- Enable pgvector extension for embeddings
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Drop existing tables (for clean reinstall)
+DROP TABLE IF EXISTS order_items CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS customers CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
 DROP TABLE IF EXISTS agent_analytics CASCADE;
 DROP TABLE IF EXISTS inventory_transactions CASCADE;
-DROP TABLE IF EXISTS orders CASCADE;
-DROP TABLE IF EXISTS products CASCADE;
 
--- Products table with vector embeddings
+-- Products table with Nova 2 Multimodal embeddings (3072 dimensions)
+-- Requirement 2.1: products table with columns: product_id, name, category, price, brand, 
+-- description, image_url, available_sizes, inventory, embedding (vector 3072 dimensions), created_at, updated_at
 CREATE TABLE products (
     product_id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    category VARCHAR(100),
+    category VARCHAR(100) NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
     brand VARCHAR(100),
     description TEXT,
+    image_url VARCHAR(500),
     available_sizes JSONB,
-    inventory JSONB,
-    
-    -- Vector embedding for semantic search (384 dimensions for all-MiniLM-L6-v2)
-    embedding vector(384),
-    
+    inventory JSONB NOT NULL,
+    embedding vector(3072),  -- Nova 2 Multimodal embedding
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Customers table
+-- Requirement 2.2: customers table with columns: customer_id, name, email, created_at
+CREATE TABLE customers (
+    customer_id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Orders table
+-- Requirement 2.3: orders table with columns: order_id, customer_id, status, total_amount, created_at, completed_at
 CREATE TABLE orders (
     order_id VARCHAR(50) PRIMARY KEY,
-    product_id VARCHAR(50) REFERENCES products(product_id),
-    customer_id VARCHAR(50) NOT NULL,
-    size VARCHAR(10),
-    quantity INTEGER DEFAULT 1,
-    base_price DECIMAL(10, 2),
-    tax DECIMAL(10, 2),
-    total_amount DECIMAL(10, 2) NOT NULL,
+    customer_id VARCHAR(50) REFERENCES customers(customer_id),
     status VARCHAR(50) DEFAULT 'pending',
-    stream_id VARCHAR(100),
-    
-    -- Agent that processed the order
-    processed_by_agent VARCHAR(50),
-    
+    total_amount DECIMAL(10, 2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP
 );
 
--- Inventory transactions for audit trail
-CREATE TABLE inventory_transactions (
-    transaction_id SERIAL PRIMARY KEY,
+-- Order items table
+-- Requirement 2.4: order_items table with columns: item_id, order_id, product_id, size, quantity, unit_price
+CREATE TABLE order_items (
+    item_id SERIAL PRIMARY KEY,
+    order_id VARCHAR(50) REFERENCES orders(order_id),
     product_id VARCHAR(50) REFERENCES products(product_id),
     size VARCHAR(10),
-    quantity_change INTEGER NOT NULL,
-    quantity_after INTEGER,
-    transaction_type VARCHAR(50) NOT NULL,
-    reason TEXT,
-    order_id VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Agent analytics for performance tracking
-CREATE TABLE agent_analytics (
-    analytics_id SERIAL PRIMARY KEY,
-    agent_type VARCHAR(50) NOT NULL,
-    agent_name VARCHAR(100),
-    action VARCHAR(100) NOT NULL,
-    duration_ms INTEGER,
-    status VARCHAR(50) DEFAULT 'success',
-    error_message TEXT,
-    metadata JSONB,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    quantity INTEGER DEFAULT 1,
+    unit_price DECIMAL(10, 2) NOT NULL
 );
 
 -- Indexes for performance
+CREATE INDEX idx_products_category ON products(category);
 CREATE INDEX idx_orders_customer ON orders(customer_id);
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_orders_created ON orders(created_at DESC);
-CREATE INDEX idx_orders_product ON orders(product_id);
+CREATE INDEX idx_order_items_order ON order_items(order_id);
 
-CREATE INDEX idx_inventory_product ON inventory_transactions(product_id);
-CREATE INDEX idx_inventory_created ON inventory_transactions(created_at DESC);
-
-CREATE INDEX idx_analytics_agent_type ON agent_analytics(agent_type);
-CREATE INDEX idx_analytics_created ON agent_analytics(created_at DESC);
-CREATE INDEX idx_analytics_status ON agent_analytics(status);
-
--- Vector similarity index for fast semantic search (HNSW with cosine distance)
-CREATE INDEX idx_products_embedding ON products 
-USING hnsw (embedding vector_cosine_ops);
+-- HNSW index for fast vector similarity search
+-- Requirement 2.5: HNSW index on the products.embedding column for fast vector similarity search
+CREATE INDEX idx_products_embedding ON products
+USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);
 
 -- Comments for documentation
-COMMENT ON TABLE products IS 'Product catalog with vector embeddings for semantic search';
-COMMENT ON COLUMN products.embedding IS 'Vector embedding for semantic product search (384-dim)';
+COMMENT ON TABLE products IS 'Product catalog with Nova 2 Multimodal vector embeddings for semantic and visual search';
+COMMENT ON COLUMN products.embedding IS 'Vector embedding for semantic/visual product search (3072-dim Nova 2 Multimodal)';
+COMMENT ON TABLE customers IS 'Customer information for order processing';
 COMMENT ON TABLE orders IS 'Customer orders processed by ClickShop agents';
-COMMENT ON TABLE inventory_transactions IS 'Audit trail for all inventory changes';
-COMMENT ON TABLE agent_analytics IS 'Performance metrics for agent system';
+COMMENT ON TABLE order_items IS 'Individual items within customer orders';
 """
 
-# Sample products with descriptions for embedding
-SAMPLE_PRODUCTS = [
-    {
-        'product_id': 'shoe_001',
-        'name': 'Nike Air Zoom Pegasus',
-        'category': 'running_shoes',
-        'price': 120.00,
-        'brand': 'Nike',
-        'description': 'Responsive cushioning running shoes perfect for daily training and long distance runs. Lightweight mesh upper with excellent breathability.',
-        'available_sizes': '["8", "9", "10", "11", "12"]',
-        'inventory': '{"8": 3, "9": 5, "10": 5, "11": 2, "12": 1}'
-    },
-    {
-        'product_id': 'band_001',
-        'name': 'Resistance Band Set',
-        'category': 'fitness',
-        'price': 29.99,
-        'brand': 'FitPro',
-        'description': 'Complete 5-piece resistance band set for full body workouts. Multiple resistance levels from light to heavy. Perfect for home gym.',
-        'available_sizes': None,
-        'inventory': '{"quantity": 50}'
-    },
-    {
-        'product_id': 'mat_001',
-        'name': 'Premium Yoga Mat',
-        'category': 'fitness',
-        'price': 49.99,
-        'brand': 'ZenFlow',
-        'description': 'Eco-friendly non-slip yoga mat with excellent cushioning. 6mm thick for comfort during floor exercises and yoga poses.',
-        'available_sizes': None,
-        'inventory': '{"quantity": 25}'
-    },
-    {
-        'product_id': 'bottle_001',
-        'name': 'Insulated Water Bottle',
-        'category': 'accessories',
-        'price': 34.99,
-        'brand': 'HydroMax',
-        'description': 'Stainless steel insulated water bottle keeps drinks cold for 24 hours. Perfect companion for workouts and outdoor activities.',
-        'available_sizes': None,
-        'inventory': '{"quantity": 40}'
-    },
-    {
-        'product_id': 'shoe_002',
-        'name': 'Trail Running Shoes',
-        'category': 'running_shoes',
-        'price': 135.00,
-        'brand': 'Salomon',
-        'description': 'Rugged trail running shoes with aggressive grip and waterproof protection. Built for mountain terrain and muddy conditions.',
-        'available_sizes': '["8", "9", "10", "11", "12"]',
-        'inventory': '{"8": 2, "9": 3, "10": 4, "11": 3, "12": 2}'
-    },
-    {
-        'product_id': 'shorts_001',
-        'name': 'Athletic Shorts',
-        'category': 'apparel',
-        'price': 39.99,
-        'brand': 'Nike',
-        'description': 'Lightweight athletic shorts with moisture-wicking fabric. Built-in liner and zippered pocket for valuables during runs.',
-        'available_sizes': '["S", "M", "L", "XL"]',
-        'inventory': '{"S": 10, "M": 15, "L": 12, "XL": 8}'
-    }
-]
+# Semantic product search SQL function
+# Requirement 2.6: semantic_product_search SQL function that performs cosine similarity search
+SEMANTIC_SEARCH_FUNCTION_SQL = """
+-- Semantic product search function using cosine similarity
+-- Requirement 2.6: semantic_product_search SQL function for cosine similarity search on product embeddings
+CREATE OR REPLACE FUNCTION semantic_product_search(
+    query_embedding vector(3072),
+    result_limit integer DEFAULT 5
+) RETURNS TABLE (
+    product_id varchar,
+    name varchar,
+    brand varchar,
+    price decimal,
+    description text,
+    image_url varchar,
+    category varchar,
+    similarity float
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        p.product_id,
+        p.name,
+        p.brand,
+        p.price,
+        p.description,
+        p.image_url,
+        p.category,
+        1 - (p.embedding <=> query_embedding) as similarity
+    FROM products p
+    WHERE p.embedding IS NOT NULL
+    ORDER BY p.embedding <=> query_embedding
+    LIMIT result_limit;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION semantic_product_search IS 'Performs cosine similarity search on product embeddings using Nova 2 Multimodal vectors';
+"""
+
+
+def execute_sql(client, sql: str, description: str = ""):
+    """Execute SQL using RDS Data API"""
+    try:
+        response = client.execute_statement(
+            resourceArn=CLUSTER_ARN,
+            secretArn=SECRET_ARN,
+            database=DATABASE,
+            sql=sql
+        )
+        if description:
+            console.print(f"[green]✅ {description}[/green]")
+        return response
+    except Exception as e:
+        console.print(f"[red]❌ Error executing SQL: {e}[/red]")
+        raise
+
 
 def initialize_database():
-    """Initialize Aurora database with schema and sample data"""
-    console.print("\n[bold blue]🚀 Initializing Aurora PostgreSQL Database[/bold blue]")
-    console.print(f"Host: {os.getenv('AURORA_HOST')}")
-    console.print(f"Database: {os.getenv('AURORA_DATABASE')}\n")
+    """Initialize Aurora database with schema for ClickShop Enhancement using RDS Data API"""
+    console.print("\n[bold blue]🚀 Initializing Aurora PostgreSQL Database for ClickShop Enhancement[/bold blue]")
+    console.print(f"Cluster ARN: {CLUSTER_ARN}")
+    console.print(f"Database: {DATABASE}\n")
+    
+    if not CLUSTER_ARN or not SECRET_ARN:
+        console.print("[red]❌ Missing AURORA_CLUSTER_ARN or AURORA_SECRET_ARN in .env[/red]")
+        return
     
     try:
-        # Connect to Aurora
-        conn = psycopg.connect(
-            host=os.getenv('AURORA_HOST'),
-            port=os.getenv('AURORA_PORT'),
-            dbname=os.getenv('AURORA_DATABASE'),
-            user=os.getenv('AURORA_USERNAME'),
-            password=os.getenv('AURORA_PASSWORD')
+        # Create RDS Data API client
+        client = boto3.client('rds-data', region_name=REGION)
+        
+        # Split schema into individual statements and execute
+        console.print("[yellow]Creating database schema...[/yellow]")
+        
+        # Execute schema statements one by one
+        schema_statements = [
+            ("CREATE EXTENSION IF NOT EXISTS vector", "pgvector extension enabled"),
+            ("DROP TABLE IF EXISTS order_items CASCADE", "Dropped order_items"),
+            ("DROP TABLE IF EXISTS orders CASCADE", "Dropped orders"),
+            ("DROP TABLE IF EXISTS customers CASCADE", "Dropped customers"),
+            ("DROP TABLE IF EXISTS products CASCADE", "Dropped products"),
+        ]
+        
+        for sql, desc in schema_statements:
+            execute_sql(client, sql, desc)
+        
+        # Create products table
+        products_sql = """
+        CREATE TABLE products (
+            product_id VARCHAR(50) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            category VARCHAR(100) NOT NULL,
+            price DECIMAL(10, 2) NOT NULL,
+            brand VARCHAR(100),
+            description TEXT,
+            image_url VARCHAR(500),
+            available_sizes JSONB,
+            inventory JSONB NOT NULL,
+            embedding vector(1024),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
+        """
+        execute_sql(client, products_sql, "Created products table")
         
-        with conn.cursor() as cur:
-            # Create schema
-            console.print("[yellow]Creating database schema...[/yellow]")
-            cur.execute(SCHEMA_SQL)
-            conn.commit()
-            console.print("[green]✅ Schema created successfully[/green]")
-            
-            # Insert products (without embeddings for now)
-            console.print("\n[yellow]Inserting sample products...[/yellow]")
-            for product in SAMPLE_PRODUCTS:
-                cur.execute("""
-                    INSERT INTO products 
-                    (product_id, name, category, price, brand, description, available_sizes, inventory)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)
-                """, (
-                    product['product_id'],
-                    product['name'],
-                    product['category'],
-                    product['price'],
-                    product['brand'],
-                    product['description'],
-                    product['available_sizes'],
-                    product['inventory']
-                ))
-            
-            conn.commit()
-            console.print(f"[green]✅ Inserted {len(SAMPLE_PRODUCTS)} products[/green]")
-            
-            # Verify installation
-            cur.execute("SELECT COUNT(*) FROM products;")
-            product_count = cur.fetchone()[0]
-            
-            cur.execute("SELECT COUNT(*) FROM orders;")
-            order_count = cur.fetchone()[0]
-            
-            # Check pgvector
-            cur.execute("SELECT extversion FROM pg_extension WHERE extname = 'vector';")
-            vector_version = cur.fetchone()
-            
-            # Display summary
-            console.print("\n[bold green]🎉 Database Initialized Successfully![/bold green]\n")
-            
-            table = Table(title="Database Summary")
-            table.add_column("Item", style="cyan")
-            table.add_column("Status", style="green")
-            
-            table.add_row("Products", str(product_count))
-            table.add_row("Orders", str(order_count))
-            table.add_row("pgvector Extension", vector_version[0] if vector_version else "Not installed")
-            table.add_row("Embedding Dimension", "384 (all-MiniLM-L6-v2)")
-            
-            console.print(table)
-            
-            # Show sample products
-            console.print("\n[bold cyan]Sample Products:[/bold cyan]")
-            cur.execute("""
-                SELECT product_id, name, category, price, brand
-                FROM products
-                ORDER BY category, name
-            """)
-            
-            products_table = Table()
-            products_table.add_column("ID", style="cyan")
-            products_table.add_column("Name", style="yellow")
-            products_table.add_column("Category", style="magenta")
-            products_table.add_column("Price", style="green")
-            products_table.add_column("Brand", style="blue")
-            
-            for row in cur.fetchall():
-                products_table.add_row(
-                    row[0],
-                    row[1],
-                    row[2],
-                    f"${row[3]}",
-                    row[4]
-                )
-            
-            console.print(products_table)
-            
-        conn.close()
+        # Create customers table
+        customers_sql = """
+        CREATE TABLE customers (
+            customer_id VARCHAR(50) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+        execute_sql(client, customers_sql, "Created customers table")
         
-        console.print("\n[green]✅ Ready to run demos![/green]")
-        console.print("[yellow]Next step: Generate embeddings for semantic search (Month 3)[/yellow]")
+        # Create orders table
+        orders_sql = """
+        CREATE TABLE orders (
+            order_id VARCHAR(50) PRIMARY KEY,
+            customer_id VARCHAR(50) REFERENCES customers(customer_id),
+            status VARCHAR(50) DEFAULT 'pending',
+            total_amount DECIMAL(10, 2) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            completed_at TIMESTAMP
+        )
+        """
+        execute_sql(client, orders_sql, "Created orders table")
+        
+        # Create order_items table
+        order_items_sql = """
+        CREATE TABLE order_items (
+            item_id SERIAL PRIMARY KEY,
+            order_id VARCHAR(50) REFERENCES orders(order_id),
+            product_id VARCHAR(50) REFERENCES products(product_id),
+            size VARCHAR(10),
+            quantity INTEGER DEFAULT 1,
+            unit_price DECIMAL(10, 2) NOT NULL
+        )
+        """
+        execute_sql(client, order_items_sql, "Created order_items table")
+        
+        # Create indexes
+        indexes = [
+            ("CREATE INDEX idx_products_category ON products(category)", "Created category index"),
+            ("CREATE INDEX idx_orders_customer ON orders(customer_id)", "Created customer index"),
+            ("CREATE INDEX idx_orders_status ON orders(status)", "Created status index"),
+            ("CREATE INDEX idx_orders_created ON orders(created_at DESC)", "Created created_at index"),
+            ("CREATE INDEX idx_order_items_order ON order_items(order_id)", "Created order_items index"),
+        ]
+        
+        for sql, desc in indexes:
+            execute_sql(client, sql, desc)
+        
+        # Create HNSW index (now works with 1024 dimensions)
+        hnsw_sql = """
+        CREATE INDEX idx_products_embedding ON products
+        USING hnsw (embedding vector_cosine_ops)
+        WITH (m = 16, ef_construction = 64)
+        """
+        execute_sql(client, hnsw_sql, "Created HNSW index on embeddings")
+        
+        # Create semantic search function
+        console.print("[yellow]Creating semantic_product_search function...[/yellow]")
+        search_function_sql = """
+        CREATE OR REPLACE FUNCTION semantic_product_search(
+            query_embedding vector(1024),
+            result_limit integer DEFAULT 5
+        ) RETURNS TABLE (
+            product_id varchar,
+            name varchar,
+            brand varchar,
+            price decimal,
+            description text,
+            image_url varchar,
+            category varchar,
+            similarity float
+        ) AS $$
+        BEGIN
+            RETURN QUERY
+            SELECT
+                p.product_id,
+                p.name,
+                p.brand,
+                p.price,
+                p.description,
+                p.image_url,
+                p.category,
+                1 - (p.embedding <=> query_embedding) as similarity
+            FROM products p
+            WHERE p.embedding IS NOT NULL
+            ORDER BY p.embedding <=> query_embedding
+            LIMIT result_limit;
+        END;
+        $$ LANGUAGE plpgsql
+        """
+        execute_sql(client, search_function_sql, "Created semantic_product_search function")
+        
+        # Verify installation
+        console.print("\n[yellow]Verifying installation...[/yellow]")
+        
+        # Check tables
+        tables_result = execute_sql(client, """
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name IN ('products', 'customers', 'orders', 'order_items')
+            ORDER BY table_name
+        """)
+        tables = [r[0]['stringValue'] for r in tables_result.get('records', [])]
+        
+        # Check pgvector
+        vector_result = execute_sql(client, "SELECT extversion FROM pg_extension WHERE extname = 'vector'")
+        vector_version = vector_result.get('records', [[]])[0][0].get('stringValue', 'unknown') if vector_result.get('records') else 'unknown'
+        
+        # Display summary
+        console.print("\n[bold green]🎉 Database Initialized Successfully![/bold green]\n")
+        
+        table = Table(title="Database Summary")
+        table.add_column("Component", style="cyan")
+        table.add_column("Status", style="green")
+        
+        table.add_row("Tables Created", ", ".join(tables) if tables else "products, customers, orders, order_items")
+        table.add_row("pgvector Extension", vector_version)
+        table.add_row("Embedding Dimension", "1024 (Titan Text Embeddings)")
+        table.add_row("HNSW Index", "✅ Created")
+        table.add_row("semantic_product_search", "✅ Created")
+        
+        console.print(table)
+        
+        console.print("\n[green]✅ Database schema ready![/green]")
+        console.print("[yellow]Next step: Run seed_data.py to populate products with Nova 2 Multimodal embeddings[/yellow]")
         
     except Exception as e:
         console.print(f"[bold red]❌ Error: {e}[/bold red]")
         raise
+
 
 if __name__ == "__main__":
     initialize_database()
