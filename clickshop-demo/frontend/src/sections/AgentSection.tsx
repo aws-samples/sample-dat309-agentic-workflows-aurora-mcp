@@ -19,7 +19,14 @@ export function AgentSection() {
   const chatEnd = useRef<HTMLDivElement>(null);
   const pc = phaseColors[phase - 1];
 
+  // Only scroll to bottom when new messages are added, not on initial render
+  const isInitialMount = useRef(true);
+  
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     chatEnd.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs, typing]);
 
