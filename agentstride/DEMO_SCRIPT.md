@@ -515,48 +515,113 @@ npm run dev
 
 ---
 
-## Backup Queries
+## Tested Query Reference & Talking Points
 
-If you need additional queries during the demo:
-
-**Phase 1/2 (Keyword searches that work well):**
-
-- `running shoes` - matches category
-- `Nike` - matches brand
-- `recovery products` - matches category keyword
-- `accessories under $50` - category + price filter
-- `fitness equipment` - matches category
-
-**Phase 1/2 (Semantic queries that FAIL - show the limitation):**
-
-- `gear for my first marathon` - returns 0 results
-- `help me build core strength` - returns 0 results
-- `track my fitness progress` - returns 0 results
-- `relieve sore muscles` - returns 0 results
-- `something comfortable for long runs` - returns 0 results
-
-**Phase 1/2 (Semantic queries that ACCIDENTALLY work - show inconsistency):**
-
-- `breathable clothes for hot weather` - returns results (matches "clothes" keyword)
-- `comfortable running shoes` - returns results (matches "running shoes" keyword)
+All queries below have been tested and verified against the live backend.
 
 ---
 
-## Phase 3 Multi-Agent Showcase
+### Phase 1 — Direct RDS Data API
 
-Phase 3 uses a **Supervisor pattern** with specialized agents. Here are queries that demonstrate each agent:
+**Architecture:** Single `Phase1Agent` with 5 `@tool` decorators, direct connection to Aurora PostgreSQL via RDS Data API.
 
-### SupervisorAgent → SearchAgent (Semantic Search)
+**Key talking points:**
 
-These queries show the SearchAgent handling natural language product discovery:
+- Simplest approach — agent writes SQL, executes via HTTP, returns results
+- Serverless-friendly (no connection pools, no timeouts)
+- Great for MVPs and getting started fast
+- Limitation: keyword matching only (ILIKE). No semantic understanding of user intent
+- Demo the inconsistency: `gear for my first marathon` → 0 results, but `breathable clothes for hot weather` → results (because "clothes" accidentally matches the Apparel category keyword)
 
-| Query                            | What it demonstrates                                            |
-| -------------------------------- | --------------------------------------------------------------- |
-| `gear for my first marathon`     | Semantic understanding - finds running shoes, apparel, recovery |
-| `help me build core strength`    | Intent recognition - finds fitness equipment                    |
-| `relieve sore muscles after gym` | Context awareness - finds recovery products                     |
-| `track my fitness progress`      | Cross-category search - finds watches and accessories           |
-| `shoes with good arch support`   | Feature-based search - finds cushioned running shoes            |
+**Queries that work (verified):**
+
+| Query                   | Results | Why it works                                  |
+| ----------------------- | ------- | --------------------------------------------- |
+| `running shoes`         | 4       | Matches "Running Shoes" category keyword      |
+| `Nike shoes`            | 5       | "shoes" triggers shoe category search         |
+| `shoes under $150`      | 5       | "shoes" + price filter `<= 150`               |
+| `fitness equipment`     | 5       | Matches "Fitness Equipment" category keyword  |
+| `Nike`                  | 5       | ILIKE brand match                             |
+| `recovery products`     | 5       | Matches "Recovery" category keyword           |
+| `accessories under $50` | 1       | Matches "Accessories" category + price filter |
+
+**Queries that fail — by design (verified):**
+
+| Query                                 | Results | Why it fails                                      |
+| ------------------------------------- | ------- | ------------------------------------------------- |
+| `gear for my first marathon`          | 0       | No keyword match for "marathon" or "gear"         |
+| `help me build core strength`         | 0       | No keyword match for "core strength"              |
+| `relieve sore muscles`                | 0       | No keyword match for "sore muscles"               |
+| `something comfortable for long runs` | 0       | No keyword match for "comfortable" or "long runs" |
+| `track my fitness progress`           | 0       | No keyword match for "fitness progress"           |
+
+**Queries that accidentally work (show inconsistency):**
+
+| Query                                | Results | Why it accidentally works                      |
+| ------------------------------------ | ------- | ---------------------------------------------- |
+| `breathable clothes for hot weather` | 5       | "clothes" matches Apparel category keyword     |
+| `comfortable running shoes`          | 4       | "running shoes" matches Running Shoes category |
+
+---
+
+### Phase 2 — MCP Abstraction Layer
+
+**Architecture:** Single `Phase2Agent` with `MCPClient` connecting to `awslabs.postgres-mcp-server`. Tools auto-discovered from the MCP server.
+
+**Key talking points:**
+
+- Same search capability as Phase 1 (still keyword-based)
+- The upgrade is architectural: standardized interface via Model Context Protocol
+- Portable — swap databases without changing agent code
+- Centralized concerns — logging, rate limiting, security at the MCP layer
+- Open standard, growing ecosystem
+- Trade-off: extra moving part (MCP server to deploy/monitor), learning curve
+- Best for teams scaling to multiple AI features that need standardization
+
+**Queries that work (verified):**
+
+| Query                  | Results | Why it works                                       |
+| ---------------------- | ------- | -------------------------------------------------- |
+| `running shoes`        | 4       | Matches "Running Shoes" category keyword           |
+| `Nike training shoes`  | 5       | "training shoes" matches Training Shoes category   |
+| `fitness equipment`    | 5       | Matches "Fitness Equipment" category keyword       |
+| `recovery products`    | 5       | Matches "Recovery" category keyword                |
+| `Brooks running shoes` | 4       | "running shoes" matches category (no Brooks in DB) |
+
+**Queries that fail — by design (verified):**
+
+| Query                         | Results | Why it fails                                  |
+| ----------------------------- | ------- | --------------------------------------------- |
+| `gear for my first marathon`  | 0       | No keyword match — same limitation as Phase 1 |
+| `Help me build core strength` | 0       | No keyword match for "core strength"          |
+| `Help with foot pain`         | 0       | No keyword match for "foot pain"              |
+
+---
+
+### Phase 3 — Multi-Agent Orchestration + Hybrid Search
+
+**Architecture:** `SupervisorAgent` (delegation only) → `SearchAgent` (semantic + lexical), `ProductAgent` (inventory), `OrderAgent` (transactions). Uses Nova Multimodal embeddings (1024d) stored in pgvector with HNSW index. Hybrid search: 70% semantic + 30% lexical (tsvector/tsrank).
+
+**Key talking points:**
+
+- Supervisor pattern — each agent has a single responsibility, supervisor orchestrates
+- SearchAgent generates embeddings and runs hybrid search against pgvector
+- Understands intent: `gear for my first marathon` → running shoes, apparel, recovery products
+- All in PostgreSQL — no separate vector database needed (pgvector extension)
+- ProductAgent handles inventory checks, OrderAgent handles transactions
+- Trade-offs: orchestration complexity, embedding latency (~200-300ms), embedding cost at scale
+- Best for production AI systems that need both scale and intelligence
+
+#### SupervisorAgent → SearchAgent (Semantic Search — verified)
+
+| Query                                                   | Results | Products returned                                                                          |
+| ------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------ |
+| `gear for my first marathon`                            | 5       | Garmin Forerunner 965, Nike Dri-FIT Shorts, Reebok Nano X4, Puma Fuse 3.0, Nike Pegasus 41 |
+| `help me build core strength`                           | 5       | Peloton Guide, Foam Roller, Nike Metcon 9, Bowflex Dumbbells, Hyperice Normatec            |
+| `relieve sore muscles after gym`                        | 5       | Epsom Salt Soak, Foam Roller, Nike Dri-FIT Shorts, Hyperice Normatec, Compex Sport Elite   |
+| `track my fitness progress`                             | 5       | Peloton Guide, Garmin Forerunner 965, Beats Fit Pro, Apple Watch Ultra 2, TRX PRO4         |
+| `shoes with good arch support`                          | 5       | Nike Blazer Mid, New Balance 1080v13, Nike Air Max 1, Puma Fuse 3.0, Nike Vomero 18        |
+| `something to help with muscle recovery after workouts` | 5       | Foam Roller, Compex Sport Elite, Epsom Salt Soak, Hyperice Normatec, Reebok Nano X4        |
 
 **Activity Panel shows:**
 
@@ -566,16 +631,14 @@ These queries show the SearchAgent handling natural language product discovery:
 4. SearchAgent: "pgvector HNSW + tsrank search"
 5. SupervisorAgent: "SearchAgent returned X results"
 
-### SupervisorAgent → ProductAgent (Inventory Check)
+#### SupervisorAgent → ProductAgent (Inventory Check — verified)
 
-These queries show the ProductAgent handling stock and availability:
-
-| Query                                        | What it demonstrates     |
-| -------------------------------------------- | ------------------------ |
-| `Is the Nike Pegasus in stock?`              | Stock availability check |
-| `Do you have the Garmin watch available?`    | Product availability     |
-| `What sizes are available for Brooks Ghost?` | Size inventory           |
-| `Check stock for foam roller`                | Inventory lookup         |
+| Query                                       | Result                                           |
+| ------------------------------------------- | ------------------------------------------------ |
+| `Is the Nike Pegasus in stock?`             | ✅ Nike Air Zoom Pegasus 41 — 66 units available |
+| `Do you have the Garmin watch available?`   | ✅ Garmin Forerunner 965 — 15 units available    |
+| `What sizes are available for Apple Watch?` | ✅ Apple Watch Ultra 2 — 49mm                    |
+| `Check stock for Garmin watch`              | ✅ Garmin Forerunner 965 — 15 units available    |
 
 **Activity Panel shows:**
 
@@ -585,9 +648,9 @@ These queries show the ProductAgent handling stock and availability:
 4. ProductAgent: "Stock verified"
 5. SupervisorAgent: "ProductAgent returned to Supervisor"
 
-### SupervisorAgent → OrderAgent (Order Processing)
+#### SupervisorAgent → OrderAgent (Order Processing — verified)
 
-Click the **Order** button on any product to see the OrderAgent:
+Click the **Order** button on any product to see the OrderAgent.
 
 **Activity Panel shows:**
 
@@ -598,15 +661,27 @@ Click the **Order** button on any product to see the OrderAgent:
 5. OrderAgent: "Processing order"
 6. SupervisorAgent: "OrderAgent completed"
 
-### Demo Flow for Multi-Agent Showcase
+#### Recommended Demo Sequence
 
-**Recommended sequence to show all agents:**
-
-1. **SearchAgent**: "gear for my first marathon" → Shows semantic search
-2. **ProductAgent**: "Is the Nike Pegasus in stock?" → Shows inventory check
-3. **OrderAgent**: Click Order on a product → Shows order processing
+1. **SearchAgent**: `gear for my first marathon` → Shows semantic search (5 results)
+2. **ProductAgent**: `Is the Nike Pegasus in stock?` → Shows inventory check (66 units)
+3. **OrderAgent**: Click Order on a product → Shows full order workflow with confirmation
 
 > "Notice how the Supervisor delegates to different specialized agents based on the type of request. This is the supervisor pattern - each agent has a single responsibility, and the supervisor orchestrates them."
+
+---
+
+### Key Differentiator Summary
+
+|                        | Phase 1             | Phase 2         | Phase 3                   |
+| ---------------------- | ------------------- | --------------- | ------------------------- |
+| **Connection**         | Direct RDS Data API | MCP Protocol    | MCP + pgvector            |
+| **Architecture**       | Single Agent        | Single Agent    | Multi-Agent Supervisor    |
+| **Search**             | Keyword/ILIKE       | Keyword/ILIKE   | Semantic + Lexical hybrid |
+| **Understands intent** | No                  | No              | Yes                       |
+| **Best for**           | Getting started     | Standardization | Production AI systems     |
+
+**The narrative arc:** Start simple (Phase 1), standardize (Phase 2), add intelligence and scale (Phase 3). Each phase builds on the previous one.
 
 ---
 
@@ -811,17 +886,39 @@ class OrderAgent:
 
 ## Demo Verification Queries
 
-Use these queries to verify the progressive feature story:
+Use these queries to verify the progressive feature story across all three phases:
 
-| Query                         | Phase 1   | Phase 2   | Phase 3   |
-| ----------------------------- | --------- | --------- | --------- |
-| `gear for my first marathon`  | 0 results | 0 results | 5 results |
-| `help me build core strength` | 0 results | 0 results | 5 results |
-| `relieve sore muscles`        | 0 results | 0 results | 5 results |
-| `running shoes`               | 4 results | 4 results | 5 results |
-| `Nike`                        | 5 results | 5 results | 5 results |
+### Cross-Phase Comparison (the money shot)
 
-The semantic queries fail in Phase 1/2 (keyword search) but succeed in Phase 3 (hybrid search with embeddings).
+| Query                                 | Phase 1   | Phase 2   | Phase 3   |
+| ------------------------------------- | --------- | --------- | --------- |
+| `running shoes`                       | 4 results | 4 results | 5 results |
+| `Nike`                                | 5 results | 5 results | 5 results |
+| `Nike shoes`                          | 5 results | 5 results | 5 results |
+| `shoes under $150`                    | 5 results | 5 results | 5 results |
+| `fitness equipment`                   | 5 results | 5 results | 5 results |
+| `gear for my first marathon`          | 0 results | 0 results | 5 results |
+| `help me build core strength`         | 0 results | 0 results | 5 results |
+| `relieve sore muscles`                | 0 results | 0 results | 5 results |
+| `track my fitness progress`           | 0 results | 0 results | 5 results |
+| `something comfortable for long runs` | 0 results | 0 results | 5 results |
+
+The keyword queries work across all phases. The semantic queries fail in Phase 1/2 (keyword search) but succeed in Phase 3 (hybrid search with embeddings). This is the core story of the demo.
+
+### Phase 3 ProductAgent Verification
+
+| Query                                       | Agent        | Result                |
+| ------------------------------------------- | ------------ | --------------------- |
+| `Is the Nike Pegasus in stock?`             | ProductAgent | ✅ 66 units available |
+| `Do you have the Garmin watch available?`   | ProductAgent | ✅ 15 units available |
+| `What sizes are available for Apple Watch?` | ProductAgent | ✅ 49mm               |
+| `Check stock for Garmin watch`              | ProductAgent | ✅ 15 units available |
+
+### Phase 3 OrderAgent Verification
+
+| Action                       | Agent      | Result                                   |
+| ---------------------------- | ---------- | ---------------------------------------- |
+| Click "Order" on any product | OrderAgent | ✅ Full order workflow with confirmation |
 
 ---
 
@@ -1034,11 +1131,19 @@ async def _process_order_tool(self, customer_id: str, items: List[dict]):
 
    ```
    Query: "Is the Nike Pegasus in stock?"
-   Result: Inventory check with stock count
+   Result: 66 units available (sizes: 7, 7.5, 8, 8.5, 9)
    Point: "Supervisor delegates to specialized ProductAgent"
    ```
 
-5. **Phase 3 - OrderAgent Demo**
+5. **Phase 3 - ProductAgent Demo (Garmin)**
+
+   ```
+   Query: "Do you have the Garmin watch available?"
+   Result: 15 units available (One Size)
+   Point: "ProductAgent handles any inventory lookup"
+   ```
+
+6. **Phase 3 - OrderAgent Demo**
    ```
    Action: Click "Order" on any product
    Result: Full order workflow with confirmation

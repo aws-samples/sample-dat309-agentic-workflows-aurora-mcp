@@ -382,11 +382,11 @@ export function AgentSection() {
     },
     2: {
       works: ['Fitness equipment', 'Recovery products', 'Brooks running shoes'],
-      breaks: ['Lightweight breathable sneakers', 'Help with foot pain'],
+      breaks: ['Help me build core strength', 'Help with foot pain'],
       hint: 'Phase 2 uses MCP but still keyword-based. Try natural language →',
     },
     3: {
-      works: ['Gear for my first marathon', 'Is the Nike Pegasus in stock?', 'What sizes do you have for foam rollers?'],
+      works: ['Gear for my first marathon', 'Is the Nike Pegasus in stock?', 'Do you have the Garmin watch available?'],
       breaks: [],
       hint: 'Phase 3 uses multi-agent orchestration. Watch the Activity Panel!',
     },

@@ -105,8 +105,8 @@ async def execute_keyword_search(
 
         search_title = f"Category filter: {params.matched_category}"
 
-    elif params.query_lower in ["shoes", "sneakers"]:
-        # Only match if query is exactly "shoes" or "sneakers"
+    elif "shoes" in params.query_lower or "sneakers" in params.query_lower:
+        # Match if query contains "shoes" or "sneakers"
         if params.price_filter:
             sql = """
                 SELECT product_id, name, brand, price, description,
