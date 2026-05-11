@@ -21,7 +21,8 @@ console = Console()
 # Cohere Embed v4 Configuration
 EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "global.cohere.embed-v4")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
-BEDROCK_REGION = os.getenv('BEDROCK_REGION', 'us-east-1')
+BEDROCK_REGION = os.getenv('BEDROCK_REGION', 'us-west-2')
+AURORA_REGION = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
 
 # RDS Data API Configuration
 CLUSTER_ARN = os.getenv('AURORA_CLUSTER_ARN')
@@ -380,7 +381,7 @@ def get_bedrock_client():
 
 def get_rds_data_client():
     """Create RDS Data API client"""
-    return boto3.client('rds-data', region_name=BEDROCK_REGION)
+    return boto3.client('rds-data', region_name=AURORA_REGION)
 
 
 def generate_embedding(bedrock_client, text: str) -> list:
@@ -398,7 +399,8 @@ def generate_embedding(bedrock_client, text: str) -> list:
         "texts": [text],
         "input_type": "search_document",
         "embedding_types": ["float"],
-        "truncate": "END"
+        "truncate": "RIGHT",
+        "output_dimension": EMBEDDING_DIMENSION
     }
 
     response = bedrock_client.invoke_model(
