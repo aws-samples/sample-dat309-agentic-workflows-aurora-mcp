@@ -42,7 +42,7 @@ const phases: PhaseData[] = [
   {
     id: 3,
     name: 'Multi-Agent',
-    description: 'Supervisor orchestrates specialized agents. Semantic search, visual search, and more.',
+    description: 'Supervisor orchestrates specialized agents. Semantic search with Cohere Embed v4.',
     accentColor: 'var(--phase-3)',
     capacity: 'Enterprise',
     responseTime: '~350ms',

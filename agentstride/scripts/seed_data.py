@@ -1,11 +1,11 @@
 """
 Seed data script for AgentStride
 Populates Aurora PostgreSQL with 30 products across 6 categories
-Generates 1024-dimensional embeddings using Amazon Nova Multimodal Embeddings
+Generates 1024-dimensional embeddings using Cohere Embed v4
 
 Requirements covered:
 - 2.7: Populate 30 products across 6 categories
-- 2.8: Generate 1024-dimensional embeddings using Amazon Nova Multimodal Embeddings
+- 2.8: Generate 1024-dimensional embeddings using Cohere Embed v4
 """
 import os
 import json
@@ -18,8 +18,8 @@ from rich.table import Table
 load_dotenv()
 console = Console()
 
-# Nova Multimodal Embeddings Configuration
-EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "amazon.nova-2-multimodal-embeddings-v1:0")
+# Cohere Embed v4 Configuration
+EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "global.cohere.embed-v4")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
 BEDROCK_REGION = os.getenv('BEDROCK_REGION', 'us-east-1')
 
@@ -385,37 +385,31 @@ def get_rds_data_client():
 
 def generate_embedding(bedrock_client, text: str) -> list:
     """
-    Generate embedding using Amazon Nova Multimodal Embeddings
-    
+    Generate embedding using Cohere Embed v4
+
     Args:
         bedrock_client: Boto3 Bedrock Runtime client
         text: Text to generate embedding for
-        
+
     Returns:
         List of 1024 floats representing the embedding vector
     """
     request_body = {
-        "schemaVersion": "nova-multimodal-embed-v1",
-        "taskType": "SINGLE_EMBEDDING",
-        "singleEmbeddingParams": {
-            "embeddingPurpose": "TEXT_RETRIEVAL",
-            "embeddingDimension": EMBEDDING_DIMENSION,
-            "text": {
-                "truncationMode": "END",
-                "value": text
-            }
-        }
+        "texts": [text],
+        "input_type": "search_document",
+        "embedding_types": ["float"],
+        "truncate": "END"
     }
-    
+
     response = bedrock_client.invoke_model(
         modelId=EMBEDDING_MODEL_ID,
         body=json.dumps(request_body),
         contentType="application/json",
         accept="application/json"
     )
-    
+
     response_body = json.loads(response['body'].read())
-    return response_body['embeddings'][0]['embedding']
+    return response_body['embeddings']['float'][0]
 
 
 def create_product_text(product: dict) -> str:
@@ -443,11 +437,11 @@ def create_product_text(product: dict) -> str:
 
 def seed_database():
     """
-    Seed the Aurora PostgreSQL database with products and Nova Multimodal embeddings
+    Seed the Aurora PostgreSQL database with products and Cohere Embed v4 embeddings
     
     Requirements covered:
     - 2.7: Populate 30 products across 6 categories
-    - 2.8: Generate 1024-dimensional embeddings using Amazon Nova Multimodal Embeddings
+    - 2.8: Generate 1024-dimensional embeddings using Cohere Embed v4
     """
     console.print("\n[bold blue]🌱 Seeding AgentStride Database[/bold blue]")
     console.print(f"[cyan]Embedding Model: {EMBEDDING_MODEL_ID}[/cyan]")

@@ -81,7 +81,7 @@ Open http://localhost:5173 to view the application.
 **Production** - Scale and intelligence for real-world applications.
 
 - **SupervisorAgent** orchestrates specialized agents
-- **SearchAgent** handles semantic search with Nova Multimodal Embeddings
+- **SearchAgent** handles semantic search with Cohere Embed v4
 - Hybrid search: pgvector (semantic) + tsvector/tsrank (lexical)
 - 70% semantic + 30% lexical scoring
 
@@ -158,8 +158,8 @@ agentstride/
 | **Backend**       | FastAPI, Python 3.11+                 | API server                  |
 | **Database**      | Aurora PostgreSQL Serverless v2       | Transactional data          |
 | **Vector Search** | pgvector 0.8.0, HNSW index            | Semantic similarity         |
-| **Embeddings**    | Amazon Nova Multimodal                | 1024-dim text/image vectors |
-| **LLM**           | Claude Sonnet 4.5 (Bedrock)           | Agent reasoning             |
+| **Embeddings**    | Cohere Embed v4                       | 1024-dim text/image vectors |
+| **LLM**           | Claude Opus 4.7 (Bedrock)             | Agent reasoning             |
 | **Protocol**      | Model Context Protocol (MCP)          | Standardized tool interface |
 
 ## Demo Script

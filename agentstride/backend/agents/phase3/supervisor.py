@@ -4,7 +4,7 @@ Phase 3 Supervisor Agent - Orchestrates specialized sub-agents.
 Implements the enterprise pattern with:
 - Supervisor agent with no direct tools
 - Delegation logic to Search, Product, and Order agents
-- Claude Sonnet 4.5 via Amazon Bedrock
+- Claude Opus 4.7 via Amazon Bedrock
 
 Requirements: 11.1, 11.5
 """
@@ -68,9 +68,9 @@ class SupervisorAgent:
         self.order_agent = order_agent
         self.activity_callback = activity_callback or (lambda x: None)
         
-        # Initialize Bedrock model - Claude Sonnet 4.5 (cross-region inference)
+        # Initialize Bedrock model - Claude Opus 4.7 (cross-region inference)
         self.model = BedrockModel(
-            model_id="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            model_id="global.anthropic.claude-opus-4-7-v1",
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
         

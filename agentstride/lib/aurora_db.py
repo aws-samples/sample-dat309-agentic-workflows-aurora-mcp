@@ -175,36 +175,30 @@ def search_products_semantic(query: str, limit: int = 5) -> List[Tuple[Dict, flo
     
     ARCHITECTURE:
     - Uses pgvector extension with HNSW indexing
-    - Nova Multimodal embeddings (1024 dimensions)
+    - Cohere Embed v4 embeddings (1024 dimensions)
     - Cosine similarity for ranking
-    
+
     Returns list of (product, similarity_score) tuples
     """
-    # Generate query embedding using Amazon Nova Multimodal Embeddings
+    # Generate query embedding using Cohere Embed v4
     bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
-    
+
     request_body = {
-        "schemaVersion": "nova-multimodal-embed-v1",
-        "taskType": "SINGLE_EMBEDDING",
-        "singleEmbeddingParams": {
-            "embeddingPurpose": "TEXT_RETRIEVAL",
-            "embeddingDimension": 1024,
-            "text": {
-                "truncationMode": "END",
-                "value": query
-            }
-        }
+        "texts": [query],
+        "input_type": "search_query",
+        "embedding_types": ["float"],
+        "truncate": "END"
     }
-    
+
     response = bedrock.invoke_model(
-        modelId="amazon.nova-2-multimodal-embeddings-v1:0",
+        modelId="global.cohere.embed-v4",
         body=json.dumps(request_body),
         contentType="application/json",
         accept="application/json"
     )
-    
+
     response_body = json.loads(response['body'].read())
-    query_embedding = response_body['embeddings'][0]['embedding']
+    query_embedding = response_body['embeddings']['float'][0]
     embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
     
     # Search using pgvector

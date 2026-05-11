@@ -1,5 +1,5 @@
 /**
- * API client for ClickShop backend
+ * API client for AgentStride backend
  */
 import type { Product, ProductListResponse, ChatRequest, ChatResponse, OrderRequest, OrderResponse } from '../types';
 

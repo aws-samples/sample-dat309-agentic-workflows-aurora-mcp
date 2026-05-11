@@ -3,7 +3,7 @@ Phase 3 Multi-Agent System - Supervisor architecture with semantic/visual search
 
 This module demonstrates the enterprise pattern with:
 - Supervisor agent that orchestrates specialized sub-agents
-- Search agent with Nova Multimodal embeddings (1024 dimensions)
+- Search agent with Cohere Embed v4 embeddings (1024 dimensions)
 - Product agent for details and inventory
 - Order agent for order processing
 - Cross-modal search (text and image)

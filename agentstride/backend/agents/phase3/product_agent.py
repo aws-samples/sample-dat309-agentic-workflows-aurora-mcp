@@ -3,7 +3,7 @@ Phase 3 Product Agent - Specialized in product details and inventory.
 
 Implements product operations using:
 - RDS Data API for Aurora PostgreSQL access
-- Claude Sonnet 4.5 via Amazon Bedrock (cross-region inference)
+- Claude Opus 4.7 via Amazon Bedrock (cross-region inference)
 
 Requirements: 11.3
 """
@@ -52,7 +52,7 @@ class ProductAgent:
         
         # Initialize model (cross-region inference)
         self.model = BedrockModel(
-            model_id="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            model_id="global.anthropic.claude-opus-4-7-v1",
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
         

@@ -22,7 +22,7 @@ export function Footer() {
         <span style={{ color: '#64748b', fontWeight: 500 }}>AgentStride</span> — Ask. Shop. Done. · © Shayon Sanyal
         <br />
         <span style={{ fontFamily: "'SF Mono', monospace", fontSize: 11 }}>
-          Aurora PostgreSQL 17.5 · pgvector 0.8 · Strands SDK · Nova Multimodal · Claude Sonnet 4.5 · MCP
+          Aurora PostgreSQL 17.5 · pgvector 0.8 · Strands SDK · Cohere Embed v4 · Claude Opus 4.7 · MCP
         </span>
       </div>
     </footer>

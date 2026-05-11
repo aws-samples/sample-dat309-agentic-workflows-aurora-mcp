@@ -25,11 +25,11 @@ const phases: Phase[] = [
     scale: '50 orders/day',
     desc: 'One Strands agent with direct database access via RDS Data API. Simple, fast to build — every tool is hardcoded and the agent manages all operations directly.',
     code: `agent = Agent(
-  model=BedrockModel("global.anthropic.claude-sonnet-4-5-20250929-v1:0"),
+  model=BedrockModel("global.anthropic.claude-opus-4-7-v1"),
   tools=[search_products, check_inventory, process_order]
 )
 result = agent("Find comfortable running shoes")`,
-    tags: ['Strands SDK', 'Claude Sonnet 4.5', 'RDS Data API', 'Aurora PostgreSQL'],
+    tags: ['Strands SDK', 'Claude Opus 4.7', 'RDS Data API', 'Aurora PostgreSQL'],
     flow: 'User → Agent → RDS Data API → Aurora PostgreSQL',
   },
   {
@@ -53,14 +53,14 @@ result = agent("Find comfortable running shoes")`,
     subtitle: 'Production',
     color: '#10b981',
     scale: '50K orders/day',
-    desc: 'A supervisor routes to specialized agents. Search uses Nova Multimodal embeddings stored in pgvector — the same index handles both text queries and product image uploads.',
-    code: `# Text AND image → same 1024-dim vector space
-emb = nova_embed(text="marathon shoes")   # or
-emb = nova_embed(image=photo_bytes)       # same index!
+    desc: 'A supervisor routes to specialized agents. Search uses Cohere Embed v4 embeddings stored in pgvector — semantic search with 1024-dimensional vectors and HNSW indexing.',
+    code: `# Cohere Embed v4 → 1024-dim vector space
+emb = cohere_embed(text="marathon shoes")
 
 SELECT *, 1-(embedding <=> $1) AS similarity
-FROM products ORDER BY embedding <=> $1`,
-    tags: ['Nova Multimodal', 'pgvector 0.8', 'HNSW', '1024-dim', 'Image Search', 'Multi-Agent'],
+FROM products ORDER BY embedding <=> $1
+LIMIT 5`,
+    tags: ['Cohere Embed v4', 'pgvector 0.8', 'HNSW', '1024-dim', 'Multi-Agent'],
     flow: 'User → Supervisor → [Search | Product | Order] → Aurora + pgvector',
   },
 ];

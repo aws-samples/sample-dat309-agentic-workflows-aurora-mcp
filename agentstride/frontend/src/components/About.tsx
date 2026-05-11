@@ -38,7 +38,7 @@ export default function About() {
 
   const features = [
     'Semantic product search with pgvector',
-    'Visual search using Nova 2 Multimodal',
+    'Semantic search using Cohere Embed v4',
     'Multi-agent orchestration patterns',
     'Real-time activity streaming',
     'Three architectural approaches',
@@ -54,7 +54,7 @@ export default function About() {
         className="text-center"
       >
         <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-          About ClickShop
+          About AgentStride
         </h1>
         <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>
           An AI-powered e-commerce demo showcasing AWS technologies
@@ -72,10 +72,10 @@ export default function About() {
           Project Overview
         </h2>
         <p className="leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-          ClickShop demonstrates how to build intelligent e-commerce experiences using 
+          AgentStride demonstrates how to build intelligent e-commerce experiences using 
           Amazon Bedrock, Aurora PostgreSQL with pgvector, and the Strands Agents SDK. 
           The demo showcases three architectural patterns for AI agents, from simple 
-          direct database access to sophisticated multi-agent systems with visual search.
+          direct database access to sophisticated multi-agent systems with semantic search.
         </p>
         
         <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-3">

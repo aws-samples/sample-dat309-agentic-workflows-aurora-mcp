@@ -130,7 +130,7 @@ def products_with_embeddings(rds_data_client, db_config):
 
 
 # Expected constants for tests
-EXPECTED_EMBEDDING_DIMENSION = 1024  # Nova Multimodal uses 1024 dims
+EXPECTED_EMBEDDING_DIMENSION = 1024  # Cohere Embed v4 uses 1024 dims
 EXPECTED_PRODUCT_COUNT = 30
 PRODUCT_CATEGORIES = [
     "Running Shoes",

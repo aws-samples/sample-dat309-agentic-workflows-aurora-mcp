@@ -1,5 +1,5 @@
 """
-Test semantic search with Nova Multimodal Embeddings.
+Test semantic search with Cohere Embed v4.
 Verifies end-to-end search functionality using the RDS Data API.
 """
 import os
@@ -13,7 +13,7 @@ load_dotenv()
 console = Console()
 
 # Configuration from environment
-EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "amazon.nova-2-multimodal-embeddings-v1:0")
+EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "global.cohere.embed-v4")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
 REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 CLUSTER_ARN = os.getenv("AURORA_CLUSTER_ARN")
@@ -22,34 +22,28 @@ DATABASE = os.getenv("AURORA_DATABASE", "clickshop")
 
 
 def generate_query_embedding(bedrock_client, query: str) -> list:
-    """Generate embedding for search query using Nova Multimodal Embeddings."""
+    """Generate embedding for search query using Cohere Embed v4."""
     request_body = {
-        "schemaVersion": "nova-multimodal-embed-v1",
-        "taskType": "SINGLE_EMBEDDING",
-        "singleEmbeddingParams": {
-            "embeddingPurpose": "TEXT_RETRIEVAL",
-            "embeddingDimension": EMBEDDING_DIMENSION,
-            "text": {
-                "truncationMode": "END",
-                "value": query
-            }
-        }
+        "texts": [query],
+        "input_type": "search_query",
+        "embedding_types": ["float"],
+        "truncate": "END"
     }
-    
+
     response = bedrock_client.invoke_model(
         modelId=EMBEDDING_MODEL_ID,
         body=json.dumps(request_body),
         contentType="application/json",
         accept="application/json"
     )
-    
+
     response_body = json.loads(response["body"].read())
-    return response_body["embeddings"][0]["embedding"]
+    return response_body["embeddings"]["float"][0]
 
 
 def semantic_search(rds_client, bedrock_client, query: str, limit: int = 5):
     """
-    Perform semantic search using Nova Multimodal embeddings and pgvector.
+    Perform semantic search using Cohere Embed v4 embeddings and pgvector.
     
     Args:
         rds_client: RDS Data API client
@@ -100,7 +94,7 @@ def semantic_search(rds_client, bedrock_client, query: str, limit: int = 5):
 
 def test_semantic_search():
     """Run semantic search tests with various queries."""
-    console.print("\n[bold blue]🔍 Testing Semantic Search with Nova Multimodal Embeddings[/bold blue]")
+    console.print("\n[bold blue]🔍 Testing Semantic Search with Cohere Embed v4[/bold blue]")
     console.print(f"[cyan]Model: {EMBEDDING_MODEL_ID}[/cyan]")
     console.print(f"[cyan]Region: {REGION}[/cyan]")
     console.print(f"[cyan]Dimensions: {EMBEDDING_DIMENSION}[/cyan]\n")
@@ -147,7 +141,7 @@ def test_semantic_search():
     
     console.print(f"\n{'='*60}")
     console.print("\n[bold green]✅ Semantic search test complete![/bold green]")
-    console.print("[cyan]Nova Multimodal Embeddings are working correctly with pgvector.[/cyan]\n")
+    console.print("[cyan]Cohere Embed v4 embeddings are working correctly with pgvector.[/cyan]\n")
 
 
 if __name__ == "__main__":

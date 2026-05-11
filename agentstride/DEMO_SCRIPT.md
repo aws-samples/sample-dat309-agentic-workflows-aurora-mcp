@@ -316,7 +316,7 @@ npm run dev
 
 > "First, the SupervisorAgent receives your request and decides which agent should handle it. For a search query, it delegates to the SearchAgent."
 
-> "The SearchAgent then generates an embedding - a 1024-dimensional vector that captures the meaning of your query. We use Amazon Nova Multimodal Embeddings for this."
+> "The SearchAgent then generates an embedding - a 1024-dimensional vector that captures the meaning of your query. We use Cohere Embed v4 for this."
 
 > "Then it runs a hybrid search combining:"
 >
@@ -600,7 +600,7 @@ All queries below have been tested and verified against the live backend.
 
 ### Phase 3 — Multi-Agent Orchestration + Hybrid Search
 
-**Architecture:** `SupervisorAgent` (delegation only) → `SearchAgent` (semantic + lexical), `ProductAgent` (inventory), `OrderAgent` (transactions). Uses Nova Multimodal embeddings (1024d) stored in pgvector with HNSW index. Hybrid search: 70% semantic + 30% lexical (tsvector/tsrank).
+**Architecture:** `SupervisorAgent` (delegation only) → `SearchAgent` (semantic + lexical), `ProductAgent` (inventory), `OrderAgent` (transactions). Uses Cohere Embed v4 embeddings (1024d) stored in pgvector with HNSW index. Hybrid search: 70% semantic + 30% lexical (tsvector/tsrank).
 
 **Key talking points:**
 
@@ -626,7 +626,7 @@ All queries below have been tested and verified against the live backend.
 **Activity Panel shows:**
 
 1. SupervisorAgent: "Delegating to SearchAgent"
-2. SearchAgent: "Generating query embedding" (Nova Multimodal 1024d)
+2. SearchAgent: "Generating query embedding" (Cohere Embed v4 1024d)
 3. SearchAgent: "Hybrid search: Semantic + Lexical"
 4. SearchAgent: "pgvector HNSW + tsrank search"
 5. SupervisorAgent: "SearchAgent returned X results"
@@ -737,7 +737,7 @@ from strands.models import BedrockModel
 class Phase1Agent:
     def __init__(self):
         self.model = BedrockModel(
-            model_id="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            model_id="global.anthropic.claude-opus-4-7-v1",
             region_name="us-east-1"
         )
         self.agent = Agent(
@@ -833,7 +833,7 @@ class SearchAgent:
     @tool
     async def _semantic_search_tool(self, query: str, limit: int = 5):
         """Hybrid search: pgvector + tsvector/tsrank"""
-        # Generate embedding with Nova Multimodal (1024d)
+        # Generate embedding with Cohere Embed v4 (1024d)
         embedding = self._generate_text_embedding(query)
 
         # Hybrid SQL: 70% semantic + 30% lexical
@@ -878,7 +878,7 @@ class OrderAgent:
 
 - Supervisor pattern with specialized agents
 - Each agent has focused tools
-- SearchAgent uses Nova Multimodal embeddings (1024d)
+- SearchAgent uses Cohere Embed v4 embeddings (1024d)
 - Hybrid search combines semantic (pgvector) + lexical (tsvector/tsrank)
 - Cross-modal search: same vector space for text and images
 
@@ -1010,7 +1010,7 @@ mcp_tools = await self.mcp_client.list_tools()  # Auto-discover tools
 ```
 SupervisorAgent: Processing with Hybrid Search (Semantic + Lexical)
 SupervisorAgent: Delegating to SearchAgent
-SearchAgent: Generating query embedding (Nova Multimodal 1024d)
+SearchAgent: Generating query embedding (Cohere Embed v4 1024d)
 SearchAgent: Embedding generated (482ms)
 SearchAgent: Hybrid search: Semantic + Lexical (pgvector + tsvector)
 SearchAgent: pgvector HNSW + tsrank search - Found 5 products
@@ -1020,7 +1020,7 @@ SupervisorAgent: SearchAgent returned 5 results
 **Key Code (line ~180):**
 
 ```python
-# Generate embedding with Nova Multimodal
+# Generate embedding with Cohere Embed v4
 query_embedding = self._generate_text_embedding(query)
 
 # Hybrid SQL: 70% semantic + 30% lexical

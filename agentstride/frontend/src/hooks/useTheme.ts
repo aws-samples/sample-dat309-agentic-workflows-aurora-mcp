@@ -9,7 +9,7 @@ type Theme = 'light' | 'dark'
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
     // Check localStorage first
-    const stored = localStorage.getItem('clickshop-theme') as Theme
+    const stored = localStorage.getItem('agentstride-theme') as Theme
     if (stored) return stored
     
     // Check system preference
@@ -28,7 +28,7 @@ export function useTheme() {
       root.classList.remove('dark')
     }
     
-    localStorage.setItem('clickshop-theme', theme)
+    localStorage.setItem('agentstride-theme', theme)
   }, [theme])
 
   const toggleTheme = () => {

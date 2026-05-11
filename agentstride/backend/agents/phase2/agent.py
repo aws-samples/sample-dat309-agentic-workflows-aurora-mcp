@@ -4,7 +4,7 @@ Phase 2 Agent - Agent with MCP abstraction layer.
 Implements the scalable pattern using:
 - Strands SDK with MCP integration
 - awslabs.postgres-mcp-server for RDS Data API
-- Claude Sonnet 4.5 via Amazon Bedrock
+- Claude Opus 4.7 via Amazon Bedrock
 - Auto-discovered tools from MCP server
 
 Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
@@ -49,7 +49,7 @@ class Phase2Agent:
     Requirements:
     - 10.1: Implemented using Strands SDK with MCP integration
     - 10.2: Uses awslabs.postgres-mcp-server for database operations via RDS Data API
-    - 10.3: Uses Claude Sonnet 4.5 via Amazon Bedrock
+    - 10.3: Uses Claude Opus 4.7 via Amazon Bedrock
     - 10.4: Auto-discovers available tools from MCP server
     - 10.5: Logs MCP tool invocations and execution times
     """
@@ -63,10 +63,10 @@ class Phase2Agent:
         """
         self.activity_callback = activity_callback or (lambda x: None)
         
-        # Initialize Bedrock model - Claude Sonnet 4.5 (cross-region inference)
+        # Initialize Bedrock model - Claude Opus 4.7 (cross-region inference)
         # Requirement 10.3
         self.model = BedrockModel(
-            model_id="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            model_id="global.anthropic.claude-opus-4-7-v1",
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
         

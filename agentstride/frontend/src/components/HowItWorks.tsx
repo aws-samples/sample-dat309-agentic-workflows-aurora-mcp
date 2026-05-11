@@ -21,13 +21,13 @@ const phases = [
     description: 'Agent connects directly to Aurora PostgreSQL. Perfect for MVPs and prototypes.',
     color: 'var(--phase-1)',
     architecture: [
-      { icon: Cpu, label: 'Strands Agent', sublabel: 'Claude Sonnet' },
+      { icon: Cpu, label: 'Strands Agent', sublabel: 'Claude Opus' },
       { icon: Database, label: 'Aurora PostgreSQL', sublabel: 'RDS Data API' },
     ],
-    techStack: ['Strands SDK', 'Claude Sonnet', 'RDS Data API', 'Aurora PostgreSQL'],
+    techStack: ['Strands SDK', 'Claude Opus', 'RDS Data API', 'Aurora PostgreSQL'],
     pros: ['Fastest to implement', 'Lowest latency', 'Simple debugging'],
     codeSnippet: `agent = Agent(
-    model=BedrockModel("claude-sonnet"),
+    model=BedrockModel("claude-opus"),
     tools=[product_lookup, inventory_check]
 )`,
   },
@@ -39,7 +39,7 @@ const phases = [
     description: 'Agent uses Model Context Protocol for database abstraction. Portable and scalable.',
     color: 'var(--phase-2)',
     architecture: [
-      { icon: Cpu, label: 'Strands Agent', sublabel: 'Claude Sonnet' },
+      { icon: Cpu, label: 'Strands Agent', sublabel: 'Claude Opus' },
       { icon: Layers, label: 'MCP Server', sublabel: 'postgres-mcp' },
       { icon: Database, label: 'Aurora PostgreSQL', sublabel: 'RDS Data API' },
     ],
@@ -47,7 +47,7 @@ const phases = [
     pros: ['Database portability', 'Connection pooling', 'Tool auto-discovery'],
     codeSnippet: `mcp = MCPClient(["postgres-mcp-server"])
 agent = Agent(
-    model=BedrockModel("claude-sonnet"),
+    model=BedrockModel("claude-opus"),
     tools=mcp.list_tools()  # Auto-discovered
 )`,
   },
@@ -56,18 +56,18 @@ agent = Agent(
     name: 'Phase 3: Multi-Agent',
     tagline: 'Enterprise Grade',
     emoji: '🤖',
-    description: 'Supervisor orchestrates specialized agents. Semantic search, visual search, and more.',
+    description: 'Supervisor orchestrates specialized agents. Semantic search with Cohere Embed v4.',
     color: 'var(--phase-3)',
     architecture: [
       { icon: Users, label: 'Supervisor', sublabel: 'Orchestrator' },
-      { icon: Network, label: 'Search Agent', sublabel: 'Nova Embeddings' },
+      { icon: Network, label: 'Search Agent', sublabel: 'Cohere Embed v4' },
       { icon: Cpu, label: 'Product Agent', sublabel: 'Inventory' },
       { icon: Cpu, label: 'Order Agent', sublabel: 'Processing' },
     ],
-    techStack: ['Strands SDK', 'Multi-Agent', 'Nova Embeddings', 'Visual Search'],
-    pros: ['Specialized agents', 'Semantic search', 'Visual search', 'Parallel processing'],
+    techStack: ['Strands SDK', 'Multi-Agent', 'Cohere Embed v4', 'pgvector'],
+    pros: ['Specialized agents', 'Semantic search', 'HNSW indexing', 'Parallel processing'],
     codeSnippet: `supervisor = Agent(
-    model=BedrockModel("claude-sonnet"),
+    model=BedrockModel("claude-opus"),
     tools=[
         search_agent.as_tool(),
         product_agent.as_tool(),
@@ -83,7 +83,7 @@ export default function HowItWorks({ currentPhase }: HowItWorksProps) {
       {/* Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-          How ClickShop Works
+          How AgentStride Works
         </h1>
         <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>
           Three architectural approaches to AI-powered e-commerce

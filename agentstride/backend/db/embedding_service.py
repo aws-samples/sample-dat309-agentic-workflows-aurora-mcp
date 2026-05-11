@@ -1,8 +1,8 @@
 """
 Embedding Service for AgentStride.
 
-Provides Nova Multimodal Embeddings for semantic search.
-Uses amazon.nova-2-multimodal-embeddings-v1:0 with 1024 dimensions.
+Provides Cohere Embed v4 embeddings for semantic search.
+Uses global.cohere.embed-v4 with 1024 dimensions.
 """
 
 import os
@@ -13,34 +13,27 @@ import boto3
 
 class EmbeddingService:
     """
-    Service for generating embeddings using Amazon Nova Multimodal Embeddings.
-    
-    Supports text and image embeddings with configurable dimensions (256, 384, 1024, 3072).
+    Service for generating embeddings using Cohere Embed v4.
+
     Default is 1024 dimensions for best accuracy within HNSW index limits.
     """
-    
-    # Nova Multimodal Embeddings configuration
-    MODEL_ID = "amazon.nova-2-multimodal-embeddings-v1:0"
+
+    MODEL_ID = "global.cohere.embed-v4"
     DEFAULT_DIMENSIONS = 1024
-    SUPPORTED_DIMENSIONS = [256, 384, 1024, 3072]
-    MAX_TEXT_LENGTH = 8192  # 8K tokens
-    
+    MAX_TEXT_LENGTH = 2048
+
     def __init__(self, region: Optional[str] = None, dimensions: Optional[int] = None):
         """
         Initialize embedding service.
-        
+
         Args:
             region: AWS region (defaults to AWS_DEFAULT_REGION env var)
-            dimensions: Embedding dimensions (256, 384, 1024, or 3072)
+            dimensions: Embedding dimensions (default 1024)
         """
         self.region = region or os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         self.dimensions = dimensions or int(os.getenv("EMBEDDING_DIMENSION", self.DEFAULT_DIMENSIONS))
-        
-        if self.dimensions not in self.SUPPORTED_DIMENSIONS:
-            raise ValueError(f"Dimensions must be one of {self.SUPPORTED_DIMENSIONS}")
-        
         self._bedrock_client = None
-    
+
     @property
     def bedrock_client(self):
         """Get or create Bedrock runtime client."""
@@ -50,43 +43,37 @@ class EmbeddingService:
                 region_name=self.region
             )
         return self._bedrock_client
-    
-    def generate_text_embedding(self, text: str, normalize: bool = True) -> List[float]:
+
+    def generate_text_embedding(self, text: str, input_type: str = "search_document") -> List[float]:
         """
-        Generate embedding for text using Nova Multimodal Embeddings.
-        
+        Generate embedding for text using Cohere Embed v4.
+
         Args:
-            text: Input text (max 8K tokens)
-            normalize: Whether to normalize the embedding vector (ignored for Nova)
-            
+            text: Input text (max 2048 tokens)
+            input_type: "search_document" for indexing, "search_query" for queries
+
         Returns:
-            Embedding vector of configured dimensions
+            1024-dimensional embedding vector
         """
         if len(text) > self.MAX_TEXT_LENGTH:
-            text = text[:self.MAX_TEXT_LENGTH]  # Truncate if too long
-        
+            text = text[:self.MAX_TEXT_LENGTH]
+
         request_body = {
-            "schemaVersion": "nova-multimodal-embed-v1",
-            "taskType": "SINGLE_EMBEDDING",
-            "singleEmbeddingParams": {
-                "embeddingPurpose": "TEXT_RETRIEVAL",
-                "embeddingDimension": self.dimensions,
-                "text": {
-                    "truncationMode": "END",
-                    "value": text
-                }
-            }
+            "texts": [text],
+            "input_type": input_type,
+            "embedding_types": ["float"],
+            "truncate": "END"
         }
-        
+
         response = self.bedrock_client.invoke_model(
             modelId=self.MODEL_ID,
             body=json.dumps(request_body),
             contentType="application/json",
             accept="application/json"
         )
-        
+
         response_body = json.loads(response["body"].read())
-        return response_body["embeddings"][0]["embedding"]
+        return response_body["embeddings"]["float"][0]
 
 
 # Global service instance

@@ -93,7 +93,7 @@ export function generateMockActivities(phase: 1 | 2 | 3, query: string): Activit
       timestamp: new Date(now.getTime() - 1500).toISOString(),
       activity_type: 'embedding',
       title: 'Generated query embedding',
-      details: 'Created 1024-dimensional vector using Nova Multimodal Embeddings',
+      details: 'Created 1024-dimensional vector using Cohere Embed v4',
       execution_time_ms: 245,
     })
     activities.push({
@@ -136,7 +136,7 @@ export function generateMockActivities(phase: 1 | 2 | 3, query: string): Activit
       activity_type: 'embedding',
       title: 'Generated multimodal embedding',
       agent_name: 'Search Agent',
-      details: 'Nova Multimodal Embeddings 1024-dim vector',
+      details: 'Cohere Embed v4 1024-dim vector',
       execution_time_ms: 289,
     })
     activities.push({

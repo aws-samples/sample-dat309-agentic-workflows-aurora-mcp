@@ -50,8 +50,8 @@ export function ProductsSection() {
             </span>
             <h2 className="section-headline">Every product, one search away.</h2>
             <p className="section-subtitle">
-              30 products across 6 categories. Each embedded as a 1024-dimensional vector using Nova
-              Multimodal — searchable by text or image.
+              30 products across 6 categories. Each embedded as a 1024-dimensional vector using Cohere
+              Embed v4 — searchable by semantic text search.
             </p>
           </div>
         </FadeIn>
@@ -120,7 +120,7 @@ export function ProductsSection() {
             <div className="embedding-code">
               <span style={{ color: '#94a3b8' }}>embedding</span>
               <span style={{ color: '#475569' }}> = </span>
-              <span style={{ color: '#3b82f6' }}>nova_embed</span>
+              <span style={{ color: '#3b82f6' }}>cohere_embed</span>
               <span style={{ color: '#475569' }}>(</span>
               <span style={{ color: '#10b981' }}>"comfortable running shoes"</span>
               <span style={{ color: '#475569' }}>)</span>

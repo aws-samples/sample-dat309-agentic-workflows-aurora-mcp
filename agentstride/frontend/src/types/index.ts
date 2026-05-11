@@ -1,5 +1,5 @@
 /**
- * TypeScript types for ClickShop frontend
+ * TypeScript types for AgentStride frontend
  */
 
 export interface Product {

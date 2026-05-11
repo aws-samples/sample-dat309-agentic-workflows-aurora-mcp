@@ -407,7 +407,7 @@ async def phase2_search(query: str, limit: int = 5) -> tuple[List[Product], List
 async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List[ActivityEntry]]:
     """
     Phase 3: Hybrid search combining semantic and lexical approaches.
-    - Semantic: Nova Multimodal embeddings with pgvector cosine similarity
+    - Semantic: Cohere Embed v4 embeddings with pgvector cosine similarity
     - Lexical: PostgreSQL tsvector/tsrank full-text search
     - Final ranking: Weighted combination of both scores
     """
@@ -435,7 +435,7 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
     activities.append(create_activity(
         activity_type="embedding",
         title="Generating query embedding",
-        details="Nova Multimodal Embeddings (1024d)",
+        details="Cohere Embed v4 Embeddings (1024d)",
         agent_name="SearchAgent",
         agent_file="agents/phase3/search_agent.py"
     ))
@@ -863,7 +863,7 @@ async def image_search(
 ) -> ImageSearchResponse:
     """
     Perform visual product search using an uploaded image.
-    Only available in Phase 3 which supports Nova Multimodal embeddings.
+    Only available in Phase 3 which supports Cohere Embed v4 embeddings.
     """
     activities = []
     
@@ -895,7 +895,7 @@ async def image_search(
         # This currently returns sample products as a placeholder.
         #
         # To implement actual visual search:
-        # 1. Use Amazon Bedrock with Nova Multimodal Embeddings:
+        # 1. Use Amazon Bedrock with Cohere Embed v4 Embeddings:
         #    bedrock = boto3.client('bedrock-runtime')
         #    response = bedrock.invoke_model(
         #        modelId='amazon.titan-embed-image-v1',

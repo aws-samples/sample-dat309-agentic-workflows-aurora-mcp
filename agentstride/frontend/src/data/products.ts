@@ -1,5 +1,5 @@
 /**
- * Product data for the ClickShop demo
+ * Product data for the AgentStride demo
  * 6 products displayed in the catalog section
  */
 export interface Product {

@@ -5,7 +5,7 @@ Property-based tests for AgentStride - Embedding Properties
 
 This module contains property-based tests using Hypothesis to verify
 that all product embeddings conform to the expected 1024 dimensions
-as specified by the Amazon Nova Multimodal Embeddings model.
+as specified by the Cohere Embed v4 model.
 
 **Validates: Requirements 2.8**
 """
@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Expected embedding dimension for Nova Multimodal Embeddings
+# Expected embedding dimension for Cohere Embed v4
 EXPECTED_EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
 
 # RDS Data API configuration
@@ -119,7 +119,7 @@ class TestEmbeddingDimensionConsistency:
     """
     Property-based tests for embedding dimension consistency.
     
-    # Feature: clickshop-enhancement, Property 1: Embedding Dimension Consistency
+    # Feature: agentstride-enhancement, Property 1: Embedding Dimension Consistency
     
     Property 1: For all products in the database with non-null embeddings,
     the embedding vector dimension SHALL be exactly 1024.
@@ -139,7 +139,7 @@ class TestEmbeddingDimensionConsistency:
     
     def test_all_embeddings_have_correct_dimension(self):
         """
-        # Feature: clickshop-enhancement, Property 1: Embedding Dimension Consistency
+        # Feature: agentstride-enhancement, Property 1: Embedding Dimension Consistency
         
         Verify that ALL product embeddings have exactly 1024 dimensions.
         This is a comprehensive check across all products.
@@ -171,7 +171,7 @@ class TestEmbeddingDimensionConsistency:
     @given(index=st.integers(min_value=0))
     def test_property_embedding_dimension_consistency(self, index: int):
         """
-        # Feature: clickshop-enhancement, Property 1: Embedding Dimension Consistency
+        # Feature: agentstride-enhancement, Property 1: Embedding Dimension Consistency
         
         Property-based test: For all products in the database with non-null embeddings,
         the embedding vector dimension SHALL be exactly 1024.
@@ -232,7 +232,7 @@ class TestEmbeddingDimensionWithDatabaseQuery:
     
     def test_database_embedding_dimension_check(self):
         """
-        # Feature: clickshop-enhancement, Property 1: Embedding Dimension Consistency
+        # Feature: agentstride-enhancement, Property 1: Embedding Dimension Consistency
         
         Direct database query to verify all embeddings have correct dimensions.
         This is more efficient for large datasets as it doesn't load embeddings.
@@ -274,7 +274,7 @@ class TestEmbeddingDimensionWithDatabaseQuery:
 # Standalone test function for pytest discovery
 def test_embedding_dimension_property():
     """
-    # Feature: clickshop-enhancement, Property 1: Embedding Dimension Consistency
+    # Feature: agentstride-enhancement, Property 1: Embedding Dimension Consistency
     
     Standalone property test for embedding dimension consistency.
     For all products in the database with non-null embeddings,
@@ -308,7 +308,7 @@ class TestEmbeddingDimensionMock:
     @given(embedding_dim=st.integers(min_value=1, max_value=10000))
     def test_property_dimension_validation_logic(self, embedding_dim: int):
         """
-        # Feature: clickshop-enhancement, Property 1: Embedding Dimension Consistency
+        # Feature: agentstride-enhancement, Property 1: Embedding Dimension Consistency
         
         Test the dimension validation logic with generated dimensions.
         This verifies the property check works correctly.
@@ -347,7 +347,7 @@ class TestEmbeddingDimensionMock:
     )
     def test_property_all_valid_embeddings_pass(self, products: List[dict]):
         """
-        # Feature: clickshop-enhancement, Property 1: Embedding Dimension Consistency
+        # Feature: agentstride-enhancement, Property 1: Embedding Dimension Consistency
         
         Property test: When all products have 1024-dimensional embeddings,
         the validation should pass for all of them.
@@ -365,7 +365,7 @@ class TestEmbeddingDimensionMock:
     )
     def test_property_invalid_dimension_detected(self, invalid_dim: int):
         """
-        # Feature: clickshop-enhancement, Property 1: Embedding Dimension Consistency
+        # Feature: agentstride-enhancement, Property 1: Embedding Dimension Consistency
         
         Property test: Any dimension other than 1024 should be detected as invalid.
         

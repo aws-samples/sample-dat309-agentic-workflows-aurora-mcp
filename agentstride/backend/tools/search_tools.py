@@ -1,7 +1,7 @@
 """
 Search Tools for AgentStride agents.
 
-Provides semantic and visual search capabilities using Nova Multimodal embeddings.
+Provides semantic and visual search capabilities using Cohere Embed v4 embeddings.
 """
 
 from typing import List, Tuple
@@ -14,7 +14,7 @@ async def semantic_product_search(
     """
     Perform semantic search for products using text query.
     
-    Uses Nova Multimodal embeddings (1024 dimensions) to find
+    Uses Cohere Embed v4 embeddings (1024 dimensions) to find
     semantically similar products.
     
     Args:
@@ -35,7 +35,7 @@ async def visual_product_search(
     """
     Perform visual search for products using an image.
     
-    Uses Nova Multimodal embeddings (1024 dimensions) to find
+    Uses Cohere Embed v4 embeddings (1024 dimensions) to find
     visually similar products.
     
     Args:

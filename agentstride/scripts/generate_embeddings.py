@@ -1,6 +1,6 @@
 """
-Generate vector embeddings for products using Amazon Nova Multimodal Embeddings.
-Uses amazon.nova-2-multimodal-embeddings-v1:0 with 1024 dimensions.
+Generate vector embeddings for products using Cohere Embed v4.
+Uses global.cohere.embed-v4 with 1024 dimensions.
 """
 import os
 import sys
@@ -16,35 +16,29 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv()
 console = Console()
 
-# Nova Multimodal Embeddings configuration
-MODEL_ID = os.getenv("EMBEDDING_MODEL", "amazon.nova-2-multimodal-embeddings-v1:0")
+# Cohere Embed v4 configuration
+MODEL_ID = os.getenv("EMBEDDING_MODEL", "global.cohere.embed-v4")
 DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
 
 
 def generate_text_embedding(bedrock_client, text: str) -> list:
-    """Generate embedding for text using Nova Multimodal Embeddings."""
+    """Generate embedding for text using Cohere Embed v4."""
     request_body = {
-        "schemaVersion": "nova-multimodal-embed-v1",
-        "taskType": "SINGLE_EMBEDDING",
-        "singleEmbeddingParams": {
-            "embeddingPurpose": "TEXT_RETRIEVAL",
-            "embeddingDimension": DIMENSIONS,
-            "text": {
-                "truncationMode": "END",
-                "value": text
-            }
-        }
+        "texts": [text],
+        "input_type": "search_document",
+        "embedding_types": ["float"],
+        "truncate": "END"
     }
-    
+
     response = bedrock_client.invoke_model(
         modelId=MODEL_ID,
         body=json.dumps(request_body),
         contentType="application/json",
         accept="application/json"
     )
-    
+
     response_body = json.loads(response["body"].read())
-    return response_body["embeddings"][0]["embedding"]
+    return response_body["embeddings"]["float"][0]
 
 
 def generate_embeddings():

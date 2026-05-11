@@ -3,7 +3,7 @@ Phase 1 Agent - Single agent with direct database access.
 
 Implements the MVP pattern using:
 - Strands SDK (strands-agents) for agent framework
-- Claude Sonnet 4.5 via Amazon Bedrock (cross-region inference)
+- Claude Opus 4.7 via Amazon Bedrock (cross-region inference)
 - RDS Data API for Aurora PostgreSQL access
 - Tools for product lookup, inventory check, price calculation, order processing
 
@@ -47,12 +47,12 @@ class Phase1Agent:
     """
     Phase 1 Shopping Agent with direct database access.
     
-    Uses Strands SDK with Claude Sonnet 4.5 via Bedrock (cross-region inference).
+    Uses Strands SDK with Claude Opus 4.7 via Bedrock (cross-region inference).
     Connects to Aurora PostgreSQL using RDS Data API.
     
     Requirements:
     - 9.1: Implemented using Strands SDK
-    - 9.2: Uses Claude Sonnet 4.5 via Amazon Bedrock
+    - 9.2: Uses Claude Opus 4.7 via Amazon Bedrock
     - 9.3: Connects to Aurora PostgreSQL using RDS Data API
     - 9.4: Has tools for product lookup, inventory check, price calculation, order processing
     - 9.5: Logs all database queries and execution times
@@ -68,10 +68,10 @@ class Phase1Agent:
         self.activity_callback = activity_callback or (lambda x: None)
         self.db = get_rds_data_client()
         
-        # Initialize Bedrock model - Claude Sonnet 4.5 (cross-region inference)
+        # Initialize Bedrock model - Claude Opus 4.7 (cross-region inference)
         # Requirement 9.2
         self.model = BedrockModel(
-            model_id="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            model_id="global.anthropic.claude-opus-4-7-v1",
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
         

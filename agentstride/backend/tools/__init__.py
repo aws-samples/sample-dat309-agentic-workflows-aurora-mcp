@@ -6,5 +6,5 @@ Contains:
 - inventory_tools.py: Inventory checking tools
 - order_tools.py: Order processing tools
 - search_tools.py: Semantic and visual search tools
-- embedding_tools.py: Nova 2 Multimodal embedding tools
+- embedding_tools.py: Cohere Embed v4 embedding tools
 """

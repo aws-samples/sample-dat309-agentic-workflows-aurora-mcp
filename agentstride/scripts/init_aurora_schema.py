@@ -1,6 +1,6 @@
 """
 Initialize Aurora PostgreSQL database schema for AgentStride
-Includes pgvector for semantic and visual search with Nova Multimodal embeddings (1024 dimensions)
+Includes pgvector for semantic and visual search with Cohere Embed v4 embeddings (1024 dimensions)
 
 Requirements covered:
 - 2.1: products table with embedding (vector 1024 dimensions)
@@ -38,7 +38,7 @@ DROP TABLE IF EXISTS products CASCADE;
 DROP TABLE IF EXISTS agent_analytics CASCADE;
 DROP TABLE IF EXISTS inventory_transactions CASCADE;
 
--- Products table with Nova Multimodal embeddings (1024 dimensions)
+-- Products table with Cohere Embed v4 embeddings (1024 dimensions)
 -- Requirement 2.1: products table with columns: product_id, name, category, price, brand, 
 -- description, image_url, available_sizes, inventory, embedding (vector 1024 dimensions), created_at, updated_at
 CREATE TABLE products (
@@ -51,7 +51,7 @@ CREATE TABLE products (
     image_url VARCHAR(500),
     available_sizes JSONB,
     inventory JSONB NOT NULL,
-    embedding vector(1024),  -- Nova Multimodal embedding
+    embedding vector(1024),  -- Cohere Embed v4 embedding
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -101,8 +101,8 @@ USING hnsw (embedding vector_cosine_ops)
 WITH (m = 16, ef_construction = 64);
 
 -- Comments for documentation
-COMMENT ON TABLE products IS 'Product catalog with Nova 2 Multimodal vector embeddings for semantic and visual search';
-COMMENT ON COLUMN products.embedding IS 'Vector embedding for semantic/visual product search (1024-dim Nova Multimodal)';
+COMMENT ON TABLE products IS 'Product catalog with Cohere Embed v4 vector embeddings for semantic and visual search';
+COMMENT ON COLUMN products.embedding IS 'Vector embedding for semantic/visual product search (1024-dim Cohere Embed v4)';
 COMMENT ON TABLE customers IS 'Customer information for order processing';
 COMMENT ON TABLE orders IS 'Customer orders processed by AgentStride agents';
 COMMENT ON TABLE order_items IS 'Individual items within customer orders';
@@ -144,7 +144,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION semantic_product_search IS 'Performs cosine similarity search on product embeddings using Nova 2 Multimodal vectors';
+COMMENT ON FUNCTION semantic_product_search IS 'Performs cosine similarity search on product embeddings using Cohere Embed v4 vectors';
 """
 
 
@@ -332,14 +332,14 @@ def initialize_database():
         
         table.add_row("Tables Created", ", ".join(tables) if tables else "products, customers, orders, order_items")
         table.add_row("pgvector Extension", vector_version)
-        table.add_row("Embedding Dimension", "1024 (Nova Multimodal Embeddings)")
+        table.add_row("Embedding Dimension", "1024 (Cohere Embed v4)")
         table.add_row("HNSW Index", "✅ Created")
         table.add_row("semantic_product_search", "✅ Created")
         
         console.print(table)
         
         console.print("\n[green]✅ Database schema ready![/green]")
-        console.print("[yellow]Next step: Run seed_data.py to populate products with Nova 2 Multimodal embeddings[/yellow]")
+        console.print("[yellow]Next step: Run seed_data.py to populate products with Cohere Embed v4 embeddings[/yellow]")
         
     except Exception as e:
         console.print(f"[bold red]❌ Error: {e}[/bold red]")

@@ -89,7 +89,7 @@ def setup_logging(debug: bool = False, json_output: bool = False) -> logging.Log
     Returns:
         Configured root logger
     """
-    logger = logging.getLogger("clickshop")
+    logger = logging.getLogger("agentstride")
     logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
     # Remove existing handlers
