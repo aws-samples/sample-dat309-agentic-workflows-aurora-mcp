@@ -150,15 +150,19 @@ def generate_follow_ups(query: str, products: List[Product], phase: int) -> List
         prices = [p.price for p in products]
         primary_category = categories[0] if categories else None
 
-        # Category keyword for search
-        category_keyword = {
+        category_keywords_map = {
             "City Breaks": "city breaks",
             "Beach & Resort": "beach resort",
             "Adventure & Outdoors": "adventure travel",
             "Wellness & Luxury": "wellness travel",
             "Family Trips": "family trips",
             "Business Travel": "business travel",
-        }.get(primary_category, "travel packages")
+        }
+        category_keyword = (
+            category_keywords_map.get(primary_category, "travel packages")
+            if primary_category
+            else "travel packages"
+        )
 
         if phase in [1, 2]:
             if prices:

@@ -51,7 +51,7 @@ class RDSDataClient:
         
         formatted = []
         for i, value in enumerate(params):
-            param = {"name": f"p{i}"}
+            param: Dict[str, Any] = {"name": f"p{i}"}
             
             if value is None:
                 param["value"] = {"isNull": True}

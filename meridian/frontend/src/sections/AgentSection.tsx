@@ -87,8 +87,6 @@ export function AgentSection() {
   const [traceId, setTraceId] = useState<string | null>(null);
   // Cart state - setCart is used but cart value not read directly (used in callback)
   const [, setCart] = useState<CartItem[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_cartAnimation, setCartAnimation] = useState(false);
   const chatEnd = useRef<HTMLDivElement>(null);
   const activityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pc = phaseColors[phase - 1];
@@ -413,10 +411,6 @@ export function AgentSection() {
       }
       return [...prev, { product, quantity: 1, size: product.available_sizes?.[0] }];
     });
-
-    // Trigger cart animation
-    setCartAnimation(true);
-    setTimeout(() => setCartAnimation(false), 600);
 
     // Show confirmation in chat
     setMsgs((p) => [

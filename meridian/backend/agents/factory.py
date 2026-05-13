@@ -34,7 +34,7 @@ class ShoppingAgent(Protocol):
         self,
         message: str,
         customer_id: str,
-        activity_callback: Callable[[ActivityEntry], Any]
+        activity_callback: Optional[Callable[[ActivityEntry], Any]] = None,
     ) -> AgentResponse:
         """
         Process a customer message and return a response.
