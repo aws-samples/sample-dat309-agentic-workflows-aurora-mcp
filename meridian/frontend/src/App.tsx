@@ -6,6 +6,7 @@ import { StickyNav } from './components/StickyNav';
 import { HeroSection } from './sections/HeroSection';
 import { ProductsSection } from './sections/ProductsSection';
 import { HowItWorksSection } from './sections/HowItWorksSection';
+import { Vision2026Section } from './sections/Vision2026Section';
 import { AgentSection } from './sections/AgentSection';
 import { Footer } from './components/Footer';
 
@@ -18,6 +19,7 @@ export default function App() {
       <HeroSection scrollY={scrollY} />
       <ProductsSection />
       <HowItWorksSection />
+      <Vision2026Section />
       <AgentSection />
       <Footer />
     </div>

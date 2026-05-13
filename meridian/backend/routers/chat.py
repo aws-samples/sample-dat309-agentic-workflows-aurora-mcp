@@ -38,7 +38,7 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 class ChatRequest(BaseModel):
     """Request model for chat endpoint."""
     message: str
-    phase: Literal[1, 2, 3]
+    phase: Literal[1, 2, 3, 4]
     customer_id: Optional[str] = None
     conversation_id: Optional[str] = None
 
@@ -152,73 +152,66 @@ def generate_follow_ups(query: str, products: List[Product], phase: int) -> List
 
         # Category keyword for search
         category_keyword = {
-            "Running Shoes": "running shoes",
-            "Training Shoes": "training shoes",
-            "Fitness Equipment": "fitness equipment",
-            "Apparel": "apparel",
-            "Accessories": "accessories",
-            "Recovery": "recovery",
-        }.get(primary_category, "shoes")
+            "City Breaks": "city breaks",
+            "Beach & Resort": "beach resort",
+            "Adventure & Outdoors": "adventure travel",
+            "Wellness & Luxury": "wellness travel",
+            "Family Trips": "family trips",
+            "Business Travel": "business travel",
+        }.get(primary_category, "travel packages")
 
         if phase in [1, 2]:
-            # Phase 1/2: Suggest keyword queries that work + one semantic query to show limitation
             if prices:
                 avg_price = sum(prices) / len(prices)
-                if avg_price > 100:
-                    follow_ups.append(f"{category_keyword} under $100")
+                if avg_price > 2000:
+                    follow_ups.append(f"{category_keyword} under $2000")
 
-            # Brand suggestion
             if brands:
                 for brand in brands:
                     if brand.lower() not in query_lower:
                         follow_ups.append(f"{brand} {category_keyword}")
                         break
 
-            # Cross-category keyword search
-            if "Running Shoes" in categories:
-                follow_ups.append("Trail running shoes")
-            elif "Training Shoes" in categories:
-                follow_ups.append("Fitness equipment")
-            elif "Fitness Equipment" in categories:
-                follow_ups.append("Recovery products")
+            if "City Breaks" in categories:
+                follow_ups.append("Beach & Resort")
+            elif "Beach & Resort" in categories:
+                follow_ups.append("Adventure & Outdoors")
+            elif "Adventure & Outdoors" in categories:
+                follow_ups.append("Wellness & Luxury")
             else:
-                follow_ups.append("Show me running shoes")
-
-            # For Phase 1/2, only suggest queries that will work
-            # The UI already shows limitations - no need to suggest failing queries
+                follow_ups.append("Show me city breaks")
 
         else:
-            # Phase 3: Suggest semantic/natural language queries that showcase hybrid search
             semantic_suggestions = {
-                "Running Shoes": [
-                    "Comfortable for marathon training",
-                    "Good cushioning for long runs",
-                    "Lightweight and breathable",
+                "City Breaks": [
+                    "Romantic weekend in Europe",
+                    "Culture and food focused city trip",
+                    "Walkable neighborhoods with great museums",
                 ],
-                "Training Shoes": [
-                    "Stable for weightlifting",
-                    "Good for CrossFit workouts",
-                    "Versatile gym shoes",
+                "Beach & Resort": [
+                    "All-inclusive beach escape",
+                    "Snorkeling and calm waters",
+                    "Luxury overwater villa",
                 ],
-                "Fitness Equipment": [
-                    "Help build core strength",
-                    "Good for home workouts",
-                    "Recovery after intense exercise",
+                "Adventure & Outdoors": [
+                    "Moderate hiking with guided tours",
+                    "Northern lights season trip",
+                    "Rainforest and wildlife experience",
                 ],
-                "Recovery": [
-                    "Relieve muscle tension",
-                    "Post-workout recovery",
-                    "Help with soreness",
+                "Wellness & Luxury": [
+                    "Spa retreat in the mountains",
+                    "Fine dining and wine country",
+                    "Traditional ryokan with onsen",
                 ],
-                "Apparel": [
-                    "Moisture-wicking for running",
-                    "Comfortable workout clothes",
-                    "Breathable athletic wear",
+                "Family Trips": [
+                    "Theme park vacation with kids",
+                    "Beach resort with kids club",
+                    "National park wildlife safari",
                 ],
-                "Accessories": [
-                    "Track my fitness goals",
-                    "Monitor heart rate",
-                    "Outdoor running gear",
+                "Business Travel": [
+                    "Quick conference stopover",
+                    "Hotel near airport with lounge",
+                    "Flexible change policy",
                 ],
             }
 
@@ -229,27 +222,23 @@ def generate_follow_ups(query: str, products: List[Product], phase: int) -> List
                         if len(follow_ups) >= 2:
                             break
 
-            # Add a cross-category semantic suggestion
-            if "Running Shoes" not in categories:
-                follow_ups.append("Shoes for long distance running")
-            elif "Recovery" not in categories:
-                follow_ups.append("Something for post-workout recovery")
+            if "City Breaks" not in categories:
+                follow_ups.append("Weekend city break under $2k")
+            elif "Beach & Resort" not in categories:
+                follow_ups.append("Relaxing beach vacation")
 
     else:
-        # No results
         if phase in [1, 2]:
-            # For keyword phases, suggest working keyword searches
             follow_ups = [
-                "Running shoes",
-                "Fitness equipment",
-                "Recovery products"
+                "City breaks",
+                "Beach & Resort",
+                "Business travel",
             ]
         else:
-            # For Phase 3, suggest semantic queries
             follow_ups = [
-                "Comfortable shoes for running",
-                "Help with workout recovery",
-                "Gear for marathon training"
+                "Romantic week in Europe",
+                "Family-friendly beach resort",
+                "Adventure trip with guided hikes",
             ]
 
     # Limit to 3 unique suggestions
@@ -756,8 +745,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
     """
     activities = []
 
-    # Phase 3: Check if this is an inventory query -> route to ProductAgent
-    if request.phase == 3 and is_inventory_query(request.message):
+    # Phase 3/4: Check if this is an inventory query -> route to ProductAgent
+    if request.phase in (3, 4) and is_inventory_query(request.message):
         activities.append(create_activity(
             activity_type="reasoning",
             title="Processing with Multi-Agent Orchestration",
@@ -793,6 +782,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         1: ("Phase1Agent", "Direct RDS Data API", phase1_search, "agents/phase1/agent.py"),
         2: ("Phase2Agent", "MCP (postgres-mcp-server)", phase2_search, "agents/phase2/agent.py"),
         3: ("SupervisorAgent", "Hybrid Search (Semantic + Lexical)", phase3_search, "agents/phase3/supervisor.py"),
+        4: ("PartnerRuntime", "Production Partner (AgentCore + Memory)", phase3_search, "agents/phase4/partner_runtime.py"),
     }
 
     agent_name, method, search_fn, agent_file = phase_configs[request.phase]
@@ -811,7 +801,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         
         # Generate personalized response message
         if products:
-            if request.phase == 3:
+            if request.phase in (3, 4):
                 top_similarity = products[0].similarity
                 if top_similarity and top_similarity > 0.8:
                     message = f"Great match! I found {len(products)} products that closely match what you're looking for:"
@@ -963,7 +953,7 @@ class OrderRequest(BaseModel):
     product_id: str
     size: Optional[str] = None
     quantity: int = 1
-    phase: Literal[1, 2, 3]
+    phase: Literal[1, 2, 3, 4]
 
 
 class OrderResponse(BaseModel):
@@ -995,6 +985,7 @@ async def process_order(request: OrderRequest) -> OrderResponse:
         1: ("Phase1Agent", "agents/phase1/agent.py"),
         2: ("Phase2Agent", "agents/phase2/agent.py"),
         3: ("OrderAgent", "agents/phase3/order_agent.py"),
+        4: ("OrderAgent", "agents/phase4/order_agent.py"),
     }
     agent_name, agent_file = phase_configs[request.phase]
 

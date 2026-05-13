@@ -14,10 +14,10 @@ export function Footer() {
         lineHeight: 1.8,
       }}
     >
-      <b style={{ color: 'var(--dl-ink)' }}>Meridian</b> — Ask. Shop. Done. · © Shayon Sanyal
+      <b style={{ color: 'var(--dl-ink)' }}>Meridian</b> — Plan. Go. Done. · © Shayon Sanyal
       <br />
       <span style={{ fontFamily: "'SF Mono', monospace", fontSize: 11 }}>
-        Aurora PostgreSQL 17.5 · pgvector 0.8 · Strands SDK · Cohere Embed v4 · Claude Opus 4.7 · MCP
+        Aurora PostgreSQL 17 · pgvector 0.8 · AgentCore · LangGraph · Strands · MCP · Claude · Cohere Embed v4
       </span>
     </footer>
   );

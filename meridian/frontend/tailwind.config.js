@@ -10,6 +10,7 @@ export default {
         'phase-1': '#3B82F6',
         'phase-2': '#8B5CF6',
         'phase-3': '#10B981',
+        'phase-4': '#FF5B1F',
         'dl-bg': '#f6f5f0',
         'dl-paper': '#fbfaf6',
         'dl-ink': '#0d1117',

@@ -23,13 +23,28 @@
 
 ## Overview
 
-**Meridian** demonstrates the architectural evolution of agentic systems through three production-grade implementations. Built for AWS re:Invent 2025 (DAT309 Chalk Talk), this project showcases scaling patterns from a weekend MVP to enterprise-scale multi-agent orchestration with semantic search capabilities.
+**Meridian** demonstrates the architectural evolution of agentic systems through three production-grade implementations. Built for AWS re:Invent (DAT309 — *Build agentic workflows with Aurora and MCP*), this project showcases scaling patterns from a weekend MVP to enterprise-scale multi-agent orchestration with semantic search, contextual memory, and governed runtime on **Amazon Bedrock AgentCore**.
 
 > **⚠️ Educational Use Only**: This demonstration is designed for learning purposes and illustrates production patterns without production-level error handling, monitoring, or security hardening.
 
 ### The Meridian Story
 
 A live-streaming shopping platform that evolved from 50 orders/day to 50,000 orders/day through three architectural iterations—demonstrating how thoughtful design enables exponential scaling without complete rewrites.
+
+### 2026 evolution (preview in the UI)
+
+The live app now includes a **2026 roadmap section** aligned with the session narrative:
+
+| Theme | What it means |
+| ----- | ------------- |
+| **Short-term memory** | Turn context and session state in the agent runtime |
+| **Long-term memory** | Durable facts in Aurora (`memory.facts` + pgvector recall) |
+| **MCP servers** | Tool discovery and secure Aurora access via RDS Data API |
+| **Agent runtime** | Amazon Bedrock **AgentCore** for durable, governed execution |
+| **Orchestration** | **LangGraph** supervisor graphs + **Strands Agents** on Bedrock |
+| **Trace-first UX** | Permalinked spans — agent, SQL, latency, replay (Wave 02) |
+
+Phase 3 of the live demo **previews** memory recall and trace IDs client-side; full persistence is planned for Wave 01–02. See `meridian/vision-2026.html` for the full narrative.
 
 ---
 

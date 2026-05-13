@@ -4,35 +4,66 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { FadeIn } from '../components/FadeIn';
+import { MemoryChip } from '../components/MemoryChip';
+import { TraceSpan } from '../components/TraceSpan';
 import { ProductThumb } from '../components/ProductThumb';
+import { enrichTraceActivities } from '../utils/traceTelemetry';
 import { sendChatMessage, processOrder } from '../api/client';
-import type { Product, ActivityEntry, Message } from '../types';
+import type { Product, ActivityEntry, Message, Phase } from '../types';
 
-const phaseColors = ['#3b82f6', '#a855f7', '#10b981'];
-const phaseLabels = ['Phase 1 · Direct', 'Phase 2 · MCP', 'Phase 3 · Multi-Agent'];
+const phaseColors = ['#3b82f6', '#a855f7', '#10b981', '#ff5b1f'];
+const phaseLabels = [
+  'Phase 1 · Keywords',
+  'Phase 2 · MCP',
+  'Phase 3 · Semantic',
+  'Phase 4 · Memory',
+];
 
 // Phase information for educational display
-const phaseInfo = {
+const phaseInfo: Record<Phase, {
+  name: string;
+  beat: string;
+  description: string;
+  capabilities: string[];
+  limitations: string[];
+  tech: string;
+}> = {
   1: {
-    name: 'Direct RDS Data API',
-    description: 'Simple SQL queries via HTTP',
-    capabilities: ['Category search', 'Brand filter', 'Price filter'],
+    name: 'Keyword concierge',
+    beat: 'Exact trip type & operator lookup — no natural language yet.',
+    description: 'Hardcoded SQL via RDS Data API',
+    capabilities: ['Trip-type filter', 'Operator filter', 'Price filter'],
     limitations: ['No semantic understanding', 'Exact keyword match only'],
     tech: 'RDS Data API → Aurora PostgreSQL',
   },
   2: {
-    name: 'MCP Abstraction',
-    description: 'Model Context Protocol layer',
-    capabilities: ['Category search', 'Brand filter', 'Price filter', 'Tool discovery'],
-    limitations: ['Still keyword-based', 'No semantic understanding'],
+    name: 'MCP discovery',
+    beat: 'Tools discovered at runtime — still keyword search underneath.',
+    description: 'Model Context Protocol tool layer',
+    capabilities: ['Trip-type filter', 'Operator filter', 'Price filter', 'MCP tool discovery'],
+    limitations: ['Still keyword-based', 'No vector search'],
     tech: 'MCP Server → RDS Data API → Aurora',
   },
   3: {
-    name: 'Multi-Agent + Hybrid Search',
-    description: 'Semantic + Lexical combined',
-    capabilities: ['Natural language queries', 'Intent understanding', 'Similarity matching'],
+    name: 'Specialist team',
+    beat: 'Hybrid pgvector search — vague travel intent maps to real packages.',
+    description: 'Supervisor + semantic retrieval',
+    capabilities: ['Natural language', 'Supervisor routing', 'Hybrid pgvector search'],
+    limitations: ['No durable memory', 'Stateless across sessions'],
+    tech: 'Supervisor → [Search · Availability · Booking] → Aurora',
+  },
+  4: {
+    name: 'Partner runtime',
+    beat: 'Remembers party size, dates, and dietary needs before every turn.',
+    description: 'AgentCore + Aurora memory.facts',
+    capabilities: [
+      'Short- & long-term memory',
+      'AgentCore session + trace',
+      'Multi-turn travel planning',
+      'Plan → confirm → book',
+    ],
     limitations: [],
-    tech: 'Supervisor → Agents → pgvector + tsvector',
+    tech: 'AgentCore · Memory · LangGraph · MCP · Aurora',
   },
 };
 
@@ -43,7 +74,7 @@ interface CartItem {
 }
 
 export function AgentSection() {
-  const [phase, setPhase] = useState<1 | 2 | 3>(1);
+  const [phase, setPhase] = useState<Phase>(1);
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [acts, setActs] = useState<ActivityEntry[]>([]);
   const [pendingActs, setPendingActs] = useState<ActivityEntry[]>([]);
@@ -53,6 +84,7 @@ export function AgentSection() {
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [phaseTransition, setPhaseTransition] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  const [traceId, setTraceId] = useState<string | null>(null);
   // Cart state - setCart is used but cart value not read directly (used in callback)
   const [, setCart] = useState<CartItem[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -60,6 +92,13 @@ export function AgentSection() {
   const chatEnd = useRef<HTMLDivElement>(null);
   const activityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pc = phaseColors[phase - 1];
+
+  const ensureTraceId = (): string => {
+    if (traceId) return traceId;
+    const id = `tr_${Math.random().toString(36).slice(2, 8)}`;
+    setTraceId(id);
+    return id;
+  };
 
   // Check backend connection on mount
   useEffect(() => {
@@ -78,7 +117,7 @@ export function AgentSection() {
   }, []);
 
   // Phase-specific delays (ms) - Phase 1 slower to show process, Phase 3 faster
-  const phaseDelays = { 1: 600, 2: 450, 3: 350 };
+  const phaseDelays: Record<Phase, number> = { 1: 600, 2: 450, 3: 350, 4: 300 };
 
   // Track previous message count to only scroll on new messages
   const prevMsgCount = useRef(0);
@@ -148,12 +187,16 @@ export function AgentSection() {
     if (!input.trim() || typing) return;
     const text = input.trim();
     setInput('');
-    setMsgs((p) => [...p, { role: 'user', text }]);
+    const userMsg: Message = { role: 'user', text };
+    const history = [...msgs, userMsg];
+    setMsgs((p) => [...p, userMsg]);
     setTyping(true);
     setActs([]);
     setCurrentStep(-1);
     setPendingActs([]);
     setFollowUps([]);
+
+    const tid = ensureTraceId();
 
     // Clear any pending activity timers
     if (activityTimerRef.current) {
@@ -171,7 +214,11 @@ export function AgentSection() {
       const botResponse = response;
 
       // Progressively reveal activities, then show the response
-      revealActivitiesProgressively(response.activities, () => {
+      revealActivitiesProgressively(
+        enrichTraceActivities(phase, text, response.activities, tid, history, {
+          productCount: botResponse.products?.length,
+        }),
+        () => {
         // Update follow-up suggestions
         if (botResponse.follow_ups) {
           setFollowUps(botResponse.follow_ups);
@@ -235,7 +282,7 @@ export function AgentSection() {
     setPhaseTransition(true);
     setTimeout(() => setPhaseTransition(false), 600);
     
-    setPhase((i + 1) as 1 | 2 | 3);
+    setPhase((i + 1) as Phase);
     setMsgs([]);
     setActs([]);
     setPendingActs([]);
@@ -292,6 +339,10 @@ export function AgentSection() {
     setPendingActs([]);
     setFollowUps([]);
 
+    const tid = ensureTraceId();
+    const orderQuery = `Order: ${product.name}`;
+    const orderHistory: Message[] = [...msgs, { role: 'user', text: orderQuery }];
+
     // Clear any pending activity timers
     if (activityTimerRef.current) {
       clearTimeout(activityTimerRef.current);
@@ -301,13 +352,17 @@ export function AgentSection() {
     try {
       const response = await processOrder({
         product_id: product.product_id,
-        size: product.available_sizes?.includes('11') ? '11' : product.available_sizes?.[0] || undefined,
+        size: product.available_sizes?.[0] || undefined,
         quantity: 1,
         phase,
       });
 
       // Progressively reveal activities, then show the response
-      revealActivitiesProgressively(response.activities, () => {
+      revealActivitiesProgressively(
+        enrichTraceActivities(phase, orderQuery, response.activities, tid, orderHistory, {
+          productCount: 0,
+        }),
+        () => {
         // Add bot response with order details
         if (response.order) {
           setMsgs((p) => [
@@ -356,7 +411,7 @@ export function AgentSection() {
             : item
         );
       }
-      return [...prev, { product, quantity: 1, size: product.available_sizes?.includes('11') ? '11' : product.available_sizes?.[0] }];
+      return [...prev, { product, quantity: 1, size: product.available_sizes?.[0] }];
     });
 
     // Trigger cart animation
@@ -369,27 +424,36 @@ export function AgentSection() {
       {
         role: 'bot',
         type: 'text',
-        text: `Added **${product.name}** to your cart! You can continue shopping or checkout when ready.`,
+        text: `Added **${product.name}** to your itinerary! Keep exploring or book when you're ready.`,
       },
     ]);
   };
 
   // Phase-specific suggestions to demonstrate capabilities and limitations
-  const phaseSuggestions: Record<1 | 2 | 3, { works: string[]; breaks: string[]; hint: string }> = {
+  const phaseSuggestions: Record<Phase, { works: string[]; breaks: string[]; hint: string }> = {
     1: {
-      works: ['Running shoes', 'Nike', 'Training shoes under $150'],
-      breaks: ['Comfortable shoes for long runs', 'Something for marathon training'],
-      hint: 'Phase 1 uses keyword matching. Try semantic queries to see limitations →',
+      works: ['City breaks', 'Beach & Resort', 'Business travel under $1500'],
+      breaks: ['Romantic week in Europe', 'Family trip with kids who love theme parks'],
+      hint: 'Phase 1: keyword lookup only. Try "romantic week in Europe" in Phase 3 to feel the jump →',
     },
     2: {
-      works: ['Fitness equipment', 'Recovery products', 'Brooks running shoes'],
-      breaks: ['Help me build core strength', 'Help with foot pain'],
-      hint: 'Phase 2 uses MCP but still keyword-based. Try natural language →',
+      works: ['Adventure & Outdoors', 'Wellness & Luxury', 'Tokyo culture trip'],
+      breaks: ['Beach vacation with snorkeling', 'Quick conference stopover in Singapore'],
+      hint: 'Phase 2: MCP discovers tools — still keywords underneath. Try natural language in Phase 3 →',
     },
     3: {
-      works: ['Gear for my first marathon', 'Is the Nike Pegasus in stock?', 'Do you have the Garmin watch available?'],
+      works: ['Weekend in Paris under $2k', 'Is the Maldives package available?', 'Family-friendly beach resort'],
       breaks: [],
-      hint: 'Phase 3 uses multi-agent orchestration. Watch the Activity Panel!',
+      hint: 'Phase 3: multi-agent hybrid search. Watch the trace for supervisor + retrieval spans.',
+    },
+    4: {
+      works: [
+        'Tokyo trip for two in October',
+        'Beach escape under $2500 — remember my food allergies',
+        'What did we discuss last time about Iceland?',
+      ],
+      breaks: [],
+      hint: 'Phase 4: same semantic search as Phase 3, plus AgentCore session + Aurora memory in the trace.',
     },
   };
 
@@ -414,7 +478,8 @@ export function AgentSection() {
               Talk to the <em className="serif">agent</em>.
             </h2>
             <p className="section-subtitle">
-              Three phases in one panel — direct SQL, MCP, and multi-agent hybrid search.
+              Climb the ladder: keywords → MCP → semantic search → memory. Phase 4 is the returning
+              traveler — same specialist team, but it remembers you.
             </p>
           </div>
         </FadeIn>
@@ -426,7 +491,7 @@ export function AgentSection() {
 
         {/* Phase pills */}
         <FadeIn delay={0.1}>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
             {phaseLabels.map((label, i) => (
               <button
                 key={i}
@@ -446,7 +511,12 @@ export function AgentSection() {
           {/* Phase info panel */}
           <div className="phase-info-bar">
             <div style={{ textAlign: 'center' }}>
-              <div className="label">Architecture</div>
+              <div className="label">This phase</div>
+              <div className="value">{phaseInfo[phase].beat}</div>
+            </div>
+            <div className="divider" />
+            <div>
+              <div className="label">Stack</div>
               <div className="value">{phaseInfo[phase].tech}</div>
             </div>
             <div className="divider" />
@@ -485,7 +555,8 @@ export function AgentSection() {
                       boxShadow: `0 0 8px ${connectionStatus === 'connected' ? pc : connectionStatus === 'checking' ? '#f59e0b' : '#ef4444'}` 
                     }}
                   />
-                  <span className="chat-title">Shopping Assistant</span>
+                  <span className="chat-title">Travel Concierge</span>
+                  {phase === 4 && <MemoryChip compact />}
                   {connectionStatus === 'disconnected' && (
                     <span style={{ 
                       fontSize: 9, 
@@ -664,7 +735,7 @@ export function AgentSection() {
                                   e.currentTarget.style.transform = 'scale(1)';
                                 }}
                               >
-                                Buy Now
+                                Book Now
                               </button>
                             </div>
                           </div>
@@ -686,7 +757,7 @@ export function AgentSection() {
                             marginBottom: 12,
                           }}>
                             <span style={{ fontSize: 20 }}>✅</span>
-                            <span style={{ fontWeight: 600, color: pc }}>Order Confirmed</span>
+                            <span style={{ fontWeight: 600, color: pc }}>Booking Confirmed</span>
                           </div>
                           <div style={{ fontSize: 12, color: 'var(--dl-muted)', marginBottom: 8 }}>
                             Order #{m.order.order_id}
@@ -849,9 +920,19 @@ export function AgentSection() {
                       animation: currentStep >= 0 ? 'pulseGlow 1.5s ease-in-out infinite' : 'none',
                     }}
                   />
-                  <span className="activity-title">Agent Activity</span>
+                  <span className="activity-title">Agent trace</span>
                 </div>
-                <span className="activity-count" style={{ color: currentStep >= 0 ? pc : undefined }}>
+                <span className="activity-count" style={{ color: currentStep >= 0 ? pc : undefined, display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {traceId && (
+                    <button
+                      type="button"
+                      className="trace-id-pill"
+                      title="Permalink preview — full persistence in Wave 02"
+                      onClick={() => navigator.clipboard?.writeText(traceId)}
+                    >
+                      {traceId}
+                    </button>
+                  )}
                   {currentStep >= 0
                     ? `step ${currentStep + 1}/${acts.length + pendingActs.length}`
                     : acts.length > 0
@@ -889,132 +970,34 @@ export function AgentSection() {
                       marginTop: 4,
                       fontFamily: 'SF Mono, monospace',
                     }}>
-                      Send a query to see agent operations
+                      Send a query to see the full agent trace
                     </div>
                   </div>
                 )}
 
-                {/* Revealed activities */}
-                {acts.map((a, i) => {
-                  const isCurrentStep = i === currentStep;
-                  return (
-                    <div
-                      key={a.id || i}
-                      className="activity-item"
-                      style={{
-                        borderLeft: isCurrentStep ? `3px solid ${pc}` : '3px solid transparent',
-                        background: isCurrentStep ? `${pc}08` : undefined,
-                        transition: 'all 0.3s ease',
-                      }}
-                    >
-                      <div className="activity-item-header">
-                        <span style={{
-                          fontSize: 14,
-                          animation: isCurrentStep ? 'stepPulse 1s ease-in-out infinite' : 'none',
-                        }}>
-                          {a.activity_type === 'search' ? '🔍' :
-                           a.activity_type === 'embedding' ? '🧠' :
-                           a.activity_type === 'mcp' ? '🔌' :
-                           a.activity_type === 'database' ? '🗄️' :
-                           a.activity_type === 'reasoning' ? '💭' :
-                           a.activity_type === 'result' ? '✅' :
-                           a.activity_type === 'error' ? '❌' :
-                           a.activity_type === 'inventory' ? '📦' :
-                           a.activity_type === 'order' ? '💳' : '⚡'}
-                        </span>
-                        <div style={{ flex: 1 }}>
-                          <div className="activity-label" style={{ color: isCurrentStep ? pc : undefined }}>
-                            {a.title}
-                          </div>
-                          <div className="activity-agent" style={{ color: pc }}>
-                            {a.agent_name || `Phase${phase}Agent`}
-                          </div>
-                          {a.agent_file && (
-                            <div style={{
-                              fontSize: 9,
-                              fontFamily: 'SF Mono, monospace',
-                              color: '#94a3b8',
-                              marginTop: 2,
-                            }}>
-                              {a.agent_file}
-                            </div>
-                          )}
-                        </div>
-                        {a.execution_time_ms ? (
-                          <span className="activity-time">{a.execution_time_ms}ms</span>
-                        ) : isCurrentStep ? (
-                          <span className="activity-time" style={{ color: pc }}>...</span>
-                        ) : null}
-                      </div>
-                      {a.details && (
-                        <div className="activity-detail" style={{ borderLeftColor: `${pc}30` }}>
-                          {a.details}
-                        </div>
-                      )}
-                      {a.sql_query && (
-                        <div className="activity-sql" style={{
-                          borderLeftColor: `${pc}30`,
-                          marginTop: 4,
-                          paddingLeft: 8,
-                          borderLeft: `2px solid ${pc}20`,
-                          fontSize: 10,
-                          fontFamily: 'SF Mono, monospace',
-                          color: '#94a3b8',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
-                          {a.sql_query}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* Pending activities (shown as placeholders) */}
-                {pendingActs.map((a, i) => (
-                  <div
-                    key={`pending-${i}`}
-                    className="activity-item"
-                    style={{
-                      opacity: 0.4,
-                      borderLeft: '3px solid transparent',
-                    }}
-                  >
-                    <div className="activity-item-header">
-                      <span style={{ fontSize: 14, filter: 'grayscale(1)' }}>
-                        {a.activity_type === 'search' ? '🔍' :
-                         a.activity_type === 'embedding' ? '🧠' :
-                         a.activity_type === 'mcp' ? '🔌' :
-                         a.activity_type === 'database' ? '🗄️' :
-                         a.activity_type === 'reasoning' ? '💭' :
-                         a.activity_type === 'result' ? '✅' :
-                         a.activity_type === 'error' ? '❌' :
-                         a.activity_type === 'inventory' ? '📦' :
-                         a.activity_type === 'order' ? '💳' : '⚡'}
-                      </span>
-                      <div style={{ flex: 1 }}>
-                        <div className="activity-label" style={{ color: '#475569' }}>
-                          {a.title}
-                        </div>
-                        <div className="activity-agent" style={{ color: '#334155' }}>
-                          {a.agent_name || `Phase${phase}Agent`}
-                        </div>
-                        {a.agent_file && (
-                          <div style={{
-                            fontSize: 9,
-                            fontFamily: 'SF Mono, monospace',
-                            color: '#334155',
-                            marginTop: 2,
-                          }}>
-                            {a.agent_file}
-                          </div>
-                        )}
-                      </div>
-                      <span className="activity-time" style={{ color: '#334155' }}>—</span>
-                    </div>
-                  </div>
+                {/* Revealed trace spans */}
+                {acts.map((a, i) => (
+                  <TraceSpan
+                    key={a.id || i}
+                    entry={a}
+                    index={i}
+                    isCurrentStep={i === currentStep}
+                    phaseColor={pc}
+                  />
                 ))}
+
+                {/* Pending spans */}
+                {pendingActs.map((a, i) => (
+                  <TraceSpan
+                    key={`pending-${a.id || i}`}
+                    entry={a}
+                    index={acts.length + i}
+                    isCurrentStep={false}
+                    isPending
+                    phaseColor={pc}
+                  />
+                ))}
+
               </div>
 
               <div className="activity-stats">

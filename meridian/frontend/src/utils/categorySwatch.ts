@@ -1,10 +1,10 @@
 const CATEGORY_SWATCHES: Record<string, { gradient: string; emoji: string }> = {
-  'Running Shoes': { gradient: 'linear-gradient(135deg, #ffd9c2, #ffb38a)', emoji: '👟' },
-  'Training Shoes': { gradient: 'linear-gradient(135deg, #ffc9a8, #ff9f6b)', emoji: '👟' },
-  'Fitness Equipment': { gradient: 'linear-gradient(135deg, #cfe7ff, #9bc7f5)', emoji: '🏋️' },
-  Apparel: { gradient: 'linear-gradient(135deg, #f0e6d8, #d4c4a8)', emoji: '👕' },
-  Accessories: { gradient: 'linear-gradient(135deg, #dde2d3, #bcc5a9)', emoji: '⌚' },
-  Recovery: { gradient: 'linear-gradient(135deg, #e7e2f5, #c8bfe6)', emoji: '🧘' },
+  'City Breaks': { gradient: 'linear-gradient(135deg, #cfe7ff, #9bc7f5)', emoji: '🏙️' },
+  'Beach & Resort': { gradient: 'linear-gradient(135deg, #ffd9c2, #ffb38a)', emoji: '🏖️' },
+  'Adventure & Outdoors': { gradient: 'linear-gradient(135deg, #dde2d3, #bcc5a9)', emoji: '🏔️' },
+  'Wellness & Luxury': { gradient: 'linear-gradient(135deg, #e7e2f5, #c8bfe6)', emoji: '🧘' },
+  'Family Trips': { gradient: 'linear-gradient(135deg, #f0e6d8, #d4c4a8)', emoji: '👨‍👩‍👧' },
+  'Business Travel': { gradient: 'linear-gradient(135deg, #eef0e9, #c5cdd8)', emoji: '✈️' },
 };
 
 const DEFAULT_SWATCH = {
@@ -18,20 +18,23 @@ export function getCategorySwatch(category: string) {
   }
 
   const lower = category.toLowerCase();
-  if (lower.includes('running') || lower.includes('training') || lower.includes('shoe')) {
-    return CATEGORY_SWATCHES['Running Shoes'];
+  if (lower.includes('city') || lower.includes('urban')) {
+    return CATEGORY_SWATCHES['City Breaks'];
   }
-  if (lower.includes('equipment') || lower.includes('strength')) {
-    return CATEGORY_SWATCHES['Fitness Equipment'];
+  if (lower.includes('beach') || lower.includes('resort') || lower.includes('island')) {
+    return CATEGORY_SWATCHES['Beach & Resort'];
   }
-  if (lower.includes('apparel') || lower.includes('wear')) {
-    return CATEGORY_SWATCHES.Apparel;
+  if (lower.includes('adventure') || lower.includes('outdoor') || lower.includes('trek')) {
+    return CATEGORY_SWATCHES['Adventure & Outdoors'];
   }
-  if (lower.includes('accessor') || lower.includes('watch')) {
-    return CATEGORY_SWATCHES.Accessories;
+  if (lower.includes('wellness') || lower.includes('luxury') || lower.includes('spa')) {
+    return CATEGORY_SWATCHES['Wellness & Luxury'];
   }
-  if (lower.includes('recover')) {
-    return CATEGORY_SWATCHES.Recovery;
+  if (lower.includes('family') || lower.includes('kids')) {
+    return CATEGORY_SWATCHES['Family Trips'];
+  }
+  if (lower.includes('business') || lower.includes('conference')) {
+    return CATEGORY_SWATCHES['Business Travel'];
   }
 
   return DEFAULT_SWATCH;

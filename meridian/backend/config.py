@@ -24,19 +24,18 @@ class SearchConfig:
     # Only exact category names or very specific keywords should match
     # Semantic queries like "help with muscle recovery" should NOT match
     category_keywords: Dict[str, str | None] = field(default_factory=lambda: {
-        "running shoes": "Running Shoes",
-        "training shoes": "Training Shoes",
-        "gym shoes": "Training Shoes",
-        "fitness equipment": "Fitness Equipment",
-        "fitness gear": "Fitness Equipment",
-        "apparel": "Apparel",
-        "clothes": "Apparel",
-        "clothing": "Apparel",
-        "accessories": "Accessories",
-        "recovery products": "Recovery",
-        "recovery gear": "Recovery",
-        "foam roller": "Recovery",
-        "massage gun": "Recovery",
+        "city break": "City Breaks",
+        "city breaks": "City Breaks",
+        "beach": "Beach & Resort",
+        "resort": "Beach & Resort",
+        "adventure": "Adventure & Outdoors",
+        "outdoors": "Adventure & Outdoors",
+        "wellness": "Wellness & Luxury",
+        "luxury": "Wellness & Luxury",
+        "family": "Family Trips",
+        "family trip": "Family Trips",
+        "business travel": "Business Travel",
+        "business trip": "Business Travel",
     })
 
 

@@ -39,10 +39,10 @@ export function ProductsSection() {
           }}
         >
           <h2 className="section-headline" style={{ margin: 0 }}>
-            Featured
+            Featured trips
           </h2>
           <div style={{ fontSize: 13, color: 'var(--dl-muted)' }}>
-            Showing <b style={{ color: 'var(--dl-ink)' }}>6 categories</b> · sorted by{' '}
+            Showing <b style={{ color: 'var(--dl-ink)' }}>6 trip types</b> · sorted by{' '}
             <b style={{ color: 'var(--dl-ink)' }}>Relevance</b>
           </div>
         </div>
@@ -93,7 +93,7 @@ export function ProductsSection() {
             <span> = </span>
             <span style={{ color: 'var(--dl-sky)' }}>cohere_embed</span>
             <span>(</span>
-            <span style={{ color: 'var(--dl-leaf)' }}>&quot;comfortable running shoes&quot;</span>
+            <span style={{ color: 'var(--dl-leaf)' }}>&quot;weekend in Tokyo with great food&quot;</span>
             <span>) → </span>
             <span style={{ color: 'var(--dl-accent)' }}>[0.0234, -0.0891, … ×1024]</span>
           </div>

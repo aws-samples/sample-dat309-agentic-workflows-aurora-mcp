@@ -1,5 +1,5 @@
 /**
- * HowItWorksSection — Daylight Studio pillar cards for three phases
+ * HowItWorksSection — Daylight Studio pillar cards for four phases
  */
 import { FadeIn } from '../components/FadeIn';
 
@@ -8,6 +8,7 @@ interface Phase {
   title: string;
   serifWord: string;
   subtitle: string;
+  beat: string;
   desc: string;
   code: string;
   tags: string[];
@@ -18,45 +19,62 @@ interface Phase {
 const phases: Phase[] = [
   {
     num: '01',
-    title: 'Single',
-    serifWord: 'agent',
-    subtitle: 'The Prototype',
-    scale: '50 orders/day',
-    desc: 'One Strands agent with direct database access via RDS Data API. Simple, fast to build — every tool is hardcoded and the agent manages all operations directly.',
+    title: 'Keyword',
+    serifWord: 'concierge',
+    subtitle: 'The lab',
+    beat: 'Looks up trips by exact type, operator, or price — like reading a brochure.',
+    scale: '50 bookings/day',
+    desc: 'One Strands agent calls Aurora through the RDS Data API with hardcoded tools. Fast to ship, easy to demo — but &ldquo;romantic week in Italy&rdquo; won&apos;t work until Phase 3.',
     code: `agent = Agent(
-  model=BedrockModel("global.anthropic.claude-opus-4-7-v1"),
-  tools=[search_products, check_inventory, process_order]
+  model=BedrockModel("claude-opus-4-7"),
+  tools=[search_packages, check_dates, book_trip]
 )
-result = agent("Find comfortable running shoes")`,
-    tags: ['Strands SDK', 'Claude Opus 4.7', 'RDS Data API', 'Aurora PostgreSQL'],
-    flow: 'User → Agent → RDS Data API → Aurora PostgreSQL',
+agent("City breaks under $2000")`,
+    tags: ['Strands SDK', 'RDS Data API', 'Keyword SQL', 'Aurora PostgreSQL'],
+    flow: 'Traveler → Agent → RDS Data API → Aurora',
   },
   {
     num: '02',
-    title: 'Agent +',
-    serifWord: 'MCP',
-    subtitle: 'The Standard',
-    scale: '5K orders/day',
-    desc: 'The agent discovers database capabilities through MCP instead of hardcoding them. RDS Data API eliminates connection management. Aurora Serverless v2 scales to zero when idle.',
+    title: 'MCP',
+    serifWord: 'discovery',
+    subtitle: 'The toolkit',
+    beat: 'Same keyword brain — but tools are discovered via MCP, not baked into the agent.',
+    scale: '5K bookings/day',
+    desc: 'The agent discovers Aurora capabilities through MCP instead of hardcoding SQL. RDS Data API removes connection pools; Serverless v2 scales to zero between sessions.',
     code: `mcp = MCPClient(awslabs.postgres_mcp_server)
-  → resource_arn: meridian-demo
-  → Serverless v2 (0.5–64 ACUs)
-  → RDS Data API + IAM auth`,
-    tags: ['MCP', 'RDS Data API', 'Serverless v2', 'IAM Auth'],
-    flow: 'User → Agent → MCP → Data API → Aurora Serverless',
+tools = mcp.list_tools()  # execute_sql, describe…
+→ Aurora Serverless v2 · IAM auth`,
+    tags: ['MCP', 'Tool discovery', 'Serverless v2', 'IAM Auth'],
+    flow: 'Traveler → Agent → MCP → Data API → Aurora',
   },
   {
     num: '03',
-    title: 'Multi-',
-    serifWord: 'agent',
+    title: 'Specialist',
+    serifWord: 'team',
+    subtitle: 'Semantic scale',
+    beat: 'Natural language works — a supervisor routes to search, availability, and booking agents.',
+    scale: '50K bookings/day',
+    desc: 'Cohere Embed v4 vectors in pgvector power hybrid semantic + lexical search. A LangGraph supervisor delegates to specialists so vague requests map to real packages.',
+    code: `emb = cohere_embed("romantic week in Italy")
+SELECT *, 0.7*semantic + 0.3*lexical AS score
+FROM packages ORDER BY score DESC LIMIT 5`,
+    tags: ['Cohere Embed v4', 'pgvector 0.8', 'LangGraph', 'Hybrid search'],
+    flow: 'Traveler → Supervisor → [Search · Availability · Booking] → Aurora',
+  },
+  {
+    num: '04',
+    title: 'Partner',
+    serifWord: 'runtime',
     subtitle: 'Production',
-    scale: '50K orders/day',
-    desc: 'A supervisor routes to specialized agents. Search uses Cohere Embed v4 embeddings stored in pgvector — semantic search with 1024-dimensional vectors and HNSW indexing.',
-    code: `emb = cohere_embed(text="marathon shoes")
-SELECT *, 1-(embedding <=> $1) AS similarity
-FROM products ORDER BY embedding <=> $1 LIMIT 5`,
-    tags: ['Cohere Embed v4', 'pgvector 0.8', 'HNSW', 'Multi-Agent'],
-    flow: 'User → Supervisor → [Search | Product | Order] → Aurora + pgvector',
+    beat: 'Remembers the traveler — party size, dates, allergies — before every search and booking.',
+    scale: '50K+ bookings/day',
+    desc: 'Bedrock AgentCore hosts durable sessions. Short-term turn context plus long-term facts in Aurora feed the same specialist team — with governed plan→confirm flows and permalinked traces.',
+    code: `session = AgentCore.start(trace_id=tr)
+facts = memory.recall(user_id, embed(query))
+graph = LangGraph.supervisor(memory=session + facts)
+result = graph.run(query)`,
+    tags: ['AgentCore', 'memory.facts', 'Trace replay', 'Plan → confirm'],
+    flow: 'Traveler → AgentCore → Memory → Supervisor → MCP → Aurora',
   },
 ];
 
@@ -75,10 +93,12 @@ export function HowItWorksSection() {
         <div style={{ marginBottom: 40 }}>
           <span className="section-label">Architecture</span>
           <h2 className="section-headline">
-            Three phases. One <em className="serif">evolution</em>.
+            Four phases. One <em className="serif">ladder</em>.
           </h2>
           <p className="section-subtitle">
-            Same application, three architectures. Watch complexity decrease as capability increases.
+            Each phase adds exactly one capability: <strong>keywords</strong> → <strong>MCP tools</strong> →{' '}
+            <strong>semantic search</strong> → <strong>memory</strong>. Phases 1–3 are the teaching path;
+            Phase 4 is how Meridian runs in production.
           </p>
         </div>
       </FadeIn>
@@ -86,18 +106,21 @@ export function HowItWorksSection() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
           gap: 20,
         }}
       >
         {phases.map((p, i) => (
-          <FadeIn key={p.num} delay={i * 0.1}>
+          <FadeIn key={p.num} delay={i * 0.08}>
             <div className="phase-card">
-              <span className="phase-subtitle">Phase {p.num}</span>
-              <h3 className="phase-title" style={{ margin: '8px 0 12px' }}>
+              <span className="phase-subtitle">Phase {p.num} · {p.subtitle}</span>
+              <h3 className="phase-title" style={{ margin: '8px 0 8px' }}>
                 {p.title}
                 <em className="serif"> {p.serifWord}</em>
               </h3>
+              <p className="phase-desc" style={{ fontWeight: 500, color: 'var(--dl-ink)', marginBottom: 8 }}>
+                {p.beat}
+              </p>
               <div className="phase-flow">{p.flow}</div>
               <p className="phase-desc">{p.desc}</p>
               <div className="phase-code">{p.code}</div>
@@ -117,6 +140,24 @@ export function HowItWorksSection() {
           </FadeIn>
         ))}
       </div>
+
+      <FadeIn delay={0.35}>
+        <div className="horizon-callout">
+          <span className="horizon-callout-label">Try the ladder</span>
+          <p>
+            Start at Phase 1 with &ldquo;city breaks&rdquo; — then try the same intent in Phase 3 as
+            &ldquo;romantic weekend in Europe.&rdquo; Jump to{' '}
+            <strong>Phase 4 · Memory</strong> to see AgentCore, session context, and Aurora facts in the trace —{' '}
+            <button
+              type="button"
+              className="horizon-callout-link"
+              onClick={() => document.getElementById('agent')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              open the demo →
+            </button>
+          </p>
+        </div>
+      </FadeIn>
     </section>
   );
 }

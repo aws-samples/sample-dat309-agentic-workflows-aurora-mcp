@@ -21,6 +21,45 @@ export interface ProductListResponse {
 
 export type ActivityType = 'search' | 'embedding' | 'tool_call' | 'database' | 'error' | 'inventory' | 'order' | 'delegation' | 'mcp' | 'reasoning' | 'result';
 
+export type TraceSpanCategory =
+  | 'runtime'
+  | 'memory_short'
+  | 'memory_long'
+  | 'orchestration'
+  | 'model'
+  | 'tool'
+  | 'data'
+  | 'synthesis';
+
+export type TraceSpanStatus = 'ok' | 'cache_hit' | 'streaming' | 'held' | 'delegated' | 'preview';
+
+export interface TraceTelemetryField {
+  label: string;
+  value: string;
+  mono?: boolean;
+}
+
+export interface LongTermMemoryFact {
+  key: string;
+  value: string;
+  source?: string;
+  confidence?: number;
+}
+
+export interface TraceMemorySnapshot {
+  shortTerm?: { label: string; items: string[] };
+  longTerm?: { label: string; facts: LongTermMemoryFact[] };
+}
+
+export interface TraceTelemetry {
+  category: TraceSpanCategory;
+  component: string;
+  status?: TraceSpanStatus;
+  fields?: TraceTelemetryField[];
+  memory?: TraceMemorySnapshot;
+  tokens?: { input?: number; output?: number };
+}
+
 export interface ActivityEntry {
   id: string;
   timestamp: string;
@@ -31,6 +70,7 @@ export interface ActivityEntry {
   execution_time_ms?: number;
   agent_name?: string;
   agent_file?: string;
+  telemetry?: TraceTelemetry;
   // Aliases for camelCase access
   type?: ActivityType;
   agentName?: string;
@@ -58,9 +98,11 @@ export interface Order {
   estimated_delivery?: string;
 }
 
+export type Phase = 1 | 2 | 3 | 4;
+
 export interface ChatRequest {
   message: string;
-  phase: 1 | 2 | 3;
+  phase: Phase;
   customer_id?: string;
   conversation_id?: string;
 }
@@ -86,7 +128,7 @@ export interface Message {
 export type ChatMessage = Message;
 
 export interface PhaseInfo {
-  id: 1 | 2 | 3;
+  id: Phase;
   name: string;
   description: string;
   color: string;
@@ -96,7 +138,7 @@ export interface OrderRequest {
   product_id: string;
   size?: string;
   quantity?: number;
-  phase: 1 | 2 | 3;
+  phase: Phase;
 }
 
 export interface OrderResponse {
