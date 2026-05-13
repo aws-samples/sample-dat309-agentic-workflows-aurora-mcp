@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meridian — UI Enhancement Mockups</title>
+<style>
+  :root {
+    --bg: #060a14;
+    --surface: #0c1222;
+    --line: rgba(255,255,255,0.08);
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --dim: #64748b;
+    --p1: #3b82f6;
+    --p2: #a855f7;
+    --p3: #10b981;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Pro Display', -apple-system, 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 64px 32px 120px;
+  }
+  .doc-head h1 {
+    font-size: 44px;
+    letter-spacing: -0.03em;
+    margin: 0 0 8px;
+    background: linear-gradient(90deg, #fff, #94a3b8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .doc-head p { color: var(--muted); max-width: 720px; line-height: 1.6; }
+  .pillrow { display: flex; gap: 8px; margin: 24px 0 56px; flex-wrap: wrap; }
+  .pill {
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); padding: 6px 12px; border: 1px solid var(--line);
+    border-radius: 999px; background: rgba(255,255,255,0.02);
+  }
+  .pill b { color: #fff; font-weight: 600; }
+
+  /* ---- Mockup card (frame for each direction) ---- */
+  .mock {
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0));
+    overflow: hidden;
+    margin-bottom: 80px;
+  }
+  .mock-head {
+    padding: 28px 32px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
+  }
+  .mock-head h2 {
+    font-size: 28px; margin: 0 0 6px; letter-spacing: -0.02em;
+  }
+  .mock-head .tag {
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--p3);
+  }
+  .mock-head p { color: var(--muted); margin: 0; max-width: 560px; line-height: 1.55; font-size: 14px; }
+  .mock-body { padding: 32px; display: grid; gap: 32px; }
+
+  .label {
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 12px;
+  }
+  .annot {
+    font-size: 12px; color: var(--muted); line-height: 1.55;
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  /* ===========================================================
+     DIRECTION 1 — "Aurora Glass": refined visual polish on current
+     =========================================================== */
+  .d1-hero {
+    position: relative; height: 460px; border-radius: 18px; overflow: hidden;
+    background:
+      radial-gradient(ellipse 80% 60% at 30% 30%, rgba(59,130,246,0.35), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 70%, rgba(168,85,247,0.30), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 60% 20%, rgba(16,185,129,0.20), transparent 60%),
+      #060a14;
+    border: 1px solid var(--line);
+    isolation: isolate;
+  }
+  .d1-hero::before {
+    content:""; position:absolute; inset:0;
+    background:
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px) 0 0/64px 64px,
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px) 0 0/64px 64px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  }
+  .d1-hero::after {
+    content:""; position:absolute; inset:0;
+    background: radial-gradient(circle at 50% 110%, transparent 60%, rgba(0,0,0,0.6));
+  }
+  .d1-nav {
+    position: absolute; top: 18px; left: 18px; right: 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(12,18,34,0.55);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    backdrop-filter: blur(20px);
+    z-index: 5;
+  }
+  .d1-brand { display:flex; gap: 10px; align-items: center; font-weight: 600; letter-spacing: -0.01em; }
+  .d1-brand .dot {
+    width: 22px; height: 22px; border-radius: 8px;
+    background: conic-gradient(from 220deg, var(--p1), var(--p2), var(--p3), var(--p1));
+    box-shadow: 0 0 16px rgba(59,130,246,0.5);
+  }
+  .d1-navlinks { display:flex; gap: 22px; font-size: 13px; color: var(--muted); }
+  .d1-navlinks a { color: inherit; text-decoration: none; }
+  .d1-navlinks a.active { color: #fff; }
+  .d1-cta {
+    font-size: 12px; padding: 8px 14px; border-radius: 999px; cursor: pointer; border: none;
+    background: linear-gradient(135deg, #fff, #d1d5db); color: #0b1020; font-weight: 600;
+  }
+  .d1-content {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 0 32px; text-align: center; z-index: 4;
+  }
+  .d1-eyebrow {
+    display:inline-flex; align-items:center; gap: 8px;
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: #cbd5e1; padding: 6px 12px; border: 1px solid var(--line);
+    border-radius: 999px; background: rgba(255,255,255,0.04);
+    margin-bottom: 20px;
+  }
+  .d1-eyebrow .live {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--p3);
+    box-shadow: 0 0 8px var(--p3);
+  }
+  .d1-headline {
+    font-size: clamp(36px, 6vw, 68px); font-weight: 700; line-height: 1.02;
+    letter-spacing: -0.04em; margin: 0;
+    background: linear-gradient(180deg, #ffffff 30%, #94a3b8 110%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .d1-tag {
+    font-size: 18px; color: var(--muted); margin: 16px auto 28px; max-width: 520px; line-height: 1.5;
+  }
+  .d1-actions { display:flex; gap: 12px; }
+  .d1-btn {
+    padding: 12px 22px; border-radius: 999px; font-size: 14px; font-weight: 600;
+    border: 1px solid var(--line); cursor: pointer; color: #fff;
+    background: rgba(255,255,255,0.04); backdrop-filter: blur(14px);
+  }
+  .d1-btn.primary {
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    border: none; box-shadow: 0 8px 30px rgba(99,102,241,0.4);
+  }
+
+  /* product cards 1 */
+  .d1-pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 800px) { .d1-pgrid { grid-template-columns: 1fr 1fr; } }
+  .d1-pcard {
+    border-radius: 18px; overflow: hidden; border: 1px solid var(--line);
+    background: linear-gradient(180deg, #0e1426, #0a0f1d);
+    transition: transform .3s ease;
+  }
+  .d1-pcard:hover { transform: translateY(-4px); }
+  .d1-pimg {
+    aspect-ratio: 4/3;
+    background:
+      radial-gradient(ellipse at 30% 30%, rgba(59,130,246,0.35), transparent 60%),
+      linear-gradient(135deg, #1e2a4a, #0c1222);
+    position: relative;
+  }
+  .d1-pimg .badge {
+    position: absolute; top: 12px; left: 12px;
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: #cbd5e1; padding: 4px 10px;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: rgba(12,18,34,0.65); backdrop-filter: blur(8px);
+  }
+  .d1-pimg .fav {
+    position: absolute; top: 12px; right: 12px;
+    width: 32px; height: 32px; border-radius: 999px;
+    background: rgba(12,18,34,0.55); border: 1px solid var(--line);
+    display: grid; place-items: center; color: var(--muted);
+  }
+  .d1-pinfo { padding: 14px 16px 16px; }
+  .d1-pname { font-size: 14px; font-weight: 600; margin: 0 0 4px; }
+  .d1-pbrand { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .d1-pfoot { display:flex; align-items:center; justify-content: space-between; }
+  .d1-price { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .d1-stock {
+    font-size: 10px; padding: 4px 8px; border-radius: 6px;
+    color: var(--p3); background: rgba(16,185,129,0.12);
+    border: 1px solid rgba(16,185,129,0.25);
+  }
+
+  /* ===========================================================
+     DIRECTION 2 — "Console" agent panel (layout + chat redesign)
+     =========================================================== */
+  .d2-stage {
+    border-radius: 20px; overflow: hidden;
+    border: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 50% 80% at 100% 0%, rgba(168,85,247,0.18), transparent 50%),
+      radial-gradient(ellipse 50% 80% at 0% 100%, rgba(16,185,129,0.14), transparent 50%),
+      #080d1c;
+  }
+  .d2-bar {
+    display:flex; align-items:center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
+    background: rgba(255,255,255,0.02);
+  }
+  .d2-bar .left { display:flex; gap:14px; align-items:center; }
+  .d2-bar .crumbs { font-size: 12px; color: var(--muted); }
+  .d2-bar .crumbs b { color: #fff; font-weight: 500; }
+  .d2-phase-seg {
+    display:inline-flex; padding: 4px; border: 1px solid var(--line);
+    border-radius: 999px; background: rgba(0,0,0,0.25);
+  }
+  .d2-phase-seg button {
+    border: none; background: transparent; color: var(--muted);
+    font-size: 12px; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+    display:flex; align-items:center; gap: 8px;
+  }
+  .d2-phase-seg button.active.p1 { color: #fff; background: rgba(59,130,246,0.18); box-shadow: inset 0 0 0 1px rgba(59,130,246,0.4); }
+  .d2-phase-seg button.active.p2 { color: #fff; background: rgba(168,85,247,0.18); box-shadow: inset 0 0 0 1px rgba(168,85,247,0.4); }
+  .d2-phase-seg button.active.p3 { color: #fff; background: rgba(16,185,129,0.18); box-shadow: inset 0 0 0 1px rgba(16,185,129,0.4); }
+  .d2-phase-seg .ph-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .ph1 { background: var(--p1); } .ph2 { background: var(--p2); } .ph3 { background: var(--p3); }
+
+  .d2-grid {
+    display: grid; grid-template-columns: 240px 1fr 360px;
+    min-height: 520px;
+  }
+  @media (max-width: 1100px) { .d2-grid { grid-template-columns: 1fr; } .d2-side, .d2-act { display:none; } }
+
+  .d2-side { border-right: 1px solid var(--line); padding: 18px; }
+  .d2-side .section-label {
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--dim); margin: 18px 0 8px;
+  }
+  .d2-side .section-label:first-child { margin-top: 0; }
+  .d2-side a {
+    display:flex; align-items:center; gap: 10px; padding: 8px 10px; border-radius: 8px;
+    font-size: 13px; color: var(--muted); text-decoration: none;
+  }
+  .d2-side a.active { background: rgba(255,255,255,0.05); color: #fff; }
+  .d2-side a .ic { width: 16px; height: 16px; border-radius: 4px; background: rgba(255,255,255,0.08); display:inline-block; }
+
+  .d2-tech-card {
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+    background: rgba(0,0,0,0.25); margin-top: 8px;
+  }
+  .d2-tech-card .row { display:flex; justify-content: space-between; font-size: 11px; color: var(--muted); padding: 4px 0; }
+  .d2-tech-card .row b { color: #cbd5e1; font-weight: 500; }
+
+  .d2-chat { display:flex; flex-direction: column; min-height: 520px; }
+  .d2-chat-feed { flex: 1; padding: 24px; display:flex; flex-direction: column; gap: 14px; }
+  .d2-msg { max-width: 78%; font-size: 14px; line-height: 1.5; padding: 12px 16px; border-radius: 16px; }
+  .d2-msg.user {
+    align-self: flex-end; color: #fff;
+    background: linear-gradient(135deg, var(--p3), #0ea271);
+    border-bottom-right-radius: 6px;
+  }
+  .d2-msg.bot {
+    align-self: flex-start; color: var(--text);
+    background: rgba(255,255,255,0.04); border: 1px solid var(--line);
+    border-bottom-left-radius: 6px;
+  }
+  .d2-msg .reasoning {
+    margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+    background: rgba(16,185,129,0.06); border: 1px dashed rgba(16,185,129,0.25);
+    font-size: 12px; color: var(--muted); font-family: 'SF Mono', ui-monospace, monospace;
+  }
+  .d2-product-row {
+    display:flex; gap: 12px; align-items: center;
+    padding: 10px; border: 1px solid var(--line); border-radius: 12px;
+    margin-top: 10px; background: rgba(0,0,0,0.2);
+  }
+  .d2-product-thumb {
+    width: 48px; height: 48px; border-radius: 10px;
+    background: linear-gradient(135deg, #233056, #0c1222);
+    flex-shrink: 0;
+  }
+  .d2-product-row .meta { flex: 1; min-width: 0; }
+  .d2-product-row .name { font-size: 13px; font-weight: 600; }
+  .d2-product-row .sub { font-size: 11px; color: var(--muted); }
+  .d2-match {
+    font-size: 10px; padding: 3px 7px; border-radius: 6px; font-weight: 600;
+    color: var(--p3); background: rgba(16,185,129,0.15);
+  }
+  .d2-buy {
+    font-size: 11px; padding: 6px 10px; border-radius: 8px;
+    color: #fff; background: var(--p3); border: none; cursor: pointer; font-weight: 600;
+  }
+  .d2-input {
+    border-top: 1px solid var(--line); padding: 14px 16px;
+    display: flex; gap: 10px; align-items: center; background: rgba(0,0,0,0.25);
+  }
+  .d2-input .field {
+    flex: 1; display:flex; align-items:center; gap:8px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--line);
+    border-radius: 14px; padding: 10px 14px;
+  }
+  .d2-input input {
+    flex: 1; background: transparent; border: none; outline: none; color: #fff;
+    font-size: 14px; font-family: inherit;
+  }
+  .d2-input .chip {
+    font-size: 10px; color: var(--muted); padding: 3px 7px;
+    border: 1px solid var(--line); border-radius: 6px; background: rgba(0,0,0,0.25);
+  }
+  .d2-send {
+    width: 40px; height: 40px; border-radius: 12px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, var(--p3), #0ea271); color: white; font-size: 16px;
+    box-shadow: 0 6px 20px rgba(16,185,129,0.35);
+  }
+
+  .d2-act { border-left: 1px solid var(--line); display:flex; flex-direction:column; }
+  .d2-act-head {
+    display:flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px; border-bottom: 1px solid var(--line);
+    font-size: 12px;
+  }
+  .d2-act-head .live {
+    display:inline-flex; align-items:center; gap:6px; color: var(--p3);
+    font-size: 11px; padding: 3px 8px; border-radius: 999px;
+    background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25);
+  }
+  .d2-act-head .live::before {
+    content:""; width: 6px; height:6px; border-radius:50%; background: var(--p3); box-shadow: 0 0 8px var(--p3);
+  }
+  .d2-timeline { padding: 12px 16px 16px; position: relative; }
+  .d2-timeline::before {
+    content:""; position:absolute; left: 24px; top: 18px; bottom: 18px; width: 1px;
+    background: linear-gradient(180deg, transparent, var(--line) 10%, var(--line) 90%, transparent);
+  }
+  .d2-step { position: relative; padding: 8px 0 8px 36px; }
+  .d2-step .node {
+    position: absolute; left: 16px; top: 12px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(16,185,129,0.15); border: 2px solid var(--p3);
+    display: grid; place-items: center;
+  }
+  .d2-step .node::after {
+    content:""; width:5px; height:5px; border-radius:50%; background: var(--p3);
+  }
+  .d2-step.done .node { background: rgba(16,185,129,0.25); }
+  .d2-step.live .node { background: rgba(16,185,129,0.35); animation: pulse 1.4s ease-in-out infinite; }
+  .d2-step.pending .node { background: transparent; border-color: var(--line); }
+  .d2-step.pending .node::after { background: var(--dim); }
+  .d2-step .ttl { font-size: 12px; color: #cbd5e1; font-weight: 500; }
+  .d2-step .sub { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: 'SF Mono', ui-monospace, monospace; }
+  .d2-step .ms { font-size: 10px; color: var(--dim); margin-left: auto; }
+  .d2-step .row { display:flex; justify-content: space-between; }
+  .d2-stats {
+    margin-top: auto; border-top: 1px solid var(--line);
+    display:grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+    font-size: 11px; color: var(--muted);
+  }
+  .d2-stats div { padding: 12px; text-align: center; border-right: 1px solid var(--line); }
+  .d2-stats div:last-child { border-right: 0; }
+  .d2-stats b { display:block; color: #fff; font-size: 16px; font-weight: 600; margin-bottom: 2px; letter-spacing: -0.01em; }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+    50% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+  }
+
+  /* ===========================================================
+     DIRECTION 3 — "Daylight Studio": light theme, editorial layout
+     =========================================================== */
+  .d3 {
+    --bg3: #f6f5f0;
+    --ink: #0d1117;
+    --line3: rgba(13,17,23,0.10);
+    --muted3: #4a5560;
+    --accent: #ff5b1f;
+    background: var(--bg3); color: var(--ink);
+    border-radius: 20px; overflow: hidden;
+    font-family: 'SF Pro Display', 'Inter', system-ui, sans-serif;
+  }
+  .d3-nav {
+    display:flex; justify-content: space-between; align-items: center;
+    padding: 18px 28px; border-bottom: 1px solid var(--line3);
+  }
+  .d3-brand { display:flex; gap: 10px; align-items:center; font-weight: 700; letter-spacing: -0.01em; }
+  .d3-brand .mark {
+    width: 22px; height: 22px; border-radius: 6px; background: var(--ink);
+    position: relative;
+  }
+  .d3-brand .mark::after {
+    content:""; position:absolute; inset: 5px; border-radius: 50%;
+    background: var(--accent);
+  }
+  .d3-nav a { font-size: 13px; color: var(--muted3); text-decoration: none; margin: 0 14px; }
+  .d3-nav .cta {
+    font-size: 12px; padding: 8px 14px; border-radius: 999px;
+    background: var(--ink); color: white; border: none; cursor: pointer; font-weight: 600;
+  }
+  .d3-hero { padding: 56px 28px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; }
+  @media (max-width: 900px) { .d3-hero { grid-template-columns: 1fr; } }
+  .d3-eyebrow {
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 18px; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .d3-eyebrow::before {
+    content:""; width: 22px; height: 1px; background: var(--accent);
+  }
+  .d3-hl {
+    font-size: clamp(40px, 6vw, 76px);
+    line-height: 0.96; letter-spacing: -0.04em; margin: 0 0 20px; font-weight: 700;
+  }
+  .d3-hl em { font-style: italic; font-family: 'Times New Roman', Georgia, serif; font-weight: 500; color: var(--accent); }
+  .d3-sub { font-size: 17px; color: var(--muted3); line-height: 1.55; max-width: 480px; margin-bottom: 28px; }
+  .d3-actions { display:flex; gap: 10px; }
+  .d3-btn {
+    font-size: 14px; font-weight: 600; padding: 12px 20px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--ink); background: transparent; color: var(--ink);
+  }
+  .d3-btn.primary { background: var(--ink); color: white; }
+  .d3-stats { margin-top: 32px; display:flex; gap: 28px; }
+  .d3-stat { font-size: 12px; color: var(--muted3); }
+  .d3-stat b { display:block; font-size: 24px; color: var(--ink); letter-spacing: -0.02em; font-weight: 700; }
+
+  .d3-card {
+    border-radius: 24px; overflow: hidden;
+    background: white;
+    box-shadow: 0 30px 60px -30px rgba(0,0,0,0.25), 0 0 0 1px var(--line3);
+    transform: rotate(-2deg);
+  }
+  .d3-card .swatch {
+    aspect-ratio: 4/3;
+    background:
+      radial-gradient(ellipse at 30% 20%, #ffd9c2, transparent 60%),
+      linear-gradient(135deg, #ffe6d3, #f6d8c0);
+    position: relative;
+  }
+  .d3-card .swatch::after {
+    content:"NIKE PEGASUS 41"; position: absolute; bottom: 16px; left: 16px;
+    font-size: 10px; letter-spacing: 0.16em; color: var(--ink);
+  }
+  .d3-card .meta { padding: 16px 20px; display:flex; justify-content: space-between; align-items: center; }
+  .d3-card .meta strong { font-size: 15px; }
+  .d3-card .meta .pr { font-size: 18px; font-weight: 700; }
+
+  /* products section in light */
+  .d3-products { padding: 0 28px 56px; }
+  .d3-section-h {
+    display:flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;
+    padding-top: 32px; border-top: 1px solid var(--line3);
+  }
+  .d3-section-h h2 { margin: 0; font-size: 36px; letter-spacing: -0.03em; }
+  .d3-section-h .filter { font-size: 13px; color: var(--muted3); }
+  .d3-section-h .filter b { color: var(--ink); }
+  .d3-pgrid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 800px) { .d3-pgrid { grid-template-columns: repeat(2, 1fr); } }
+  .d3-pcard {
+    border-radius: 16px; padding: 14px; background: white; border: 1px solid var(--line3);
+  }
+  .d3-pcard .thumb {
+    aspect-ratio: 1/1; border-radius: 10px;
+    background: linear-gradient(135deg, #eef0e9, #dde2d3); margin-bottom: 12px;
+    display:grid; place-items: center; color: var(--muted3); font-size: 24px;
+  }
+  .d3-pcard .name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .d3-pcard .brand { font-size: 11px; color: var(--muted3); margin-bottom: 8px; }
+  .d3-pcard .footer { display:flex; justify-content: space-between; align-items:center; }
+  .d3-pcard .price { font-weight: 700; font-size: 14px; }
+  .d3-pcard .add {
+    width: 26px; height: 26px; border-radius: 999px; border: 1px solid var(--ink);
+    background: transparent; cursor: pointer; font-size: 14px; line-height: 1;
+  }
+
+  /* legend / takeaway block */
+  .legend {
+    display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  @media (max-width: 800px) { .legend { grid-template-columns: 1fr; } }
+  .legend .item {
+    border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+    background: rgba(255,255,255,0.02);
+  }
+  .legend h4 { margin: 0 0 6px; font-size: 14px; }
+  .legend p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.55; }
+
+  /* footnote */
+  .foot {
+    margin-top: 64px; padding: 24px; border: 1px dashed var(--line);
+    border-radius: 16px; color: var(--muted); font-size: 13px; line-height: 1.6;
+  }
+  .foot b { color: #fff; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <div class="doc-head">
+    <div class="label">Meridian · UI exploration</div>
+    <h1>Three directions for enhancing the experience.</h1>
+    <p>The current build is a dark, parallax single-page app with a hero, product grid, and a 3-phase agent demo. These mockups explore three distinct ways forward — from a light visual refresh, to a redesigned agent console, to a bolder editorial direction. Open this file in a browser to compare side by side.</p>
+    <div class="pillrow">
+      <span class="pill"><b>1.</b> Aurora Glass · refresh</span>
+      <span class="pill"><b>2.</b> Console · agent redesign</span>
+      <span class="pill"><b>3.</b> Daylight Studio · bold direction</span>
+    </div>
+  </div>
+
+  <!-- ============== DIRECTION 1 ============== -->
+  <div class="mock">
+    <div class="mock-head">
+      <div>
+        <div class="tag">Direction 01 · Lowest risk</div>
+        <h2>Aurora Glass</h2>
+        <p>Keeps the dark, parallax language but replaces stock photo cycling with a richer aurora gradient + grid system, adds a glass nav, and tightens product cards. Same structure, more cohesive.</p>
+      </div>
+    </div>
+    <div class="mock-body">
+
+      <div>
+        <div class="label">Hero — gradient over grid, glass nav, layered eyebrow</div>
+        <div class="d1-hero">
+          <div class="d1-nav">
+            <div class="d1-brand"><div class="dot"></div> Meridian</div>
+            <div class="d1-navlinks">
+              <a class="active">Products</a>
+              <a>How it works</a>
+              <a>Agent demo</a>
+              <a>Docs</a>
+            </div>
+            <button class="d1-cta">Try the agent →</button>
+          </div>
+          <div class="d1-content">
+            <div class="d1-eyebrow"><span class="live"></span> Live demo · Phase 3 multi-agent</div>
+            <h1 class="d1-headline">Ask. Shop. Done.</h1>
+            <p class="d1-tag">An agent shopping experience built on Aurora, MCP, and Cohere embeddings.</p>
+            <div class="d1-actions">
+              <button class="d1-btn primary">Explore products</button>
+              <button class="d1-btn">Try the agent</button>
+            </div>
+          </div>
+        </div>
+        <p class="annot" style="margin-top: 12px;">Why: the rotating Unsplash photos feel generic and a couple of URLs in the source are broken. A signature gradient + grid is faster to render, owns the brand, and stays on-theme. The translucent nav adds depth without competing with the headline.</p>
+      </div>
+
+      <div>
+        <div class="label">Product cards — replace stock images with category swatches + clearer pricing</div>
+        <div class="d1-pgrid">
+          <div class="d1-pcard">
+            <div class="d1-pimg" style="background: radial-gradient(ellipse at 30% 30%, rgba(59,130,246,0.45), transparent 60%), linear-gradient(135deg, #1e2a4a, #0c1222);">
+              <div class="badge">Running</div>
+              <div class="fav">♡</div>
+            </div>
+            <div class="d1-pinfo">
+              <h4 class="d1-pname">Pegasus 41</h4>
+              <div class="d1-pbrand">Nike</div>
+              <div class="d1-pfoot">
+                <span class="d1-price">$140</span>
+                <span class="d1-stock">In stock</span>
+              </div>
+            </div>
+          </div>
+          <div class="d1-pcard">
+            <div class="d1-pimg" style="background: radial-gradient(ellipse at 70% 30%, rgba(168,85,247,0.45), transparent 60%), linear-gradient(135deg, #2a1e4a, #120c22);">
+              <div class="badge">Recovery</div>
+              <div class="fav">♡</div>
+            </div>
+            <div class="d1-pinfo">
+              <h4 class="d1-pname">Theragun Pro</h4>
+              <div class="d1-pbrand">Therabody</div>
+              <div class="d1-pfoot">
+                <span class="d1-price">$599</span>
+                <span class="d1-stock">In stock</span>
+              </div>
+            </div>
+          </div>
+          <div class="d1-pcard">
+            <div class="d1-pimg" style="background: radial-gradient(ellipse at 50% 70%, rgba(16,185,129,0.40), transparent 60%), linear-gradient(135deg, #0f3a2e, #0c1f1a);">
+              <div class="badge">Wearables</div>
+              <div class="fav">♡</div>
+            </div>
+            <div class="d1-pinfo">
+              <h4 class="d1-pname">Forerunner 965</h4>
+              <div class="d1-pbrand">Garmin</div>
+              <div class="d1-pfoot">
+                <span class="d1-price">$599</span>
+                <span class="d1-stock">In stock</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="annot" style="margin-top: 12px;">Why: 30 product images of varying styles fight each other in the grid. Color-coded category swatches let the same component handle missing or broken images gracefully and keep the page on-brand.</p>
+      </div>
+
+      <div class="legend">
+        <div class="item"><h4>Glass nav with state</h4><p>Sticky pill nav fades in on scroll, includes a CTA, and the active section highlights as you pass it.</p></div>
+        <div class="item"><h4>Owned background</h4><p>Aurora gradient + grid replaces rotating photos. Cuts ~5 image fetches and one broken URL.</p></div>
+        <div class="item"><h4>Type system</h4><p>Display headlines clip a soft white→slate gradient; subhead uses muted slate. Same SF Pro stack.</p></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============== DIRECTION 2 ============== -->
+  <div class="mock">
+    <div class="mock-head">
+      <div>
+        <div class="tag">Direction 02 · Highest functional impact</div>
+        <h2>Console — agent redesign</h2>
+        <p>The Phase 1/2/3 demo is the showstopper, but the panel is dense. This redesign treats it like a developer console: persistent left rail (architecture / suggestions), a cleaner chat with inline reasoning, and a real timeline on the right with a metrics strip.</p>
+      </div>
+    </div>
+    <div class="mock-body">
+
+      <div class="d2-stage">
+        <div class="d2-bar">
+          <div class="left">
+            <div class="crumbs">Live demo · <b>Shopping Assistant</b></div>
+            <div class="d2-phase-seg">
+              <button><span class="ph-dot ph1"></span> Phase 1 · Direct</button>
+              <button><span class="ph-dot ph2"></span> Phase 2 · MCP</button>
+              <button class="active p3"><span class="ph-dot ph3"></span> Phase 3 · Multi-Agent</button>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);">⌘K  search · ⎋  clear</div>
+        </div>
+
+        <div class="d2-grid">
+          <!-- Left rail -->
+          <div class="d2-side">
+            <div class="section-label">Architecture</div>
+            <div class="d2-tech-card">
+              <div class="row"><span>Layer</span><b>Multi-Agent</b></div>
+              <div class="row"><span>Search</span><b>pgvector + tsvector</b></div>
+              <div class="row"><span>Vectors</span><b>1024d · Cohere v4</b></div>
+              <div class="row"><span>Latency</span><b>~340ms</b></div>
+            </div>
+
+            <div class="section-label">Try asking</div>
+            <a class="active"><span class="ic" style="background: rgba(16,185,129,0.3)"></span> Marathon training gear</a>
+            <a><span class="ic"></span> Help with foot pain</a>
+            <a><span class="ic"></span> Build core strength</a>
+            <a><span class="ic"></span> Is the Pegasus in stock?</a>
+
+            <div class="section-label">Limitations</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.55;">None — Phase 3 handles natural-language, semantic, and inventory queries.</div>
+          </div>
+
+          <!-- Chat -->
+          <div class="d2-chat">
+            <div class="d2-chat-feed">
+              <div class="d2-msg user">I'm training for my first marathon — what should I get?</div>
+              <div class="d2-msg bot">
+                For a first marathon I'd prioritize three things: a high-mileage shoe, a GPS watch, and a recovery tool. Here's what I'd recommend from your size and budget.
+                <div class="reasoning">
+                  ▸ supervisor → search_agent · embedded query (1024d) → top-K=3 across categories
+                </div>
+                <div class="d2-product-row">
+                  <div class="d2-product-thumb" style="background:linear-gradient(135deg,#3b82f6,#1e3a8a);"></div>
+                  <div class="meta">
+                    <div class="name">Nike Pegasus 41 · size 11</div>
+                    <div class="sub">$140 · Nike · In stock</div>
+                  </div>
+                  <span class="d2-match">94% match</span>
+                  <button class="d2-buy">Add</button>
+                </div>
+                <div class="d2-product-row">
+                  <div class="d2-product-thumb" style="background:linear-gradient(135deg,#10b981,#065f46);"></div>
+                  <div class="meta">
+                    <div class="name">Garmin Forerunner 965</div>
+                    <div class="sub">$599 · Garmin · In stock</div>
+                  </div>
+                  <span class="d2-match">88% match</span>
+                  <button class="d2-buy">Add</button>
+                </div>
+              </div>
+            </div>
+            <div class="d2-input">
+              <div class="field">
+                <span class="chip">Phase 3</span>
+                <input value="Will the Pegasus be in stock next week?" />
+              </div>
+              <button class="d2-send">↑</button>
+            </div>
+          </div>
+
+          <!-- Activity timeline -->
+          <div class="d2-act">
+            <div class="d2-act-head">
+              <span style="color:var(--muted);">Agent activity · step 4/5</span>
+              <span class="live">live</span>
+            </div>
+            <div class="d2-timeline">
+              <div class="d2-step done">
+                <div class="node"></div>
+                <div class="row"><div class="ttl">Embed query</div><span class="ms">62ms</span></div>
+                <div class="sub">cohere.embed("marathon training gear")</div>
+              </div>
+              <div class="d2-step done">
+                <div class="node"></div>
+                <div class="row"><div class="ttl">Plan tool calls</div><span class="ms">28ms</span></div>
+                <div class="sub">supervisor → [search, inventory]</div>
+              </div>
+              <div class="d2-step done">
+                <div class="node"></div>
+                <div class="row"><div class="ttl">Hybrid search</div><span class="ms">96ms</span></div>
+                <div class="sub">pgvector cosine + tsvector rank</div>
+              </div>
+              <div class="d2-step live">
+                <div class="node"></div>
+                <div class="row"><div class="ttl">Inventory check</div><span class="ms">…</span></div>
+                <div class="sub">SELECT stock FROM inventory WHERE …</div>
+              </div>
+              <div class="d2-step pending">
+                <div class="node"></div>
+                <div class="row"><div class="ttl">Compose response</div><span class="ms">—</span></div>
+                <div class="sub">supervisor → user</div>
+              </div>
+            </div>
+            <div class="d2-stats">
+              <div><b>340ms</b>total</div>
+              <div><b>5</b>steps</div>
+              <div><b>1024d</b>vectors</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="item"><h4>Persistent left rail</h4><p>Architecture, suggestions, and limitations live alongside the chat — no more empty-state pop in/out as you send messages.</p></div>
+        <div class="item"><h4>True timeline</h4><p>Activity feed becomes a vertical timeline with a live node, real ms timings, and a stats strip on completion.</p></div>
+        <div class="item"><h4>Inline reasoning</h4><p>One-line agent trace inside each bot bubble lets devs see <em>why</em> a result was returned without leaving the chat.</p></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============== DIRECTION 3 ============== -->
+  <div class="mock">
+    <div class="mock-head">
+      <div>
+        <div class="tag">Direction 03 · Boldest move</div>
+        <h2>Daylight Studio</h2>
+        <p>Inverts the palette to a warm off-white with serif italic accents and a tilted product card. Reads more like a product/lifestyle brand than a tech demo. Same IA — radically different feel.</p>
+      </div>
+    </div>
+    <div class="mock-body">
+
+      <div class="d3">
+        <div class="d3-nav">
+          <div class="d3-brand"><div class="mark"></div> Meridian</div>
+          <div>
+            <a>Catalog</a>
+            <a>Agent</a>
+            <a>How it works</a>
+            <a>Story</a>
+          </div>
+          <button class="cta">Try the agent →</button>
+        </div>
+
+        <div class="d3-hero">
+          <div>
+            <div class="d3-eyebrow">Shopping, powered by agents</div>
+            <h1 class="d3-hl">Ask.<br/><em>Shop.</em><br/>Done.</h1>
+            <p class="d3-sub">An agent that understands what you actually mean. Built on Aurora, MCP, and Cohere embeddings — so "something for marathon training" returns the right shoe, watch, and recovery tool. In stock.</p>
+            <div class="d3-actions">
+              <button class="d3-btn primary">Talk to the agent</button>
+              <button class="d3-btn">See the catalog</button>
+            </div>
+            <div class="d3-stats">
+              <div class="d3-stat"><b>30</b>products</div>
+              <div class="d3-stat"><b>6</b>categories</div>
+              <div class="d3-stat"><b>1024d</b>vectors</div>
+              <div class="d3-stat"><b>~340ms</b>p50 latency</div>
+            </div>
+          </div>
+          <div class="d3-card">
+            <div class="swatch"></div>
+            <div class="meta">
+              <div>
+                <strong>Pegasus 41</strong>
+                <div style="font-size:12px;color:var(--muted3);">Nike · Running</div>
+              </div>
+              <div class="pr">$140</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d3-products">
+          <div class="d3-section-h">
+            <h2>Featured</h2>
+            <div class="filter">Showing <b>6 categories</b> · sorted by <b>Relevance</b></div>
+          </div>
+          <div class="d3-pgrid">
+            <div class="d3-pcard">
+              <div class="thumb" style="background:linear-gradient(135deg,#ffd9c2,#ffb38a);">👟</div>
+              <div class="name">Pegasus 41</div>
+              <div class="brand">Nike · Running</div>
+              <div class="footer"><div class="price">$140</div><button class="add">+</button></div>
+            </div>
+            <div class="d3-pcard">
+              <div class="thumb" style="background:linear-gradient(135deg,#dde2d3,#bcc5a9);">⌚</div>
+              <div class="name">Forerunner 965</div>
+              <div class="brand">Garmin · Wearables</div>
+              <div class="footer"><div class="price">$599</div><button class="add">+</button></div>
+            </div>
+            <div class="d3-pcard">
+              <div class="thumb" style="background:linear-gradient(135deg,#e7e2f5,#c8bfe6);">🧘</div>
+              <div class="name">Theragun Pro</div>
+              <div class="brand">Therabody · Recovery</div>
+              <div class="footer"><div class="price">$599</div><button class="add">+</button></div>
+            </div>
+            <div class="d3-pcard">
+              <div class="thumb" style="background:linear-gradient(135deg,#cfe7ff,#9bc7f5);">🏋️</div>
+              <div class="name">Bowflex 552</div>
+              <div class="brand">Bowflex · Strength</div>
+              <div class="footer"><div class="price">$449</div><button class="add">+</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="item"><h4>Editorial typography</h4><p>SF Pro display + a Times-italic accent introduces personality without sacrificing the existing typesystem.</p></div>
+        <div class="item"><h4>Product hero card</h4><p>Tilted "wallet" card alongside the headline grounds an abstract product (an agent) in a tangible thing.</p></div>
+        <div class="item"><h4>Stat strip</h4><p>30 products · 6 categories · 1024d vectors lives up top — the demo's tech credibility is now part of the pitch.</p></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>Recommendation:</b> ship Direction 1 as a visual pass first (low risk, biggest perceived improvement on the marketing surface), then layer in the Direction 2 console redesign for the agent demo since that's where most user time is spent. Direction 3 is best framed as a marketing-page A/B — it's a stronger brand statement, but inverts contrast in a way that may not survive long technical demos.
+  </div>
+</div>
+</body>
+</html>

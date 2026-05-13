@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wayfare 2026 — Vision & Narrative</title>
+<style>
+  :root {
+    --bg: #f6f5f0;
+    --paper: #fbfaf6;
+    --ink: #0d1117;
+    --ink-2: #1a1f2a;
+    --line: rgba(13,17,23,0.10);
+    --line-strong: rgba(13,17,23,0.22);
+    --muted: #4a5560;
+    --dim: #6b7480;
+    --accent: #ff5b1f;
+    --accent-2: #b54214;
+    --leaf: #2f6b3d;
+    --plum: #5b3a7a;
+    --sky: #2563eb;
+    --sand: #d9c8a3;
+    --grid-bg: #efece4;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: 'SF Pro Display', 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; line-height: 1.5;
+  }
+  em.serif, .serif {
+    font-family: 'Times New Roman', Georgia, serif;
+    font-style: italic; font-weight: 500;
+  }
+  code { font-family: ui-monospace, 'SF Mono', monospace; font-size: 0.92em; background: rgba(13,17,23,0.06); padding: 1px 5px; border-radius: 4px; }
+  .doc { max-width: 1180px; margin: 0 auto; padding: 56px 28px 120px; }
+
+  /* ---------- Header / brand ---------- */
+  .brandbar {
+    display:flex; justify-content: space-between; align-items: center;
+    padding-bottom: 22px; margin-bottom: 36px; border-bottom: 1px solid var(--line);
+  }
+  .mark {
+    display:flex; gap: 10px; align-items:center; font-weight: 700; letter-spacing: -0.01em;
+  }
+  .mark .glyph {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--ink); position: relative;
+  }
+  .mark .glyph::after {
+    content:""; position:absolute; left: 6px; top: 6px; right: 6px; bottom: 6px;
+    border-radius: 50%; background: var(--accent);
+  }
+  .mark .glyph::before {
+    content:""; position:absolute; left: 12px; top: -4px; width: 2px; height: 8px;
+    background: var(--accent); border-radius: 2px;
+  }
+  .brandbar .meta { font-size: 12px; color: var(--dim); letter-spacing: 0.06em; }
+  .brandbar .meta b { color: var(--ink); }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 12px 0 48px; }
+  .eyebrow {
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent); display:inline-flex; align-items: center; gap: 10px;
+  }
+  .eyebrow::before { content:""; width: 28px; height: 1px; background: var(--accent); }
+  h1.display {
+    font-size: clamp(48px, 8vw, 100px);
+    line-height: 0.94; letter-spacing: -0.045em; font-weight: 700;
+    margin: 18px 0 24px; max-width: 14ch;
+  }
+  h1.display em.serif { color: var(--accent); }
+  .lede {
+    font-size: 19px; color: var(--muted); max-width: 64ch; line-height: 1.55;
+  }
+  .meta-row {
+    display:flex; gap: 28px; margin-top: 36px; flex-wrap: wrap;
+    border-top: 1px solid var(--line); padding-top: 24px;
+  }
+  .meta { font-size: 12px; color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; }
+  .meta b { display:block; font-size: 22px; color: var(--ink); letter-spacing: -0.02em; font-weight: 700; text-transform: none; margin-top: 4px; }
+
+  /* ---------- Pivot callout ---------- */
+  .pivot {
+    margin-top: 16px; padding: 18px 20px; border: 1px dashed var(--line-strong);
+    border-radius: 14px; font-size: 13px; color: var(--muted); background: var(--paper);
+    display: grid; grid-template-columns: 100px 1fr; gap: 18px; align-items: start;
+  }
+  .pivot .lbl { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  .pivot b { color: var(--ink); }
+
+  /* ---------- Section frame ---------- */
+  section.chapter {
+    padding: 64px 0 24px; margin-top: 24px; border-top: 1px solid var(--line);
+  }
+  .chapter-head {
+    display: grid; grid-template-columns: 120px 1fr; gap: 32px; margin-bottom: 40px;
+  }
+  @media (max-width: 720px) { .chapter-head { grid-template-columns: 1fr; } }
+  .chapter-num { font-size: 14px; letter-spacing: 0.18em; color: var(--dim); }
+  .chapter-num b { display:block; font-size: 56px; color: var(--ink); letter-spacing: -0.04em; font-weight: 700; line-height: 1; margin-top: 6px; }
+  .chapter-title { font-size: 36px; letter-spacing: -0.02em; margin: 0 0 12px; line-height: 1.1; max-width: 20ch; }
+  .chapter-title em.serif { color: var(--accent); }
+  .chapter-intro { font-size: 16px; color: var(--muted); max-width: 64ch; }
+
+  /* ---------- Pillar cards ---------- */
+  .pillars { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  @media (max-width: 800px) { .pillars { grid-template-columns: 1fr; } }
+  .pillar {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .pillar .num { font-size: 12px; letter-spacing: 0.16em; color: var(--accent); text-transform: uppercase; }
+  .pillar h3 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+  .pillar h3 em.serif { color: var(--accent); }
+  .pillar p { margin: 0; color: var(--muted); font-size: 14px; }
+  .pillar .why {
+    margin-top: 4px; padding-top: 14px; border-top: 1px dashed var(--line);
+    font-size: 12px; color: var(--dim);
+  }
+  .pillar .why b { color: var(--ink); }
+
+  /* ---------- Concept blocks ---------- */
+  .concepts { display: grid; gap: 24px; }
+  .concept {
+    border: 1px solid var(--line); border-radius: 22px; background: var(--paper); overflow: hidden;
+  }
+  .concept-head {
+    display:flex; justify-content: space-between; align-items: flex-end; gap: 24px;
+    padding: 22px 24px; border-bottom: 1px solid var(--line); background: white;
+  }
+  .concept-head h4 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+  .concept-head h4 em.serif { color: var(--accent); }
+  .concept-head .tag {
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent);
+  }
+  .concept-head p { margin: 6px 0 0; color: var(--muted); font-size: 13px; max-width: 60ch; }
+  .concept-body { padding: 24px; }
+
+  /* ---------- Concept: Traveler profile ---------- */
+  .me-chip {
+    display: grid; grid-template-columns: 64px 1fr auto; gap: 16px; align-items: center;
+    padding: 18px; background: white; border: 1px solid var(--line); border-radius: 16px;
+  }
+  .me-avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, #ffd9c2, #ff9a6b);
+    display:grid; place-items: center; font-family: 'Times New Roman', serif; font-style: italic;
+    font-size: 28px; color: var(--ink); border: 1px solid var(--line);
+  }
+  .me-meta .name { font-weight: 600; font-size: 16px; }
+  .me-meta .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .me-tags { display:flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .me-tags span {
+    font-size: 11px; padding: 4px 10px; border-radius: 999px; background: rgba(255,91,31,0.1);
+    color: var(--accent-2); border: 1px solid rgba(255,91,31,0.25);
+  }
+  .me-actions { display:flex; gap: 8px; }
+  .btn {
+    font-size: 12px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--ink);
+    background: transparent; color: var(--ink); cursor: pointer; font-weight: 600;
+  }
+  .btn.primary { background: var(--ink); color: white; border-color: var(--ink); }
+  .btn.ghost { border-color: var(--line-strong); }
+
+  /* ---------- Itinerary canvas ---------- */
+  .iti {
+    display: grid; grid-template-columns: 1fr 280px; gap: 16px;
+  }
+  @media (max-width: 800px) { .iti { grid-template-columns: 1fr; } }
+  .iti-canvas {
+    background: white; border: 1px solid var(--line); border-radius: 14px; padding: 18px;
+  }
+  .iti-day { display: grid; grid-template-columns: 70px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px dashed var(--line); }
+  .iti-day:last-child { border-bottom: 0; }
+  .iti-day .when { font-size: 12px; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; }
+  .iti-day .when b { display:block; font-size: 22px; color: var(--ink); letter-spacing: -0.02em; font-weight: 700; text-transform: none; margin-top: 2px; }
+  .iti-day .events { display: flex; flex-direction: column; gap: 10px; }
+  .iti-event {
+    display: grid; grid-template-columns: 80px 1fr auto; gap: 12px; align-items: center;
+    padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line);
+  }
+  .iti-event .time { font-size: 12px; color: var(--muted); font-family: ui-monospace, 'SF Mono', monospace; }
+  .iti-event .name { font-size: 14px; font-weight: 600; }
+  .iti-event .where { font-size: 12px; color: var(--muted); }
+  .iti-event .badge {
+    font-size: 10px; padding: 3px 8px; border-radius: 999px;
+    background: rgba(47,107,61,0.12); color: var(--leaf); border: 1px solid rgba(47,107,61,0.3);
+  }
+  .iti-event .badge.warn { background: rgba(255,91,31,0.12); color: var(--accent-2); border-color: rgba(255,91,31,0.3); }
+  .iti-event .badge.hold { background: rgba(91,58,122,0.12); color: var(--plum); border-color: rgba(91,58,122,0.3); }
+  .iti-side {
+    background: white; border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+  }
+  .iti-side h5 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  .iti-side .row { display:flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px dashed var(--line); }
+  .iti-side .row:last-child { border-bottom: 0; }
+  .iti-side .row b { font-weight: 600; }
+
+  /* ---------- Agent graph ---------- */
+  .studio { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
+  @media (max-width: 800px) { .studio { grid-template-columns: 1fr; } }
+  .canvas {
+    position: relative; background: var(--grid-bg); border: 1px solid var(--line); border-radius: 14px;
+    height: 380px; overflow: hidden;
+    background-image: radial-gradient(circle, rgba(13,17,23,0.10) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .node {
+    position: absolute; padding: 10px 14px; border-radius: 12px; background: white;
+    border: 1px solid var(--line-strong); font-size: 12px; font-weight: 600;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06); min-width: 150px;
+  }
+  .node small { display:block; font-weight: 500; color: var(--dim); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+  .node.supervisor { left: 5%; top: 40%; border-color: var(--ink); }
+  .node.flights { left: 32%; top: 5%; border-color: var(--sky); }
+  .node.lodging { left: 32%; top: 28%; border-color: var(--leaf); }
+  .node.dining { left: 32%; top: 51%; border-color: var(--accent); }
+  .node.timing { left: 32%; top: 74%; border-color: var(--plum); }
+  .node.calendar { left: 64%; top: 16%; border-color: var(--ink); }
+  .node.booking { left: 64%; top: 42%; border-color: var(--accent); }
+  .node.ops { left: 64%; top: 68%; border-color: var(--sky); }
+  .canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .canvas .label-pill {
+    position:absolute; font-size: 10px; padding: 2px 8px; background: white; border: 1px solid var(--line);
+    border-radius: 999px; color: var(--muted);
+  }
+  .panel-side {
+    background: white; border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+  }
+  .panel-side h5 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  .panel-side .row { display:flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px dashed var(--line); }
+  .panel-side .row:last-child { border-bottom: 0; }
+  .panel-side .row b { font-weight: 600; }
+
+  /* ---------- Trace ---------- */
+  .trace { background: white; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .trace-head { display:flex; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .trace-head b { color: var(--ink); }
+  .trace-row {
+    display: grid; grid-template-columns: 80px 1fr 80px 130px;
+    align-items: center; padding: 10px 18px; border-bottom: 1px dashed var(--line);
+    font-size: 13px; gap: 10px;
+  }
+  .trace-row:last-child { border-bottom: 0; }
+  .trace-row .agent {
+    font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; white-space: nowrap; text-align: center;
+  }
+  .a-flight { background: rgba(37,99,235,0.12); color: var(--sky); }
+  .a-lodge  { background: rgba(47,107,61,0.12); color: var(--leaf); }
+  .a-dine   { background: rgba(255,91,31,0.12); color: var(--accent-2); }
+  .a-time   { background: rgba(91,58,122,0.12); color: var(--plum); }
+  .a-sup    { background: rgba(13,17,23,0.08); color: var(--ink); }
+  .a-book   { background: rgba(255,91,31,0.16); color: var(--accent-2); }
+  .trace-row .ttl b { font-weight: 600; }
+  .trace-row .ttl small { display:block; color: var(--muted); font-family: ui-monospace, 'SF Mono', monospace; font-size: 11px; margin-top: 2px; }
+  .trace-row .ms { color: var(--muted); font-family: ui-monospace, 'SF Mono', monospace; font-size: 12px; text-align: right; }
+  .trace-row .badge {
+    font-size: 10px; padding: 3px 8px; border-radius: 999px; text-align: center;
+    background: rgba(47,107,61,0.12); color: var(--leaf); border: 1px solid rgba(47,107,61,0.3);
+  }
+  .trace-row .badge.warn { background: rgba(255,91,31,0.12); color: var(--accent-2); border-color: rgba(255,91,31,0.3); }
+  .trace-row .badge.hold { background: rgba(91,58,122,0.12); color: var(--plum); border-color: rgba(91,58,122,0.3); }
+
+  /* ---------- Compare retrieval ---------- */
+  .compare { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .compare { grid-template-columns: 1fr; } }
+  .compare .col { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .compare .col h6 { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  .compare .col .head { display:flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .compare .col .head b { font-size: 16px; letter-spacing: -0.01em; }
+  .compare .item { padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .compare .item:last-child { border-bottom: 0; }
+  .compare .item .row1 { display:flex; justify-content: space-between; align-items:center; }
+  .compare .item .pct { font-size: 11px; color: var(--muted); font-family: ui-monospace, 'SF Mono', monospace; }
+  .compare .item .bar { height: 6px; border-radius: 3px; background: var(--grid-bg); overflow: hidden; margin-top: 5px; }
+  .compare .item .bar > div { height: 100%; background: var(--accent); }
+  .compare .item .why { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* ---------- Live Aurora strip ---------- */
+  .live { display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 800px) { .live { grid-template-columns: 1fr; } }
+  .live .card { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .live .card h6 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  .live .num { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; }
+  .live .delta { font-size: 12px; color: var(--leaf); margin-top: 4px; }
+  .live .delta.warn { color: var(--accent-2); }
+  .live .spark { margin-top: 12px; height: 36px; }
+
+  /* ---------- Plan / confirm ---------- */
+  .sandbox {
+    background: white; border: 1px solid var(--line); border-radius: 14px; padding: 22px;
+    display: grid; grid-template-columns: 1fr 360px; gap: 24px;
+  }
+  @media (max-width: 800px) { .sandbox { grid-template-columns: 1fr; } }
+  .sandbox h5 { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  .sandbox .plan {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px; font-size: 13px;
+  }
+  .sandbox .plan ol { margin: 0; padding-left: 18px; color: var(--muted); }
+  .sandbox .plan ol li { margin: 6px 0; }
+  .sandbox .plan ol li b { color: var(--ink); font-weight: 600; }
+  .sandbox-actions { display:flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .receipt {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 16px; font-size: 13px;
+  }
+  .receipt .row { display:flex; justify-content: space-between; padding: 4px 0; }
+  .receipt .row.total { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; font-weight: 700; font-size: 15px; }
+  .receipt .scope { margin-top: 12px; font-size: 11px; color: var(--muted); padding: 8px 10px; border: 1px dashed var(--line); border-radius: 8px; }
+  .receipt .scope b { color: var(--ink); }
+
+  /* ---------- Disruption (long-running) ---------- */
+  .disrupt {
+    background: white; border: 1px solid var(--line); border-radius: 14px; padding: 22px;
+  }
+  .disrupt .head { display:flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+  .disrupt .alert {
+    background: rgba(255,91,31,0.08); border: 1px solid rgba(255,91,31,0.3);
+    color: var(--accent-2); padding: 10px 14px; border-radius: 10px; font-size: 13px;
+    display:flex; gap: 12px; align-items: center;
+  }
+  .disrupt .alert b { color: var(--accent-2); }
+  .disrupt .steps { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .disrupt .step {
+    display: grid; grid-template-columns: 24px 1fr auto; gap: 12px;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; align-items: center; background: var(--bg);
+    font-size: 13px;
+  }
+  .disrupt .step .dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: rgba(47,107,61,0.2); border: 2px solid var(--leaf);
+    display: grid; place-items: center;
+  }
+  .disrupt .step .dot::after { content:""; width: 5px; height: 5px; border-radius: 50%; background: var(--leaf); }
+  .disrupt .step.live .dot { background: rgba(255,91,31,0.2); border-color: var(--accent); }
+  .disrupt .step.live .dot::after { background: var(--accent); }
+  .disrupt .step.pending .dot { background: transparent; border-color: var(--line-strong); }
+  .disrupt .step.pending .dot::after { background: var(--dim); }
+  .disrupt .step b { font-weight: 600; }
+  .disrupt .step small { color: var(--muted); font-family: ui-monospace, 'SF Mono', monospace; font-size: 11px; display:block; margin-top: 2px; }
+  .disrupt .step .ms { font-size: 11px; color: var(--muted); font-family: ui-monospace, 'SF Mono', monospace; }
+
+  /* ---------- Tool catalog ---------- */
+  .catalog { background: white; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .catalog .row {
+    display: grid; grid-template-columns: 220px 1fr 100px 100px 100px;
+    padding: 12px 18px; border-bottom: 1px dashed var(--line); align-items: center; gap: 14px; font-size: 13px;
+  }
+  .catalog .row:last-child { border-bottom: 0; }
+  .catalog .row.head { background: var(--bg); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--line); }
+  .catalog .name b { font-weight: 600; }
+  .catalog .name small { color: var(--muted); font-family: ui-monospace, 'SF Mono', monospace; font-size: 11px; display:block; margin-top: 2px; }
+  .catalog .desc { color: var(--muted); font-size: 12px; }
+  .catalog .ver { font-family: ui-monospace, 'SF Mono', monospace; color: var(--ink); font-size: 12px; }
+  .catalog .ms { font-family: ui-monospace, 'SF Mono', monospace; color: var(--muted); font-size: 12px; }
+  .catalog .health {
+    font-size: 10px; padding: 3px 8px; border-radius: 999px; text-align: center;
+    background: rgba(47,107,61,0.12); color: var(--leaf); border: 1px solid rgba(47,107,61,0.3); font-weight: 600;
+  }
+  .catalog .health.warn { background: rgba(255,91,31,0.12); color: var(--accent-2); border-color: rgba(255,91,31,0.3); }
+
+  /* ---------- Roadmap ---------- */
+  .roadmap { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  .roadmap .row {
+    display: grid; grid-template-columns: 80px 1fr 1.2fr 140px;
+    padding: 16px 22px; border-bottom: 1px solid var(--line); align-items: start; gap: 18px;
+  }
+  .roadmap .row:last-child { border-bottom: 0; }
+  .roadmap .row.head { background: white; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .roadmap .when { font-weight: 600; }
+  .roadmap .what { font-size: 15px; font-weight: 600; }
+  .roadmap .what em.serif { color: var(--accent); font-weight: 500; }
+  .roadmap .desc { font-size: 13px; color: var(--muted); }
+  .roadmap .effort {
+    font-size: 11px; padding: 4px 10px; border-radius: 999px;
+    background: rgba(13,17,23,0.06); color: var(--ink); white-space: nowrap; display:inline-block; font-weight: 600;
+  }
+  .roadmap .effort.s { background: rgba(47,107,61,0.14); color: var(--leaf); }
+  .roadmap .effort.m { background: rgba(255,91,31,0.14); color: var(--accent-2); }
+  .roadmap .effort.l { background: rgba(91,58,122,0.14); color: var(--plum); }
+
+  /* ---------- Pull quote ---------- */
+  .pull {
+    margin: 80px 0 24px; padding: 56px 0; text-align: center;
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .pull blockquote {
+    margin: 0 auto; max-width: 24ch; font-family: 'Times New Roman', Georgia, serif;
+    font-style: italic; font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.02em;
+    line-height: 1.15; color: var(--ink);
+  }
+  .pull blockquote span { color: var(--accent); }
+  .pull cite { font-size: 12px; color: var(--dim); letter-spacing: 0.16em; text-transform: uppercase; font-style: normal; display: block; margin-top: 24px; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--dim); }
+  footer b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <!-- BRAND BAR -->
+  <div class="brandbar">
+    <div class="mark">
+      <div class="glyph"></div>
+      <div>Wayfare</div>
+    </div>
+    <div class="meta">Vision <b>2026.1</b> · Domain <b>Travel concierge</b> · Stack <b>Aurora PostgreSQL · MCP · pgvector</b></div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="eyebrow">Wayfare · 2026 vision</div>
+    <h1 class="display">A trip you talk into <em class="serif">existence</em>.</h1>
+    <p class="lede">
+      Wayfare is an agentic travel concierge: the user describes the trip in their own words — "five quiet days in Lisbon in May, walkable hotel, no red-eyes, decent vegetarian dinners" — and a supervisor of specialist agents searches, plans, books, and watches for disruptions. Every step is grounded in Aurora PostgreSQL, observable as a trace, and bounded by an explicit budget the user controls.
+    </p>
+    <div class="meta-row">
+      <div class="meta">Story arc<b>Plan → Book → Travel</b></div>
+      <div class="meta">Agents<b>1 supervisor · 7 specialists</b></div>
+      <div class="meta">Substrate<b>Aurora PostgreSQL · pgvector · pg_trgm · CTEs</b></div>
+      <div class="meta">Persona<b>Traveler + ops viewer</b></div>
+    </div>
+    <div class="pivot">
+      <div class="lbl">Pivot note</div>
+      <div>
+        We dropped the product-catalog framing (overlap with another workshop) and the Apache <b>AGE</b> reference (Aurora PostgreSQL doesn't ship AGE). The "graph-feeling" queries — itineraries, connections, location hierarchies — are now expressed with Aurora-native primitives: <b>pgvector</b> for semantic, <b>pg_trgm + tsvector</b> for lexical, <b>recursive CTEs</b> for traversal, and <b>logical replication + the Data API</b> for streaming. One engine, several retrieval styles, no extension drama.
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAPTER 1: PILLARS -->
+  <section class="chapter">
+    <div class="chapter-head">
+      <div class="chapter-num">Chapter <b>01</b></div>
+      <div>
+        <h2 class="chapter-title">Six <em class="serif">pillars</em> for Wayfare's narrative.</h2>
+        <p class="chapter-intro">
+          Each pillar maps a 2026-era agentic pattern onto travel — where the workflow is naturally long-running, multi-step, and high-stakes. That makes every pattern more visible than it would be in a search-and-buy demo.
+        </p>
+      </div>
+    </div>
+
+    <div class="pillars">
+      <div class="pillar">
+        <span class="num">Pillar 01</span>
+        <h3>Durable <em class="serif">memory</em> of the traveler.</h3>
+        <p>Aurora holds a <code>traveler.facts</code> table indexed by pgvector for semantic recall — passport country, loyalty status, dietary needs, prior trips, "I never sit in the back of the plane", aisle vs. window, things they've ruled out. Read on every turn, written by an explicit memory agent the user can audit.</p>
+        <div class="why"><b>Why it matters.</b> Travel personalization compounds across trips. The first trip is fine; the fifth should be effortless because the agent already knows you.</div>
+      </div>
+
+      <div class="pillar">
+        <span class="num">Pillar 02</span>
+        <h3>From a single chat to a <em class="serif">supervisor</em>.</h3>
+        <p>One supervisor agent fans out to specialists: <em>Flights</em>, <em>Lodging</em>, <em>Dining</em>, <em>Timing</em> (weather/season), <em>Calendar</em>, <em>Booking</em>, <em>Operations</em> (disruption watch). Each owns a narrow MCP toolset and is independently versioned and replaceable.</p>
+        <div class="why"><b>Why it matters.</b> A trip is many concerns held together. Specialist agents make that visible — and let teams own slices independently.</div>
+      </div>
+
+      <div class="pillar">
+        <span class="num">Pillar 03</span>
+        <h3>MCP as the <em class="serif">contract</em> with the world.</h3>
+        <p>Every external system — a GDS, OpenSky for live flight status, OpenWeather, a hotel API, Google Calendar, Stripe, the user's own Aurora — sits behind an MCP server with a versioned schema. A Tool Catalog page shows version, owner, p50 latency, last health check, and a dry-run button.</p>
+        <div class="why"><b>Why it matters.</b> Travel is integrations all the way down. MCP turns "we wrote glue code" into "we shipped a contract."</div>
+      </div>
+
+      <div class="pillar">
+        <span class="num">Pillar 04</span>
+        <h3>Governed <em class="serif">autonomy</em>, with money on the line.</h3>
+        <p>Agents act under explicit budgets — total dollars, per-leg caps, refundable-only flags, calendar conflicts as hard stops. Anything that costs money pauses for an inline plan-and-confirm with a diff. The receipt links back to the trace that produced it.</p>
+        <div class="why"><b>Why it matters.</b> "The agent booked the wrong flight" is the headline that kills the category. Show the leash; show that it works.</div>
+      </div>
+
+      <div class="pillar">
+        <span class="num">Pillar 05</span>
+        <h3>Observability as a <em class="serif">surface</em>, not a sidebar.</h3>
+        <p>The current Activity Panel becomes a Gantt-style trace: agents on the y-axis, time on the x-axis, tool calls as bars, with retries, cache hits, and confirmation gates inline. Every trace is permalinked and replayable in a sandbox.</p>
+        <div class="why"><b>Why it matters.</b> Travel ops teams will use this view for debugging. Travelers will see a friendly view of the same trace as their itinerary timeline.</div>
+      </div>
+
+      <div class="pillar">
+        <span class="num">Pillar 06</span>
+        <h3>Long-running <em class="serif">workflows</em> on Aurora.</h3>
+        <p>A trip lives for weeks. Aurora persists every step of the plan as a state machine, the agent wakes on triggers (price drop, weather alert, gate change), and the user is told only the things that need their attention. Logical replication streams Aurora changes to the UI in real time.</p>
+        <div class="why"><b>Why it matters.</b> 2026's agentic frontier is not single-turn — it's <em>durable</em> agents that watch the world for you. Aurora is a natural backbone for that.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHAPTER 2: SURFACES -->
+  <section class="chapter">
+    <div class="chapter-head">
+      <div class="chapter-num">Chapter <b>02</b></div>
+      <div>
+        <h2 class="chapter-title">New <em class="serif">surfaces</em> that bring it to life.</h2>
+        <p class="chapter-intro">
+          Each surface below is a concrete addition to the SPA: a section, the components inside it, the Aurora schema it touches, and the MCP tools it exposes. Same Daylight Studio aesthetic throughout — warm, editorial, opinionated.
+        </p>
+      </div>
+    </div>
+
+    <div class="concepts">
+
+      <!-- Surface 1: Traveler -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 01 · Memory</div>
+            <h4>The <em class="serif">traveler</em>, remembered.</h4>
+            <p>A profile chip in the chat. Click to inspect every preference Wayfare has stored, when it learned it, which trip taught it, and edit or forget any of them.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="me-chip">
+            <div class="me-avatar">S</div>
+            <div class="me-meta">
+              <div class="name">Shayon · 4 trips · Star Alliance Gold</div>
+              <div class="sub">Last trip Lisbon · next planned: Tokyo · home airport BOS</div>
+              <div class="me-tags">
+                <span>Aisle, exit row</span>
+                <span>No red-eyes</span>
+                <span>Vegetarian</span>
+                <span>Walkable hotels</span>
+                <span>Boutique &gt; chain</span>
+                <span>Avoid: Heathrow connections</span>
+              </div>
+            </div>
+            <div class="me-actions">
+              <button class="btn ghost">Inspect 31 facts</button>
+              <button class="btn">Edit memory</button>
+            </div>
+          </div>
+          <p style="margin-top: 14px; font-size: 12px; color: var(--muted);"><b>Aurora schema.</b> <code>traveler.facts(traveler_id, key, value, source_msg_id, source_trip_id, learned_at, confidence, embedding vector(1024))</code>. Semantic recall via pgvector, exact lookup via b-tree on <code>(traveler_id, key)</code>. Writer is a dedicated <em>memory_agent</em> behind an MCP tool — not the supervisor, so writes are auditable.</p>
+        </div>
+      </div>
+
+      <!-- Surface 2: Itinerary -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 02 · Plan</div>
+            <h4>The trip, as an <em class="serif">itinerary</em>.</h4>
+            <p>Once the supervisor has a plan, it renders not as a chat blob but as a real itinerary timeline — days, events, statuses (held / confirmed / disrupted), and a side panel showing the budget envelope and the constraints the user gave.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="iti">
+            <div class="iti-canvas">
+              <div class="iti-day">
+                <div class="when">Day 01<b>May 14</b></div>
+                <div class="events">
+                  <div class="iti-event">
+                    <span class="time">09:35</span>
+                    <div><div class="name">UA 924 · BOS → LIS</div><div class="where">Boston · Logan T-B · seat 7C aisle</div></div>
+                    <span class="badge">confirmed</span>
+                  </div>
+                  <div class="iti-event">
+                    <span class="time">22:10</span>
+                    <div><div class="name">Memmo Alfama · 4 nights</div><div class="where">Lisbon · Alfama · 8-min walk to tram</div></div>
+                    <span class="badge hold">held · 12h</span>
+                  </div>
+                </div>
+              </div>
+              <div class="iti-day">
+                <div class="when">Day 02<b>May 15</b></div>
+                <div class="events">
+                  <div class="iti-event">
+                    <span class="time">10:00</span>
+                    <div><div class="name">Belém self-guided walk</div><div class="where">low rain probability · 19°C</div></div>
+                    <span class="badge">scheduled</span>
+                  </div>
+                  <div class="iti-event">
+                    <span class="time">20:00</span>
+                    <div><div class="name">Dinner · Páteo</div><div class="where">vegetarian tasting · 10-min walk</div></div>
+                    <span class="badge">reserved</span>
+                  </div>
+                </div>
+              </div>
+              <div class="iti-day">
+                <div class="when">Day 03<b>May 16</b></div>
+                <div class="events">
+                  <div class="iti-event">
+                    <span class="time">all day</span>
+                    <div><div class="name">Sintra day trip</div><div class="where">Pena Palace · pre-booked entry · ☂︎ chance of rain</div></div>
+                    <span class="badge warn">weather watch</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="iti-side">
+              <h5>Budget envelope</h5>
+              <div class="row"><span>Total cap</span><b>$3,200</b></div>
+              <div class="row"><span>Committed</span><b>$1,840</b></div>
+              <div class="row"><span>Held</span><b>$880</b></div>
+              <div class="row"><span>Headroom</span><b>$480</b></div>
+              <h5 style="margin-top: 16px;">Constraints</h5>
+              <div class="row"><span>Red-eyes</span><b>off</b></div>
+              <div class="row"><span>Refundable</span><b>required</b></div>
+              <div class="row"><span>Walkable hotel</span><b>≤ 12 min to old town</b></div>
+              <div class="row"><span>Veg dinners</span><b>4 of 5 nights</b></div>
+            </div>
+          </div>
+          <p style="margin-top: 14px; font-size: 12px; color: var(--muted);"><b>Aurora schema.</b> <code>trip(id, traveler_id, status, budget_cents, constraints jsonb)</code>, <code>trip_event(id, trip_id, kind, when_local, when_utc, status, refundable, ref jsonb)</code>. The "held · 12h" badge maps to a row-level <code>expires_at</code>; a worker job sweeps expirations.</p>
+        </div>
+      </div>
+
+      <!-- Surface 3: Agent graph -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 03 · Architecture</div>
+            <h4>Wayfare <em class="serif">Studio</em>.</h4>
+            <p>Replace the static phase explainer with a live agent graph. Edges fire when calls happen; click a node to see its model, prompts, MCP tools, budget, and live latency.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="studio">
+            <div class="canvas">
+              <svg viewBox="0 0 900 380" preserveAspectRatio="none">
+                <defs>
+                  <marker id="arrW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#0d1117" />
+                  </marker>
+                </defs>
+                <path d="M 200 190 C 250 80, 290 60, 340 50" stroke="#0d1117" fill="none" stroke-width="1.4" marker-end="url(#arrW)"/>
+                <path d="M 200 190 C 250 150, 290 140, 340 140" stroke="#0d1117" fill="none" stroke-width="1.4" marker-end="url(#arrW)"/>
+                <path d="M 200 190 C 250 220, 290 230, 340 230" stroke="#0d1117" fill="none" stroke-width="1.4" marker-end="url(#arrW)"/>
+                <path d="M 200 190 C 250 290, 290 310, 340 310" stroke="#0d1117" fill="none" stroke-width="1.4" marker-end="url(#arrW)"/>
+                <path d="M 510 60 C 570 80, 600 100, 640 130" stroke="#0d1117" stroke-dasharray="4 4" fill="none" stroke-width="1.4" marker-end="url(#arrW)"/>
+                <path d="M 510 150 C 570 170, 600 190, 640 220" stroke="#0d1117" stroke-dasharray="4 4" fill="none" stroke-width="1.4" marker-end="url(#arrW)"/>
+                <path d="M 510 320 C 570 320, 600 320, 640 310" stroke="#0d1117" stroke-dasharray="4 4" fill="none" stroke-width="1.4" marker-end="url(#arrW)"/>
+              </svg>
+              <div class="node supervisor"><small>Supervisor</small>plan_and_route</div>
+              <div class="node flights"><small>Flights agent</small>search_book_seat</div>
+              <div class="node lodging"><small>Lodging</small>search_hold_book</div>
+              <div class="node dining"><small>Dining</small>find_reserve</div>
+              <div class="node timing"><small>Timing</small>weather_season</div>
+              <div class="node calendar"><small>Calendar</small>conflicts_holds</div>
+              <div class="node booking"><small>Booking</small>commit_with_budget</div>
+              <div class="node ops"><small>Operations</small>watch_disruptions</div>
+              <span class="label-pill" style="left: 28%; top: 2%;">GDS · MCP</span>
+              <span class="label-pill" style="left: 28%; top: 25%;">vector · pg_trgm</span>
+              <span class="label-pill" style="left: 28%; top: 49%;">resy · opentable</span>
+              <span class="label-pill" style="left: 28%; top: 71%;">openweather</span>
+            </div>
+            <div class="panel-side">
+              <h5>Lodging · selected</h5>
+              <div class="row"><span>Model</span><b>claude-sonnet</b></div>
+              <div class="row"><span>Tools</span><b>4 · MCP</b></div>
+              <div class="row"><span>Budget</span><b>$0.06 / plan</b></div>
+              <div class="row"><span>p50 latency</span><b>140ms</b></div>
+              <div class="row"><span>Schema ver.</span><b>v2.4 · today</b></div>
+              <div class="row"><span>Owner</span><b>lodging-team</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Surface 4: Trace -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 04 · Observability</div>
+            <h4>The <em class="serif">trace</em>, replayable.</h4>
+            <p>Every plan turn produces a permalinked trace. Travelers see a friendly version (the itinerary view above); developers and ops see this — agents, tool calls, latencies, status pills, retries, and confirmation gates inline.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="trace">
+            <div class="trace-head">
+              <span>trace · <b>tr_lis_5814</b> · "5 quiet days in Lisbon, walkable, no red-eyes, vegetarian"</span>
+              <span><b>1.42s total</b> · 6 agents · $0.041</span>
+            </div>
+            <div class="trace-row">
+              <span class="agent a-sup">supervisor</span>
+              <div class="ttl"><b>plan</b><small>fan-out → [flights, lodging, dining, timing] · respect: budget, no-red-eye</small></div>
+              <span class="ms">38ms</span>
+              <span class="badge">on plan</span>
+            </div>
+            <div class="trace-row">
+              <span class="agent a-flight">flights</span>
+              <div class="ttl"><b>search(BOS→LIS, May 14, refundable)</b><small>GDS via MCP · 14 candidates · filter no-red-eye</small></div>
+              <span class="ms">412ms</span>
+              <span class="badge">3 finalists</span>
+            </div>
+            <div class="trace-row">
+              <span class="agent a-lodge">lodging</span>
+              <div class="ttl"><b>hybrid_search("walkable Alfama, boutique")</b><small>pgvector · pg_trgm · within 12 min walk to Praça do Comércio</small></div>
+              <span class="ms">186ms</span>
+              <span class="badge">5 candidates</span>
+            </div>
+            <div class="trace-row">
+              <span class="agent a-time">timing</span>
+              <div class="ttl"><b>weather_outlook(LIS, +14d)</b><small>OpenWeather via MCP · rain prob day 3 = 62%</small></div>
+              <span class="ms">96ms</span>
+              <span class="badge warn">flag day 3</span>
+            </div>
+            <div class="trace-row">
+              <span class="agent a-dine">dining</span>
+              <div class="ttl"><b>find_vegetarian(LIS, 4 dinners)</b><small>4 reservable + 1 walk-in · matches "boutique" preference</small></div>
+              <span class="ms">204ms</span>
+              <span class="badge">held · 24h</span>
+            </div>
+            <div class="trace-row">
+              <span class="agent a-book">booking</span>
+              <div class="ttl"><b>compose_plan + price_envelope</b><small>$1,840 committed + $880 held · within $3,200 cap</small></div>
+              <span class="ms">128ms</span>
+              <span class="badge hold">awaiting confirm</span>
+            </div>
+          </div>
+          <p style="margin-top: 14px; font-size: 12px; color: var(--muted);"><b>Tech.</b> Traces written to Aurora as <code>traces</code> + <code>spans</code>. OpenTelemetry-compatible export. Replay endpoint serves cached tool responses, so devs can iterate on prompts without paying for the LLM again.</p>
+        </div>
+      </div>
+
+      <!-- Surface 5: Compare retrieval -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 05 · Retrieval</div>
+            <h4>Three ways to find the <em class="serif">right</em> hotel.</h4>
+            <p>A "compare retrieval" widget on the lodging panel: same query, three rankings — exact filters, semantic, hybrid. Teaches why hybrid wins and lets users export the winning ranking as a snapshot. All three modes are pure Aurora.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="compare">
+            <div class="col">
+              <div class="head"><b>Exact filters</b><span style="font-size:11px;color:var(--muted);">SQL · WHERE</span></div>
+              <h6>Top results</h6>
+              <div class="item"><div class="row1"><span>Memmo Alfama</span><span class="pct">match</span></div><div class="bar"><div style="width: 100%;"></div></div><div class="why">Inside the polygon; 4-star; pet-free.</div></div>
+              <div class="item"><div class="row1"><span>Hotel do Chiado</span><span class="pct">match</span></div><div class="bar"><div style="width: 100%;"></div></div><div class="why">Inside the polygon; 4-star.</div></div>
+              <div class="item"><div class="row1"><span>Pousada Lisboa</span><span class="pct">match</span></div><div class="bar"><div style="width: 100%;"></div></div><div class="why">Inside the polygon; 5-star — over budget.</div></div>
+            </div>
+            <div class="col">
+              <div class="head"><b>Semantic</b><span style="font-size:11px;color:var(--muted);">pgvector · cosine</span></div>
+              <h6>Top results</h6>
+              <div class="item"><div class="row1"><span>Santiago de Alfama</span><span class="pct">0.93</span></div><div class="bar"><div style="width: 93%;"></div></div><div class="why">Reviews mention "boutique, walkable, quiet courtyard."</div></div>
+              <div class="item"><div class="row1"><span>Memmo Alfama</span><span class="pct">0.89</span></div><div class="bar"><div style="width: 89%;"></div></div><div class="why">"Tucked into the old town · rooftop pool".</div></div>
+              <div class="item"><div class="row1"><span>The Lumiares</span><span class="pct">0.82</span></div><div class="bar"><div style="width: 82%;"></div></div><div class="why">Bairro Alto — outside walking polygon.</div></div>
+            </div>
+            <div class="col">
+              <div class="head"><b>Hybrid</b><span style="font-size:11px;color:var(--accent);">vector + pg_trgm + CTE</span></div>
+              <h6>Top results</h6>
+              <div class="item"><div class="row1"><span>Memmo Alfama <em class="serif">(✓ all)</em></span><span class="pct">0.96</span></div><div class="bar"><div style="width: 96%; background: var(--leaf);"></div></div><div class="why">Polygon match + boutique semantics + neighborhood hierarchy via CTE.</div></div>
+              <div class="item"><div class="row1"><span>Santiago de Alfama</span><span class="pct">0.94</span></div><div class="bar"><div style="width: 94%; background: var(--leaf);"></div></div><div class="why">Adjacent neighborhood (1-hop CTE) · refundable · top semantic.</div></div>
+              <div class="item"><div class="row1"><span>Hotel do Chiado</span><span class="pct">0.88</span></div><div class="bar"><div style="width: 88%; background: var(--leaf);"></div></div><div class="why">Polygon match + tram-adjacent.</div></div>
+            </div>
+          </div>
+          <p style="margin-top: 14px; font-size: 12px; color: var(--muted);"><b>Aurora moment.</b> One SQL query joins <code>hotels</code> (relational filters), <code>hotels.embedding</code> (pgvector), <code>hotels.review_tsv</code> (full-text), <code>hotels.name</code> via <code>pg_trgm</code> (typo-tolerant), and a <em>recursive CTE</em> over <code>neighborhoods</code> to expand "Alfama" to its parents and direct neighbors. No graph extension required — just Postgres being honest about how powerful it already is.</p>
+        </div>
+      </div>
+
+      <!-- Surface 6: Plan + confirm -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 06 · Governed action</div>
+            <h4>Plan, confirm, <em class="serif">commit</em>.</h4>
+            <p>Before any irreversible action — placing the booking, charging the card, locking a non-refundable rate — the agent presents the plan with a diff and the receipt. The user confirms once. The receipt links back to the trace.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="sandbox">
+            <div>
+              <h5>Proposed plan</h5>
+              <div class="plan">
+                <ol>
+                  <li>Book <b>UA 924 BOS→LIS</b>, May 14, seat 7C aisle — <b>$640</b> · refundable</li>
+                  <li>Book <b>Memmo Alfama</b>, May 14–18, junior suite — <b>$880</b> · free cancel until May 11</li>
+                  <li>Hold <b>4 dinner reservations</b>, vegetarian — <b>$0</b> · 24h holds</li>
+                  <li>Charge <b>Visa •••• 4411</b> for the <b>$1,520</b> committed total</li>
+                  <li>Add all events to <b>Personal Calendar</b>; share itinerary with <b>+1</b></li>
+                </ol>
+              </div>
+              <div class="sandbox-actions">
+                <button class="btn primary">Confirm & book</button>
+                <button class="btn ghost">Modify plan</button>
+                <button class="btn ghost">Hold 24h, decide later</button>
+              </div>
+            </div>
+            <div class="receipt">
+              <div class="row"><span>Flights</span><span>$640.00</span></div>
+              <div class="row"><span>Lodging</span><span>$880.00</span></div>
+              <div class="row"><span>Dining (held)</span><span>$0.00</span></div>
+              <div class="row"><span>Tax & fees (est.)</span><span>$74.20</span></div>
+              <div class="row total"><span>Charged today</span><span>$1,594.20</span></div>
+              <div class="scope"><b>Agent scope.</b> Refundable only · single traveler · cap $3,200 · no overnight transit. Anything outside this requires re-confirmation.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Surface 7: Disruption (long-running) -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 07 · Long-running</div>
+            <h4>Wakes the agent on <em class="serif">disruptions</em>.</h4>
+            <p>The Operations agent watches your trip for weeks and acts only when it must. A gate change, a price drop, a weather flag — it tries to resolve the issue silently within scope, and asks only when it can't.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="disrupt">
+            <div class="head">
+              <div class="alert">
+                <span style="font-size:18px;">⚠︎</span>
+                <div><b>UA 924 cancelled.</b> Auto-rebook in progress · scope: refundable only · same day, ≤2 stops · seat preference preserved.</div>
+              </div>
+              <button class="btn ghost">Pause auto-rebook</button>
+            </div>
+            <div class="steps">
+              <div class="step">
+                <div class="dot"></div>
+                <div><b>Detect cancellation</b><small>flightaware · MCP · webhook → trip_event update</small></div>
+                <div class="ms">14:02:11</div>
+              </div>
+              <div class="step">
+                <div class="dot"></div>
+                <div><b>Search alternatives</b><small>GDS · 6 candidates · filter no-red-eye, ≤2 stops, refundable</small></div>
+                <div class="ms">14:02:13 · 480ms</div>
+              </div>
+              <div class="step live">
+                <div class="dot"></div>
+                <div><b>Hold UA 928 · BOS→FRA→LIS · 7C aisle</b><small>price delta +$48 · within $80 disruption budget</small></div>
+                <div class="ms">14:02:14 · live</div>
+              </div>
+              <div class="step pending">
+                <div class="dot"></div>
+                <div><b>Notify traveler · single push</b><small>"We rebooked you. Tap to confirm or revert."</small></div>
+                <div class="ms">queued</div>
+              </div>
+              <div class="step pending">
+                <div class="dot"></div>
+                <div><b>Update calendar + itinerary view</b><small>cascading event updates via logical replication → SSE</small></div>
+                <div class="ms">queued</div>
+              </div>
+            </div>
+          </div>
+          <p style="margin-top: 14px; font-size: 12px; color: var(--muted);"><b>How.</b> A durable workflow per trip lives in Aurora as a state machine (<code>trip_workflow</code> with <code>state</code> + <code>next_action_at</code>). A worker polls <code>next_action_at</code> and runs the supervisor with the right context. Disruption budgets are enforced at the booking agent, not the prompt.</p>
+        </div>
+      </div>
+
+      <!-- Surface 8: Tool catalog -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 08 · MCP</div>
+            <h4>The <em class="serif">tool</em> catalog.</h4>
+            <p>Every MCP tool the agents can call, with version, owner, schema, latency, last health check, and a dry-run button. The most important page for any team that has to support this stack.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="catalog">
+            <div class="row head"><div>Tool</div><div>Description</div><div>Version</div><div>p50</div><div>Health</div></div>
+            <div class="row"><div class="name"><b>flights.search</b><small>gds · MCP server v2.4</small></div><div class="desc">Cabin/seat-aware fare search with refundable filter.</div><div class="ver">v2.4</div><div class="ms">412ms</div><div><span class="health">healthy</span></div></div>
+            <div class="row"><div class="name"><b>flights.book</b><small>gds · MCP server v2.4</small></div><div class="desc">Two-step book with hold; idempotent on retries.</div><div class="ver">v2.4</div><div class="ms">820ms</div><div><span class="health">healthy</span></div></div>
+            <div class="row"><div class="name"><b>lodging.hybrid_search</b><small>aurora · MCP</small></div><div class="desc">pgvector + pg_trgm + recursive CTE over neighborhoods.</div><div class="ver">v3.1</div><div class="ms">186ms</div><div><span class="health">healthy</span></div></div>
+            <div class="row"><div class="name"><b>weather.outlook</b><small>openweather · MCP</small></div><div class="desc">14-day rain/temp outlook for a polygon.</div><div class="ver">v1.2</div><div class="ms">96ms</div><div><span class="health">healthy</span></div></div>
+            <div class="row"><div class="name"><b>memory.write_fact</b><small>aurora · MCP</small></div><div class="desc">Append-only writer with source citation.</div><div class="ver">v1.0</div><div class="ms">22ms</div><div><span class="health">healthy</span></div></div>
+            <div class="row"><div class="name"><b>calendar.add_holds</b><small>google · MCP</small></div><div class="desc">Tentative holds with refundable cancel hooks.</div><div class="ver">v0.9</div><div class="ms">240ms</div><div><span class="health warn">degraded</span></div></div>
+            <div class="row"><div class="name"><b>payments.charge</b><small>stripe · MCP</small></div><div class="desc">Charge within scope; receipt linked to trace id.</div><div class="ver">v1.4</div><div class="ms">310ms</div><div><span class="health">healthy</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Surface 9: Live ops -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 09 · Live Aurora</div>
+            <h4>The fleet, <em class="serif">live</em>.</h4>
+            <p>For ops dashboards: real-time signals from Aurora — trips in flight, average disruption-resolution time, and embedding cache hit rate. Streamed to the page over server-sent events from logical replication.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="live">
+            <div class="card"><h6>Trips in flight</h6><div class="num">214</div><div class="delta">▲ 18 since 9am</div><svg class="spark" viewBox="0 0 200 36"><path d="M0 28 L20 24 L40 26 L60 18 L80 22 L100 12 L120 16 L140 8 L160 14 L180 6 L200 10" stroke="#2f6b3d" stroke-width="2" fill="none"/></svg></div>
+            <div class="card"><h6>Disruption · auto-resolved</h6><div class="num">87%</div><div class="delta">▲ 6 pts vs. last week</div><svg class="spark" viewBox="0 0 200 36"><path d="M0 22 L20 26 L40 20 L60 22 L80 18 L100 20 L120 14 L140 16 L160 12 L180 10 L200 8" stroke="#2563eb" stroke-width="2" fill="none"/></svg></div>
+            <div class="card"><h6>Agent p50 latency</h6><div class="num">340ms</div><div class="delta warn">▲ 60ms · investigate</div><svg class="spark" viewBox="0 0 200 36"><path d="M0 18 L20 16 L40 20 L60 14 L80 18 L100 16 L120 22 L140 18 L160 24 L180 22 L200 28" stroke="#b54214" stroke-width="2" fill="none"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- PULL QUOTE -->
+  <div class="pull">
+    <blockquote>The trip you describe in a paragraph; the agent <span>watches</span> it for weeks.</blockquote>
+    <cite>The thesis for Wayfare</cite>
+  </div>
+
+  <!-- CHAPTER 3: ROADMAP -->
+  <section class="chapter">
+    <div class="chapter-head">
+      <div class="chapter-num">Chapter <b>03</b></div>
+      <div>
+        <h2 class="chapter-title">A <em class="serif">phased</em> path to ship.</h2>
+        <p class="chapter-intro">
+          Effort sized for a small full-stack team — Aurora schema, an MCP server, and a UI surface — per concept. The first wave is the smallest possible bet that already tells the new story.
+        </p>
+      </div>
+    </div>
+
+    <div class="roadmap">
+      <div class="row head"><div>Wave</div><div>What</div><div>Description</div><div>Effort</div></div>
+      <div class="row">
+        <div class="when">Wave 01</div>
+        <div class="what">Itinerary view + trace permalinks <em class="serif">(plan + observability)</em></div>
+        <div class="desc">Replace the chat-blob plan output with the itinerary timeline; promote Activity Panel to permalinked traces. Establishes the Wayfare visual language.</div>
+        <div><span class="effort s">S · 1–2 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 01</div>
+        <div class="what">Traveler memory <em class="serif">(profile)</em></div>
+        <div class="desc">Aurora memory schema, dedicated memory_agent MCP tool, profile chip + inspector. Sets up every later surface to feel "personal".</div>
+        <div><span class="effort s">S · 1–2 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 02</div>
+        <div class="what">Supervisor + 4 specialists <em class="serif">(architecture)</em></div>
+        <div class="desc">Refactor today's Phase 3 into supervisor + Flights, Lodging, Dining, Timing agents. Each gets its own MCP server.</div>
+        <div><span class="effort m">M · 3–4 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 02</div>
+        <div class="what">Plan / confirm / commit <em class="serif">(governance)</em></div>
+        <div class="desc">Inline approvals before any booking. Per-agent budgets and scopes. Receipts link back to traces.</div>
+        <div><span class="effort m">M · 2–3 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 03</div>
+        <div class="what">Hybrid retrieval + recursive CTE <em class="serif">(retrieval)</em></div>
+        <div class="desc">pgvector + pg_trgm + tsvector + recursive CTE over neighborhoods. Compare-modes widget. The "Aurora is enough" demo.</div>
+        <div><span class="effort m">M · 2–3 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 03</div>
+        <div class="what">Tool catalog + dry-run <em class="serif">(MCP)</em></div>
+        <div class="desc">Page listing every MCP tool with version, owner, schema, latency, dry-run button. The page enterprise reviewers love.</div>
+        <div><span class="effort m">M · 2–3 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 04</div>
+        <div class="what">Long-running ops + disruptions <em class="serif">(durability)</em></div>
+        <div class="desc">Operations agent + trip workflow state machine in Aurora + worker that wakes on triggers. The "watches it for weeks" promise.</div>
+        <div><span class="effort l">L · 4–6 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 04</div>
+        <div class="what">Live ops dashboard <em class="serif">(SSE)</em></div>
+        <div class="desc">Logical replication → SSE stream → fleet view. Useful for keynote demos and ongoing health.</div>
+        <div><span class="effort s">S · 1 week</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 05</div>
+        <div class="what">Replay sandbox <em class="serif">(devx)</em></div>
+        <div class="desc">Re-run any trace against cached tool responses with a different prompt or model. Removes LLM cost from debugging.</div>
+        <div><span class="effort m">M · 2–3 weeks</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <b>Notes.</b> Brand candidate is <b>Wayfare</b>; backups are <em>Lodestar</em> and <em>Itinera</em>. Aurora capabilities used: pgvector, pg_trgm, tsvector, recursive CTEs, JSONB, logical replication, the Data API. <em>No AGE</em>. Daylight Studio palette applied throughout per saved preference. Next step: pick the two waves to scope first and I'll draft Aurora schema + MCP tool definitions to match.
+  </footer>
+
+</div>
+</body>
+</html>

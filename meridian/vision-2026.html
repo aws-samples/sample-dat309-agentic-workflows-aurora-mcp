@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meridian 2026 — Vision & Narrative</title>
+<style>
+  :root {
+    --bg: #f6f5f0;
+    --paper: #fbfaf6;
+    --ink: #0d1117;
+    --ink-2: #1a1f2a;
+    --line: rgba(13,17,23,0.10);
+    --line-strong: rgba(13,17,23,0.22);
+    --muted: #4a5560;
+    --dim: #6b7480;
+    --accent: #ff5b1f;
+    --accent-2: #b54214;
+    --leaf: #2f6b3d;
+    --plum: #5b3a7a;
+    --sky: #2563eb;
+    --grid-bg: #efece4;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: 'SF Pro Display', 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; line-height: 1.5;
+  }
+  em.serif, .serif {
+    font-family: 'Times New Roman', Georgia, serif;
+    font-style: italic; font-weight: 500;
+  }
+  .doc {
+    max-width: 1180px; margin: 0 auto; padding: 56px 28px 120px;
+  }
+  .grid-bg-line {
+    position: relative;
+  }
+  .grid-bg-line::before {
+    content:""; position: absolute; left:0; right:0; top: 0; height: 1px;
+    background: var(--line-strong);
+  }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    padding: 24px 0 64px;
+  }
+  .eyebrow {
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent); display:inline-flex; align-items: center; gap: 10px;
+  }
+  .eyebrow::before {
+    content:""; width: 28px; height: 1px; background: var(--accent);
+  }
+  h1.display {
+    font-size: clamp(48px, 8vw, 96px);
+    line-height: 0.94; letter-spacing: -0.045em; font-weight: 700;
+    margin: 18px 0 24px; max-width: 14ch;
+  }
+  h1.display em.serif { color: var(--accent); }
+  .lede {
+    font-size: 19px; color: var(--muted); max-width: 64ch; line-height: 1.55;
+  }
+  .meta-row {
+    display:flex; gap: 28px; margin-top: 36px; flex-wrap: wrap;
+    border-top: 1px solid var(--line); padding-top: 24px;
+  }
+  .meta { font-size: 12px; color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; }
+  .meta b { display:block; font-size: 22px; color: var(--ink); letter-spacing: -0.02em; font-weight: 700; text-transform: none; margin-top: 4px; }
+
+  /* ---------- Section frame ---------- */
+  section.chapter {
+    padding: 64px 0 24px;
+    margin-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+  .chapter-head {
+    display: grid; grid-template-columns: 120px 1fr; gap: 32px; margin-bottom: 40px;
+  }
+  @media (max-width: 720px) { .chapter-head { grid-template-columns: 1fr; } }
+  .chapter-num {
+    font-size: 14px; letter-spacing: 0.18em; color: var(--dim);
+  }
+  .chapter-num b { display:block; font-size: 56px; color: var(--ink); letter-spacing: -0.04em; font-weight: 700; line-height: 1; margin-top: 6px; }
+  .chapter-title { font-size: 36px; letter-spacing: -0.02em; margin: 0 0 12px; line-height: 1.1; max-width: 18ch; }
+  .chapter-title em.serif { color: var(--accent); }
+  .chapter-intro { font-size: 16px; color: var(--muted); max-width: 64ch; }
+
+  /* ---------- Pillar cards ---------- */
+  .pillars { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  @media (max-width: 800px) { .pillars { grid-template-columns: 1fr; } }
+  .pillar {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 14px;
+    position: relative; overflow: hidden;
+  }
+  .pillar .num {
+    font-size: 12px; letter-spacing: 0.16em; color: var(--accent); text-transform: uppercase;
+  }
+  .pillar h3 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+  .pillar h3 em.serif { color: var(--accent); }
+  .pillar p { margin: 0; color: var(--muted); font-size: 14px; }
+  .pillar .why {
+    margin-top: 4px; padding-top: 14px; border-top: 1px dashed var(--line);
+    font-size: 12px; color: var(--dim);
+  }
+  .pillar .why b { color: var(--ink); }
+
+  /* ---------- Concept blocks (mockup tiles) ---------- */
+  .concepts { display: grid; gap: 24px; }
+  .concept {
+    border: 1px solid var(--line); border-radius: 22px; background: var(--paper);
+    overflow: hidden;
+  }
+  .concept-head {
+    display:flex; justify-content: space-between; align-items: flex-end; gap: 24px;
+    padding: 22px 24px; border-bottom: 1px solid var(--line); background: white;
+  }
+  .concept-head h4 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+  .concept-head h4 em.serif { color: var(--accent); }
+  .concept-head .tag {
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent);
+  }
+  .concept-head p { margin: 6px 0 0; color: var(--muted); font-size: 13px; max-width: 60ch; }
+  .concept-body { padding: 24px; }
+
+  /* ---------- Concept 1: Memory of Me (profile chip) ---------- */
+  .me-chip {
+    display: grid; grid-template-columns: 64px 1fr auto; gap: 16px; align-items: center;
+    padding: 18px; background: white; border: 1px solid var(--line); border-radius: 16px;
+  }
+  .me-avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, #ffd9c2, #ff9a6b);
+    border: 1px solid var(--line);
+    display:grid; place-items: center; font-family: 'Times New Roman', serif; font-style: italic;
+    font-size: 28px; color: var(--ink);
+  }
+  .me-meta .name { font-weight: 600; font-size: 16px; }
+  .me-meta .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .me-tags { display:flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .me-tags span {
+    font-size: 11px; padding: 4px 10px; border-radius: 999px; background: rgba(255,91,31,0.1);
+    color: var(--accent-2); border: 1px solid rgba(255,91,31,0.25);
+  }
+  .me-actions { display:flex; gap: 8px; }
+  .btn {
+    font-size: 12px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--ink);
+    background: transparent; color: var(--ink); cursor: pointer; font-weight: 600;
+  }
+  .btn.primary { background: var(--ink); color: white; border-color: var(--ink); }
+  .btn.ghost { border-color: var(--line-strong); }
+
+  /* ---------- Concept 2: Agent Studio (graph) ---------- */
+  .studio {
+    display: grid; grid-template-columns: 1fr 280px; gap: 16px;
+  }
+  @media (max-width: 800px) { .studio { grid-template-columns: 1fr; } }
+  .canvas {
+    position: relative; background: var(--grid-bg); border: 1px solid var(--line); border-radius: 14px;
+    height: 360px; overflow: hidden;
+    background-image:
+      radial-gradient(circle, rgba(13,17,23,0.10) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .node {
+    position: absolute; padding: 10px 14px; border-radius: 12px; background: white;
+    border: 1px solid var(--line-strong); font-size: 12px; font-weight: 600;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06); min-width: 140px;
+  }
+  .node small { display:block; font-weight: 500; color: var(--dim); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+  .node.supervisor { left: 8%; top: 38%; border-color: var(--ink); }
+  .node.search { left: 38%; top: 8%; border-color: var(--leaf); }
+  .node.inventory { left: 38%; top: 38%; border-color: var(--accent); }
+  .node.policy { left: 38%; top: 68%; border-color: var(--plum); }
+  .node.payment { left: 70%; top: 22%; border-color: var(--sky); }
+  .node.cx { left: 70%; top: 60%; border-color: var(--ink); }
+  .canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .canvas .label-pill {
+    position:absolute; font-size: 10px; padding: 2px 8px; background: white; border: 1px solid var(--line);
+    border-radius: 999px; color: var(--muted);
+  }
+  .panel-side {
+    background: white; border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+  }
+  .panel-side h5 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  .panel-side .row { display:flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px dashed var(--line); }
+  .panel-side .row:last-child { border-bottom: 0; }
+  .panel-side .row b { font-weight: 600; }
+
+  /* ---------- Concept 3: Trace (causal log) ---------- */
+  .trace { background: white; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .trace-head { display:flex; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .trace-head b { color: var(--ink); }
+  .trace-row {
+    display: grid; grid-template-columns: 60px 1fr 80px 110px;
+    align-items: center; padding: 10px 18px; border-bottom: 1px dashed var(--line);
+    font-size: 13px;
+  }
+  .trace-row:last-child { border-bottom: 0; }
+  .trace-row .agent {
+    font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; white-space: nowrap; text-align: center;
+  }
+  .a-search { background: rgba(47,107,61,0.12); color: var(--leaf); }
+  .a-policy { background: rgba(91,58,122,0.12); color: var(--plum); }
+  .a-inv { background: rgba(255,91,31,0.12); color: var(--accent-2); }
+  .a-pay { background: rgba(37,99,235,0.12); color: var(--sky); }
+  .a-sup { background: rgba(13,17,23,0.08); color: var(--ink); }
+  .trace-row .ttl b { font-weight: 600; }
+  .trace-row .ttl small { display:block; color: var(--muted); font-family: ui-monospace, 'SF Mono', monospace; font-size: 11px; }
+  .trace-row .ms { color: var(--muted); font-family: ui-monospace, 'SF Mono', monospace; font-size: 12px; text-align: right; }
+  .trace-row .badge {
+    font-size: 10px; padding: 3px 8px; border-radius: 999px; text-align: center;
+    background: rgba(47,107,61,0.12); color: var(--leaf); border: 1px solid rgba(47,107,61,0.3);
+  }
+  .trace-row .badge.warn { background: rgba(255,91,31,0.12); color: var(--accent-2); border-color: rgba(255,91,31,0.3); }
+
+  /* ---------- Concept 4: Compare (semantic vs hybrid) ---------- */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 800px) { .compare { grid-template-columns: 1fr; } }
+  .compare .col {
+    background: white; border: 1px solid var(--line); border-radius: 14px; padding: 18px;
+  }
+  .compare .col h6 { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  .compare .col .head { display:flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .compare .col .head b { font-size: 18px; letter-spacing: -0.01em; }
+  .compare .item {
+    display: grid; grid-template-columns: 1fr 50px; gap: 8px; align-items: center;
+    padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 13px;
+  }
+  .compare .item:last-child { border-bottom: 0; }
+  .compare .item .bar {
+    height: 6px; border-radius: 3px; background: var(--grid-bg); overflow: hidden;
+    grid-column: 1 / -1; margin-top: 4px;
+  }
+  .compare .item .bar > div { height: 100%; background: var(--accent); }
+  .compare .item .row1 { display:flex; justify-content: space-between; align-items:center; }
+  .compare .item .row1 .pct { font-size: 12px; color: var(--muted); font-family: ui-monospace, 'SF Mono', monospace; }
+
+  /* ---------- Concept 5: Live data (Aurora moments) ---------- */
+  .live {
+    display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  @media (max-width: 800px) { .live { grid-template-columns: 1fr; } }
+  .live .card { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .live .card h6 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  .live .num { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; }
+  .live .delta { font-size: 12px; color: var(--leaf); margin-top: 4px; }
+  .live .delta.warn { color: var(--accent-2); }
+  .live .spark { margin-top: 12px; height: 36px; }
+
+  /* ---------- Concept 6: Sandbox (cart confirm) ---------- */
+  .sandbox {
+    background: white; border: 1px solid var(--line); border-radius: 14px; padding: 22px;
+    display: grid; grid-template-columns: 1fr 360px; gap: 24px;
+  }
+  @media (max-width: 800px) { .sandbox { grid-template-columns: 1fr; } }
+  .sandbox h5 { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  .sandbox .plan {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px; font-size: 13px;
+  }
+  .sandbox .plan ol { margin: 0; padding-left: 18px; color: var(--muted); }
+  .sandbox .plan ol li { margin: 5px 0; }
+  .sandbox .plan ol li b { color: var(--ink); font-weight: 600; }
+  .sandbox-actions { display:flex; gap: 8px; margin-top: 16px; }
+  .receipt {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 16px; font-size: 13px;
+  }
+  .receipt .row { display:flex; justify-content: space-between; padding: 4px 0; }
+  .receipt .row.total { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; font-weight: 700; font-size: 15px; }
+  .receipt .scope {
+    margin-top: 12px; font-size: 11px; color: var(--muted); padding: 8px 10px;
+    border: 1px dashed var(--line); border-radius: 8px;
+  }
+  .receipt .scope b { color: var(--ink); }
+
+  /* ---------- Roadmap table ---------- */
+  .roadmap {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 18px; overflow: hidden;
+  }
+  .roadmap .row {
+    display: grid; grid-template-columns: 80px 1fr 1.2fr 140px;
+    padding: 16px 22px; border-bottom: 1px solid var(--line); align-items: start;
+    gap: 18px;
+  }
+  .roadmap .row:last-child { border-bottom: 0; }
+  .roadmap .row.head { background: white; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .roadmap .when { font-weight: 600; }
+  .roadmap .what { font-size: 15px; font-weight: 600; }
+  .roadmap .what em.serif { color: var(--accent); font-weight: 500; }
+  .roadmap .desc { font-size: 13px; color: var(--muted); }
+  .roadmap .effort {
+    font-size: 11px; padding: 4px 10px; border-radius: 999px;
+    background: rgba(13,17,23,0.06); color: var(--ink); white-space: nowrap;
+    display:inline-block; font-weight: 600;
+  }
+  .roadmap .effort.s { background: rgba(47,107,61,0.14); color: var(--leaf); }
+  .roadmap .effort.m { background: rgba(255,91,31,0.14); color: var(--accent-2); }
+  .roadmap .effort.l { background: rgba(91,58,122,0.14); color: var(--plum); }
+
+  /* ---------- Pull quote ---------- */
+  .pull {
+    margin: 80px 0 24px;
+    padding: 56px 0;
+    text-align: center;
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .pull blockquote {
+    margin: 0 auto; max-width: 22ch; font-family: 'Times New Roman', Georgia, serif;
+    font-style: italic; font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.02em;
+    line-height: 1.15; color: var(--ink);
+  }
+  .pull blockquote span { color: var(--accent); }
+  .pull cite { font-size: 12px; color: var(--dim); letter-spacing: 0.16em; text-transform: uppercase; font-style: normal; display: block; margin-top: 24px; }
+
+  /* footer */
+  footer { margin-top: 56px; font-size: 12px; color: var(--dim); }
+  footer b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="eyebrow">Meridian · 2026 vision</div>
+    <h1 class="display">From a search box to a <em class="serif">shopping partner</em>.</h1>
+    <p class="lede">
+      The current build proves a point — three phases (direct SQL, MCP, multi-agent + hybrid search) on Aurora PostgreSQL. To match what shipped across the agentic ecosystem in 2025–26, the demo needs to evolve from <em>finding products</em> to <em>making decisions</em>: long-running plans, durable memory, governed actions, and a control surface where every agent step is observable, replayable, and reversible.
+    </p>
+    <div class="meta-row">
+      <div class="meta">Surface area today<b>4 sections · 1 chat</b></div>
+      <div class="meta">Surface area proposed<b>9 surfaces · 6 agents</b></div>
+      <div class="meta">Substrate<b>Aurora PostgreSQL · pgvector · MCP</b></div>
+      <div class="meta">Persona shift<b>Demo viewer → operator</b></div>
+    </div>
+  </div>
+
+  <!-- CHAPTER 1: PILLARS -->
+  <section class="chapter">
+    <div class="chapter-head">
+      <div class="chapter-num">Chapter <b>01</b></div>
+      <div>
+        <h2 class="chapter-title">Five <em class="serif">pillars</em> for the 2026 narrative.</h2>
+        <p class="chapter-intro">
+          Each pillar maps to an industry pattern that matured in 2025–26 — durable memory, multi-agent supervision, declarative tool calls via MCP, governed autonomous actions, and observability as a first-class product surface. Together they shape the story Meridian should tell.
+        </p>
+      </div>
+    </div>
+
+    <div class="pillars">
+      <div class="pillar">
+        <span class="num">Pillar 01</span>
+        <h3>Durable <em class="serif">memory</em>, not just sessions.</h3>
+        <p>Pgvector + a dedicated <code>profile</code> schema in Aurora hold long-lived facts: sizes, brand affinities, prior orders, allergies, return reasons. Memory is read on every turn, written by an explicit writer agent, and presented to the user so they can edit or forget.</p>
+        <div class="why"><b>Why it matters.</b> 2026 users expect agents to remember "I run in 11s, hate ankle support, returned the last Hokas". Without it the demo plateaus at single-turn search.</div>
+      </div>
+
+      <div class="pillar">
+        <span class="num">Pillar 02</span>
+        <h3>From phases to a <em class="serif">supervisor</em>.</h3>
+        <p>Replace the linear Phase 1/2/3 toggle with a supervisor that fans out to specialist agents — Search, Inventory, Policy, Payment, CX. Each owns a narrow MCP toolset and is independently swappable. Phases become "modes" the supervisor picks per query.</p>
+        <div class="why"><b>Why it matters.</b> The phase pills today demo a teaching ladder. A supervisor graph demos a system you'd actually run.</div>
+      </div>
+
+      <div class="pillar">
+        <span class="num">Pillar 03</span>
+        <h3>MCP as the <em class="serif">contract</em> with everything.</h3>
+        <p>Every tool — Aurora reads, Stripe charges, ShipStation labels, Zendesk tickets, internal pricing rules — lives behind an MCP server with versioned schemas. The UI surfaces a "Tool Catalog" page where you can inspect, version-pin, and dry-run each one.</p>
+        <div class="why"><b>Why it matters.</b> MCP went from novel to assumed. Showing a versioned, inspectable catalog is the modern equivalent of an API explorer.</div>
+      </div>
+
+      <div class="pillar">
+        <span class="num">Pillar 04</span>
+        <h3>Governed <em class="serif">autonomy</em>.</h3>
+        <p>Agents act under a budget: dollars per session, ms per call, tools per plan, and confirmation thresholds. Anything risky — an actual charge, a policy override, a refund above a limit — pauses for human approval inline in the chat with a diff of what will happen.</p>
+        <div class="why"><b>Why it matters.</b> 2026 procurement won't approve agents that can't be reined in. Show the leash; show that it works.</div>
+      </div>
+
+      <div class="pillar">
+        <span class="num">Pillar 05</span>
+        <h3>Observability as a <em class="serif">surface</em>.</h3>
+        <p>The current Activity Panel becomes a full Trace view: a Gantt-style timeline of agents, tool calls, SQL, retrieval, latencies, token spend, and cache hits. Every trace is replayable and shareable as a permalinked URL.</p>
+        <div class="why"><b>Why it matters.</b> The thing developers want to copy is not the chat — it's the trace. Make it the centerpiece.</div>
+      </div>
+
+      <div class="pillar">
+        <span class="num">Pillar 06</span>
+        <h3>The <em class="serif">graph</em> under the catalog.</h3>
+        <p>Aurora's relational core stays — but layer Apache AGE for product-relationship queries: "shoes that customers who liked the Pegasus also bought, filtered by what's in stock in my size". Hybrid: vector + lexical + graph traversal, in one SQL query.</p>
+        <div class="why"><b>Why it matters.</b> Graph + vector + relational in one engine is Aurora's best 2026 story. Make it a visible, demo-able feature.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHAPTER 2: CONCEPTS -->
+  <section class="chapter">
+    <div class="chapter-head">
+      <div class="chapter-num">Chapter <b>02</b></div>
+      <div>
+        <h2 class="chapter-title">New <em class="serif">surfaces</em> that bring it to life.</h2>
+        <p class="chapter-intro">
+          Each surface below is a concrete addition to the SPA: a section with components, an MCP tool, and a story. All visualized in the Daylight Studio direction so they read as one product.
+        </p>
+      </div>
+    </div>
+
+    <div class="concepts">
+
+      <!-- Concept 1: Memory of Me -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 01 · Memory</div>
+            <h4>Memory of <em class="serif">me</em>.</h4>
+            <p>A profile chip in the chat. Click to inspect every fact the agent has stored, when it learned it, which message taught it, and edit or forget any of them.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="me-chip">
+            <div class="me-avatar">S</div>
+            <div class="me-meta">
+              <div class="name">Shayon · returning runner</div>
+              <div class="sub">12 sessions · last seen yesterday · 4 orders · 1 return</div>
+              <div class="me-tags">
+                <span>Size 11 (Nike)</span>
+                <span>Wide forefoot</span>
+                <span>Marathon · Oct 26</span>
+                <span>Allergy: latex insoles</span>
+                <span>Brand: Brooks · Hoka · Nike</span>
+              </div>
+            </div>
+            <div class="me-actions">
+              <button class="btn ghost">Inspect 23 facts</button>
+              <button class="btn">Edit memory</button>
+            </div>
+          </div>
+          <p style="margin-top: 14px; font-size: 12px; color: var(--muted);"><b>Aurora schema.</b> <code>memory.facts(user_id, key, value, source_msg_id, learned_at, confidence)</code> + <code>vector(1024)</code> for semantic recall. Writer is a dedicated <em>memory_agent</em> tool, not the supervisor.</p>
+        </div>
+      </div>
+
+      <!-- Concept 2: Agent Studio -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 02 · Architecture</div>
+            <h4>Agent <em class="serif">Studio</em>.</h4>
+            <p>Replace the static phase explainer with a live graph: nodes are agents, edges fire when calls happen, and each node opens an inspector with its tools, prompt, model, and budget.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="studio">
+            <div class="canvas">
+              <svg viewBox="0 0 900 360" preserveAspectRatio="none">
+                <defs>
+                  <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#0d1117" />
+                  </marker>
+                </defs>
+                <path d="M 200 180 C 270 90, 320 60, 380 60" stroke="#0d1117" fill="none" stroke-width="1.4" marker-end="url(#arr)"/>
+                <path d="M 200 180 C 270 180, 320 180, 380 180" stroke="#0d1117" fill="none" stroke-width="1.4" marker-end="url(#arr)"/>
+                <path d="M 200 180 C 270 280, 320 300, 380 300" stroke="#0d1117" fill="none" stroke-width="1.4" marker-end="url(#arr)"/>
+                <path d="M 540 70 C 600 90, 640 110, 680 130" stroke="#0d1117" fill="none" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arr)"/>
+                <path d="M 540 190 C 600 210, 640 240, 680 270" stroke="#0d1117" fill="none" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arr)"/>
+              </svg>
+              <div class="node supervisor"><small>Supervisor</small>plan_and_route</div>
+              <div class="node search"><small>Search agent</small>hybrid_query</div>
+              <div class="node inventory"><small>Inventory</small>stock_lookup</div>
+              <div class="node policy"><small>Policy</small>returns + price</div>
+              <div class="node payment"><small>Payment</small>charge / hold</div>
+              <div class="node cx"><small>CX</small>ticket / refund</div>
+              <span class="label-pill" style="left: 30%; top: 22%;">vector + lexical</span>
+              <span class="label-pill" style="left: 30%; top: 51%;">aurora · pg</span>
+              <span class="label-pill" style="left: 30%; top: 80%;">mcp · rules</span>
+            </div>
+            <div class="panel-side">
+              <h5>Inventory · selected</h5>
+              <div class="row"><span>Model</span><b>claude-sonnet</b></div>
+              <div class="row"><span>Tools</span><b>3 · MCP</b></div>
+              <div class="row"><span>Budget</span><b>$0.04 / session</b></div>
+              <div class="row"><span>p50 latency</span><b>72ms</b></div>
+              <div class="row"><span>Last update</span><b>v3.2 · today</b></div>
+              <div class="row"><span>Owner</span><b>commerce-team</b></div>
+            </div>
+          </div>
+          <p style="margin-top: 14px; font-size: 12px; color: var(--muted);"><b>Aurora layer.</b> Each agent's runs are persisted to <code>agent_runs</code> with foreign keys to <code>tool_calls</code>, <code>retrievals</code>, and <code>messages</code> — making the graph real, not decorative.</p>
+        </div>
+      </div>
+
+      <!-- Concept 3: Trace -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 03 · Observability</div>
+            <h4>The <em class="serif">trace</em>, replayable.</h4>
+            <p>Every chat turn produces a permalinked trace. Each row shows the agent, what it did, latency, and a status pill. The trace can be replayed step-by-step or shared.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="trace">
+            <div class="trace-head">
+              <span>trace · <b>tr_8a91c4</b> · "gear for my first marathon"</span>
+              <span><b>340ms total</b> · 5 agents · $0.012</span>
+            </div>
+            <div class="trace-row">
+              <span class="agent a-sup">supervisor</span>
+              <div class="ttl"><b>plan</b><small>route → [search, inventory, policy]</small></div>
+              <span class="ms">28ms</span>
+              <span class="badge">on plan</span>
+            </div>
+            <div class="trace-row">
+              <span class="agent a-search">search</span>
+              <div class="ttl"><b>hybrid_query("marathon training gear")</b><small>pgvector cosine + tsvector rank · K=8</small></div>
+              <span class="ms">96ms</span>
+              <span class="badge">cache hit</span>
+            </div>
+            <div class="trace-row">
+              <span class="agent a-inv">inventory</span>
+              <div class="ttl"><b>stock_lookup(8 SKUs)</b><small>SELECT stock, lead_time FROM inventory …</small></div>
+              <span class="ms">72ms</span>
+              <span class="badge">in stock</span>
+            </div>
+            <div class="trace-row">
+              <span class="agent a-policy">policy</span>
+              <div class="ttl"><b>price_eligibility(member="silver")</b><small>discount = 0.05 · within budget</small></div>
+              <span class="ms">41ms</span>
+              <span class="badge warn">held for confirm</span>
+            </div>
+            <div class="trace-row">
+              <span class="agent a-sup">supervisor</span>
+              <div class="ttl"><b>compose</b><small>3 products + 1 follow-up</small></div>
+              <span class="ms">103ms</span>
+              <span class="badge">delivered</span>
+            </div>
+          </div>
+          <p style="margin-top: 14px; font-size: 12px; color: var(--muted);"><b>Tech.</b> Traces written to Aurora as <code>traces</code> + <code>spans</code>. OpenTelemetry-compatible export. Re-run hits a sandbox endpoint that replays from cached tool responses, so devs can debug without paying for the LLM again.</p>
+        </div>
+      </div>
+
+      <!-- Concept 4: Compare -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 04 · Search</div>
+            <h4>Vector vs. <em class="serif">graph</em> vs. hybrid.</h4>
+            <p>A "compare modes" widget on the search panel. Same query, three rankings, side-by-side. Teaches the audience why hybrid wins — and lets them export the winning ranking as a snapshot.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="compare">
+            <div class="col">
+              <div class="head"><b>Pure vector</b><span style="font-size:11px;color:var(--muted);">pgvector · cosine</span></div>
+              <h6>Top results</h6>
+              <div class="item">
+                <div class="row1"><span>Hoka Bondi 8</span><span class="pct">0.91</span></div>
+                <div class="bar"><div style="width: 91%;"></div></div>
+              </div>
+              <div class="item">
+                <div class="row1"><span>Brooks Ghost Max</span><span class="pct">0.88</span></div>
+                <div class="bar"><div style="width: 88%;"></div></div>
+              </div>
+              <div class="item">
+                <div class="row1"><span>Asics Gel Nimbus</span><span class="pct">0.84</span></div>
+                <div class="bar"><div style="width: 84%;"></div></div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="head"><b>Hybrid + graph</b><span style="font-size:11px;color:var(--accent);">vector + tsvector + AGE</span></div>
+              <h6>Top results</h6>
+              <div class="item">
+                <div class="row1"><span>Nike Pegasus 41 <em class="serif">(your size)</em></span><span class="pct">0.96</span></div>
+                <div class="bar"><div style="width: 96%; background: var(--leaf);"></div></div>
+              </div>
+              <div class="item">
+                <div class="row1"><span>Garmin Forerunner 965</span><span class="pct">0.93</span></div>
+                <div class="bar"><div style="width: 93%; background: var(--leaf);"></div></div>
+              </div>
+              <div class="item">
+                <div class="row1"><span>Theragun Pro</span><span class="pct">0.89</span></div>
+                <div class="bar"><div style="width: 89%; background: var(--leaf);"></div></div>
+              </div>
+            </div>
+          </div>
+          <p style="margin-top: 14px; font-size: 12px; color: var(--muted);"><b>Aurora moment.</b> A single SQL query joins <code>products</code> (relational), <code>products.embedding</code> (vector), <code>products.tsv</code> (lexical), and the <code>cypher</code> traversal of co-purchase from Apache AGE. One engine, three retrieval modes.</p>
+        </div>
+      </div>
+
+      <!-- Concept 5: Live data -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 05 · Live Aurora</div>
+            <h4>The <em class="serif">store</em>, live.</h4>
+            <p>A small dashboard strip showing real-time signals from Aurora — orders/min, embedding cache hit rate, and median agent latency. Every agent's actions feed it.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="live">
+            <div class="card">
+              <h6>Orders / min</h6>
+              <div class="num">37</div>
+              <div class="delta">▲ 12% vs. yesterday</div>
+              <svg class="spark" viewBox="0 0 200 36"><path d="M0 28 L20 24 L40 26 L60 18 L80 22 L100 12 L120 16 L140 8 L160 14 L180 6 L200 10" stroke="#2f6b3d" stroke-width="2" fill="none"/></svg>
+            </div>
+            <div class="card">
+              <h6>Embedding cache hit</h6>
+              <div class="num">71%</div>
+              <div class="delta">▲ 4 pts since v3.2</div>
+              <svg class="spark" viewBox="0 0 200 36"><path d="M0 22 L20 26 L40 20 L60 22 L80 18 L100 20 L120 14 L140 16 L160 12 L180 10 L200 8" stroke="#2563eb" stroke-width="2" fill="none"/></svg>
+            </div>
+            <div class="card">
+              <h6>Agent p50 latency</h6>
+              <div class="num">340ms</div>
+              <div class="delta warn">▲ 60ms · investigate</div>
+              <svg class="spark" viewBox="0 0 200 36"><path d="M0 18 L20 16 L40 20 L60 14 L80 18 L100 16 L120 22 L140 18 L160 24 L180 22 L200 28" stroke="#b54214" stroke-width="2" fill="none"/></svg>
+            </div>
+          </div>
+          <p style="margin-top: 14px; font-size: 12px; color: var(--muted);"><b>How.</b> Aurora <code>pg_stat_statements</code> + a custom <code>agent_metrics</code> mat-view, refreshed every 10s, streamed to the page over server-sent events.</p>
+        </div>
+      </div>
+
+      <!-- Concept 6: Sandbox / confirm -->
+      <div class="concept">
+        <div class="concept-head">
+          <div>
+            <div class="tag">Surface 06 · Governed action</div>
+            <h4>Plan, confirm, <em class="serif">commit</em>.</h4>
+            <p>Before any irreversible action — placing the order, refunding, applying a discount — the agent presents a plan with a diff. The user confirms once. The receipt links to the trace.</p>
+          </div>
+        </div>
+        <div class="concept-body">
+          <div class="sandbox">
+            <div>
+              <h5>Proposed plan</h5>
+              <div class="plan">
+                <ol>
+                  <li>Reserve <b>1×</b> Nike Pegasus 41, size 11 — <b>$140</b></li>
+                  <li>Apply silver-member discount: <b>−$7.00</b></li>
+                  <li>Charge <b>Visa •••• 4411</b> for <b>$140.50</b></li>
+                  <li>Schedule shipping via ShipStation, free 2-day</li>
+                  <li>Email receipt to <b>shayon@example.com</b></li>
+                </ol>
+              </div>
+              <div class="sandbox-actions">
+                <button class="btn primary">Confirm & place order</button>
+                <button class="btn ghost">Modify plan</button>
+                <button class="btn ghost">Cancel</button>
+              </div>
+            </div>
+            <div class="receipt">
+              <div class="row"><span>Subtotal</span><span>$140.00</span></div>
+              <div class="row"><span>Tax (est.)</span><span>$11.20</span></div>
+              <div class="row"><span>Shipping</span><span>FREE</span></div>
+              <div class="row"><span>Member discount</span><span>−$7.00</span></div>
+              <div class="row total"><span>Total</span><span>$144.20</span></div>
+              <div class="scope"><b>Agent scope.</b> charge ≤ $250, single SKU, member-discount only. Anything outside this requires re-confirmation.</div>
+            </div>
+          </div>
+          <p style="margin-top: 14px; font-size: 12px; color: var(--muted);"><b>Why.</b> Treats the agent as an actor with a budget, not a free hand. The "scope" line is the visible leash — it's what makes this demo defensible to enterprise reviewers.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- PULL QUOTE -->
+  <div class="pull">
+    <blockquote>The thing devs want to copy is not the chat — it's the <span>trace</span>.</blockquote>
+    <cite>The argument behind every concept above</cite>
+  </div>
+
+  <!-- CHAPTER 3: ROADMAP -->
+  <section class="chapter">
+    <div class="chapter-head">
+      <div class="chapter-num">Chapter <b>03</b></div>
+      <div>
+        <h2 class="chapter-title">A <em class="serif">phased</em> path to ship.</h2>
+        <p class="chapter-intro">
+          The current build is the foundation; this is what to add and in what order. Effort tags reflect a small full-stack team — Aurora schema, MCP server, and a UI surface — per concept.
+        </p>
+      </div>
+    </div>
+
+    <div class="roadmap">
+      <div class="row head"><div>Wave</div><div>What</div><div>Description</div><div>Effort</div></div>
+      <div class="row">
+        <div class="when">Wave 01</div>
+        <div class="what">Trace view + permalinks <em class="serif">(observability)</em></div>
+        <div class="desc">Promote the Activity Panel to a full Gantt-style trace; persist to Aurora; add /trace/:id route. Highest narrative payoff for least new infra.</div>
+        <div><span class="effort s">S · 1–2 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 01</div>
+        <div class="what">Memory of me <em class="serif">(profile)</em></div>
+        <div class="desc">Add memory schema, writer agent, and inspector chip. Establishes the long-running shopper persona the rest depends on.</div>
+        <div><span class="effort s">S · 1–2 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 02</div>
+        <div class="what">Supervisor + 5 specialists <em class="serif">(architecture)</em></div>
+        <div class="desc">Refactor Phase 3 into a supervisor graph with Search, Inventory, Policy, Payment, CX agents. Each gets its own MCP server.</div>
+        <div><span class="effort m">M · 3–4 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 02</div>
+        <div class="what">Tool catalog + dry-run <em class="serif">(MCP)</em></div>
+        <div class="desc">A page listing every MCP tool with version, schema, owner, latency, and a "dry-run" button that calls the tool with a synthetic input.</div>
+        <div><span class="effort m">M · 2–3 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 03</div>
+        <div class="what">Plan / confirm / commit <em class="serif">(governance)</em></div>
+        <div class="desc">Inline approvals before money moves. Per-agent budgets and scopes. Auditable approval log. Required for any "real shopping" demo.</div>
+        <div><span class="effort m">M · 2–3 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 03</div>
+        <div class="what">Hybrid + graph search <em class="serif">(retrieval)</em></div>
+        <div class="desc">Add Apache AGE traversal (co-purchase, brand affinity) and a UI to compare vector / hybrid / hybrid+graph rankings on the same query.</div>
+        <div><span class="effort l">L · 4–6 weeks</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 04</div>
+        <div class="what">Live store dashboard <em class="serif">(SSE)</em></div>
+        <div class="desc">Aurora-backed ops strip — orders/min, cache hits, p50 latency — streamed via SSE. Useful for keynote demos and ongoing health.</div>
+        <div><span class="effort s">S · 1 week</span></div>
+      </div>
+      <div class="row">
+        <div class="when">Wave 04</div>
+        <div class="what">Replay sandbox <em class="serif">(devx)</em></div>
+        <div class="desc">Re-run any trace against cached tool responses with a different prompt or model. Removes LLM cost from debugging.</div>
+        <div><span class="effort m">M · 2–3 weeks</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <b>Notes.</b> Surface counts and effort sizes are illustrative — anchored on the current single-page app. The Daylight Studio palette is applied here per saved design preference; the agent demo console can stay dark for contrast on dense traces. Next step: pick the two waves to scope first and I'll draft the Aurora schema deltas and MCP tool definitions to go with them.
+  </footer>
+
+</div>
+</body>
+</html>

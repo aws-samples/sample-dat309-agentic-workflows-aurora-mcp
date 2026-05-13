@@ -1,4 +1,4 @@
-# AgentStride: Ask. Shop. Done.
+# Meridian: Ask. Shop. Done.
 
 <div align="center">
 
@@ -23,11 +23,11 @@
 
 ## Overview
 
-**AgentStride** demonstrates the architectural evolution of agentic systems through three production-grade implementations. Built for AWS re:Invent 2025 (DAT309 Chalk Talk), this project showcases scaling patterns from a weekend MVP to enterprise-scale multi-agent orchestration with semantic search capabilities.
+**Meridian** demonstrates the architectural evolution of agentic systems through three production-grade implementations. Built for AWS re:Invent 2025 (DAT309 Chalk Talk), this project showcases scaling patterns from a weekend MVP to enterprise-scale multi-agent orchestration with semantic search capabilities.
 
 > **⚠️ Educational Use Only**: This demonstration is designed for learning purposes and illustrates production patterns without production-level error handling, monitoring, or security hardening.
 
-### The AgentStride Story
+### The Meridian Story
 
 A live-streaming shopping platform that evolved from 50 orders/day to 50,000 orders/day through three architectural iterations—demonstrating how thoughtful design enables exponential scaling without complete rewrites.
 
@@ -186,7 +186,7 @@ SELECT * FROM semantic_product_search(query_embedding, 5);
 ```bash
 # Clone repository
 git clone https://github.com/aws-samples/sample-dat309-agentic-workflows-aurora-mcp
-cd sample-dat309-agentic-workflows-aurora-mcp/agentstride
+cd sample-dat309-agentic-workflows-aurora-mcp/meridian
 
 # Run automated setup
 ./scripts/setup.sh
@@ -242,7 +242,7 @@ AURORA_CLUSTER_ARN=your_aurora_cluster_arn
 AURORA_SECRET_ARN=your_secret_arn
 AURORA_CLUSTER_IDENTIFIER=your_cluster_identifier
 AURORA_CLUSTER_ENDPOINT=your_cluster_endpoint
-AURORA_DATABASE=agentstride
+AURORA_DATABASE=meridian
 ```
 
 ---
@@ -254,7 +254,7 @@ The project includes a full-stack web application for interactive demos:
 ### Backend (FastAPI)
 
 ```bash
-cd agentstride
+cd meridian
 source venv/bin/activate
 uvicorn backend.main:app --reload --port 8000
 ```
@@ -268,7 +268,7 @@ uvicorn backend.main:app --reload --port 8000
 ### Frontend (React + Vite)
 
 ```bash
-cd agentstride/frontend
+cd meridian/frontend
 npm install
 npm run dev
 ```
@@ -286,7 +286,7 @@ Open http://localhost:5173 to view the application.
 
 ## Demo Script
 
-See [DEMO_SCRIPT.md](agentstride/DEMO_SCRIPT.md) for a complete 60-minute walkthrough with talking points, representative queries, and code highlights.
+See [DEMO_SCRIPT.md](meridian/DEMO_SCRIPT.md) for a complete 60-minute walkthrough with talking points, representative queries, and code highlights.
 
 - HNSW vector indexing for similarity search
 
@@ -295,7 +295,7 @@ See [DEMO_SCRIPT.md](agentstride/DEMO_SCRIPT.md) for a complete 60-minute walkth
 ## Project Structure
 
 ```
-agentstride/
+meridian/
 ├── requirements.txt               # Python dependencies
 ├── .env.example                   # Environment variable template
 ├── DEMO_SCRIPT.md                 # 60-minute demo walkthrough
