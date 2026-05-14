@@ -475,7 +475,7 @@ export function AgentSection() {
       style={{
         position: 'relative',
         padding: '64px 28px 80px',
-        maxWidth: 1180,
+        maxWidth: 1280,
         margin: '0 auto',
         borderTop: '1px solid var(--dl-line)',
       }}
@@ -568,16 +568,7 @@ export function AgentSection() {
                   <span className="chat-title">Travel Concierge</span>
                   {phase === 4 && <MemoryChip compact facts={memoryFacts} />}
                   {connectionStatus === 'disconnected' && (
-                    <span style={{ 
-                      fontSize: 9, 
-                      color: '#ef4444', 
-                      background: 'rgba(239, 68, 68, 0.1)', 
-                      padding: '2px 6px', 
-                      borderRadius: 4,
-                      fontFamily: 'SF Mono, monospace',
-                    }}>
-                      Offline
-                    </span>
+                    <span className="offline-badge">Offline</span>
                   )}
                 </div>
                 {msgs.length > 0 && (
@@ -594,26 +585,19 @@ export function AgentSection() {
               <div className="chat-messages">
                 {msgs.length === 0 && !typing && (
                   <div className="chat-empty">
-                    <div style={{ fontSize: 36, opacity: 0.3 }}>💬</div>
-                    <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>
-                      {currentPhaseSuggestions.hint}
-                    </p>
+                    <div style={{ fontSize: 44, opacity: 0.35 }}>✈️</div>
+                    <p>{currentPhaseSuggestions.hint}</p>
 
-                    {/* Queries that work in this phase */}
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 10, color: '#10b981', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        ✓ Works in Phase {phase}
-                      </div>
-                      <div className="chat-suggestions">
+                    <div className="chat-starter-section">
+                      <div className="chat-starter-label ok">✓ Works in Phase {phase}</div>
+                      <div className="chat-starter-grid">
                         {currentPhaseSuggestions.works.map((s) => (
                           <button
                             key={s}
+                            type="button"
                             onClick={() => setInput(s)}
-                            className="suggestion-btn"
-                            style={{
-                              '--phase-color': pc,
-                              border: `1px solid ${pc}40`,
-                            } as React.CSSProperties}
+                            className="chat-starter-card"
+                            style={{ '--phase-color': pc } as React.CSSProperties}
                           >
                             {s}
                           </button>
@@ -621,19 +605,16 @@ export function AgentSection() {
                       </div>
                     </div>
 
-                    {/* Queries that break in this phase (show limitations) */}
                     {currentPhaseSuggestions.breaks.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: 10, color: '#f59e0b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          ⚠ Try these to see limitations
-                        </div>
-                        <div className="chat-suggestions">
+                      <div className="chat-starter-section">
+                        <div className="chat-starter-label warn">⚠ Try these to see limitations</div>
+                        <div className="chat-starter-grid">
                           {currentPhaseSuggestions.breaks.map((s) => (
                             <button
                               key={s}
+                              type="button"
                               onClick={() => setInput(s)}
-                              className="suggestion-btn warn"
-                              style={{ '--phase-color': '#f59e0b' } as React.CSSProperties}
+                              className="chat-starter-card warn"
                             >
                               {s}
                             </button>
@@ -647,8 +628,14 @@ export function AgentSection() {
                 {msgs.map((m, i) => (
                   <div
                     key={i}
-                    className={`message ${m.role}`}
+                    className={`message-row ${m.role}`}
                   >
+                    {m.role === 'bot' && (
+                      <div className="message-avatar" style={{ '--phase-color': pc } as React.CSSProperties}>
+                        M
+                      </div>
+                    )}
+                    <div className={`message ${m.role}`}>
                     {m.role === 'user' ? (
                       m.text
                     ) : m.type === 'products' && m.products ? (
@@ -661,27 +648,18 @@ export function AgentSection() {
                               category={pr.category}
                               alt={pr.name}
                               style={{
-                                width: 48,
-                                height: 48,
-                                borderRadius: 8,
+                                width: 64,
+                                height: 64,
+                                borderRadius: 10,
                                 flexShrink: 0,
                               }}
-                              emojiSize={22}
+                              emojiSize={28}
                             />
                             <div style={{ flex: 1 }}>
                               <div className="product-result-name">{pr.name}</div>
                               <div className="product-result-meta" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <span>${pr.price.toFixed(2)} · {pr.brand}</span>
-                                <span style={{
-                                  fontSize: 9,
-                                  fontWeight: 600,
-                                  padding: '2px 6px',
-                                  borderRadius: 4,
-                                  background: 'rgba(16, 185, 129, 0.15)',
-                                  color: '#10b981',
-                                }}>
-                                  ✓ In Stock
-                                </span>
+                                <span className="stock-badge">✓ Available</span>
                               </div>
                             </div>
                             {pr.similarity && (
@@ -696,56 +674,21 @@ export function AgentSection() {
                               <button
                                 onClick={() => handleAddToCart(pr)}
                                 disabled={typing}
+                                className="product-action-btn secondary"
                                 style={{
-                                  padding: '6px 10px',
-                                  fontSize: 10,
-                                  fontWeight: 600,
-                                  background: 'transparent',
                                   border: `1px solid ${pc}50`,
-                                  borderRadius: 6,
                                   color: pc,
-                                  cursor: typing ? 'not-allowed' : 'pointer',
-                                  opacity: typing ? 0.5 : 1,
-                                  transition: 'all 0.2s ease',
-                                  whiteSpace: 'nowrap',
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (!typing) {
-                                    e.currentTarget.style.background = `${pc}15`;
-                                    e.currentTarget.style.borderColor = pc;
-                                  }
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'transparent';
-                                  e.currentTarget.style.borderColor = `${pc}50`;
                                 }}
                               >
-                                + Cart
+                                + Itinerary
                               </button>
                               <button
                                 onClick={() => handleOrder(pr)}
                                 disabled={typing}
-                                style={{
-                                  padding: '6px 10px',
-                                  fontSize: 10,
-                                  fontWeight: 600,
-                                  background: pc,
-                                  border: 'none',
-                                  borderRadius: 6,
-                                  color: '#fff',
-                                  cursor: typing ? 'not-allowed' : 'pointer',
-                                  opacity: typing ? 0.5 : 1,
-                                  transition: 'all 0.2s ease',
-                                  whiteSpace: 'nowrap',
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (!typing) e.currentTarget.style.transform = 'scale(1.05)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.transform = 'scale(1)';
-                                }}
+                                className="product-action-btn primary"
+                                style={{ background: pc }}
                               >
-                                Book Now
+                                Book now
                               </button>
                             </div>
                           </div>
@@ -830,11 +773,16 @@ export function AgentSection() {
                     ) : (
                       m.text
                     )}
+                    </div>
                   </div>
                 ))}
 
                 {typing && (
-                  <div className="typing-indicator">
+                  <div className="message-row bot">
+                    <div className="message-avatar" style={{ '--phase-color': pc } as React.CSSProperties}>
+                      M
+                    </div>
+                    <div className="typing-indicator">
                     {[0, 1, 2].map((k) => (
                       <div
                         key={k}
@@ -845,44 +793,24 @@ export function AgentSection() {
                         }}
                       />
                     ))}
+                    </div>
                   </div>
                 )}
                 
                 {/* Follow-up suggestions */}
                 {!typing && followUps.length > 0 && (
-                  <div className="follow-ups" style={{ marginTop: 12, marginBottom: 8 }}>
-                    <div style={{ 
-                      fontSize: 11, 
-                      color: '#64748b', 
-                      marginBottom: 8,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Try asking:
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <div className="follow-ups" style={{ marginTop: 12, marginBottom: 8, marginLeft: 48 }}>
+                    <div className="follow-ups-label">Try asking:</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {followUps.map((fu, i) => (
                         <button
                           key={i}
                           onClick={() => setInput(fu)}
                           className="follow-up-btn"
                           style={{
-                            padding: '6px 12px',
-                            fontSize: 12,
                             background: `${pc}10`,
                             border: `1px solid ${pc}30`,
-                            borderRadius: 16,
                             color: pc,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = `${pc}20`;
-                            e.currentTarget.style.borderColor = `${pc}50`;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = `${pc}10`;
-                            e.currentTarget.style.borderColor = `${pc}30`;
                           }}
                         >
                           {fu}
@@ -900,7 +828,7 @@ export function AgentSection() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && send()}
-                  placeholder="Ask about products..."
+                  placeholder="Ask about destinations, dates, or trip style…"
                   className="chat-input"
                   style={
                     {
@@ -910,10 +838,11 @@ export function AgentSection() {
                 />
                 <button
                   onClick={send}
-                  className="send-btn"
+                  className="send-btn send-btn-labeled"
                   style={{ background: 'var(--dl-ink)' }}
+                  aria-label="Send message"
                 >
-                  ↑
+                  Send
                 </button>
               </div>
             </div>
