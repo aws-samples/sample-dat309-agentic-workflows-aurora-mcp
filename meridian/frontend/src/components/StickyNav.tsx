@@ -8,7 +8,7 @@ interface StickyNavProps {
 const navLinks = [
   { label: 'Trips', target: 'products' },
   { label: 'How it works', target: 'howitworks' },
-  { label: '2026', target: 'vision2026' },
+  { label: 'Deep dive', target: 'vision2026' },
   { label: 'Agent', target: 'agent' },
 ];
 

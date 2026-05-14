@@ -1,361 +1,250 @@
 """
-Seed data script for Meridian
-Populates Aurora PostgreSQL with 30 travel packages across 6 categories
-Generates 1024-dimensional embeddings using Cohere Embed v4
-
-Requirements covered:
-- 2.7: Populate 30 travel packages across 6 categories
-- 2.8: Generate 1024-dimensional embeddings using Cohere Embed v4
+Seed Meridian Aurora: trip packages (with embeddings), travelers, profiles, preferences.
 """
-import os
 import json
+import os
+import uuid
+
 import boto3
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.progress import track
 from rich.table import Table
 
+from travel_catalog import (
+    TRIP_PACKAGES,
+    TRAVELERS,
+    TRAVELER_PROFILES,
+    TRAVELER_PREFERENCES,
+    DEMO_TRAVELER_ID,
+)
+
 load_dotenv()
 console = Console()
 
-# Cohere Embed v4 Configuration
 EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "global.cohere.embed-v4")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
-BEDROCK_REGION = os.getenv('BEDROCK_REGION', 'us-west-2')
-AURORA_REGION = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
-
-# RDS Data API Configuration
-CLUSTER_ARN = os.getenv('AURORA_CLUSTER_ARN')
-SECRET_ARN = os.getenv('AURORA_SECRET_ARN')
-DATABASE = os.getenv('AURORA_DATABASE', 'meridian')
-
-# Travel catalog: 6 categories × 5 packages = 30 experiences (see travel_catalog.py)
-from travel_catalog import TRAVEL_PRODUCTS as PRODUCTS
+BEDROCK_REGION = os.getenv("BEDROCK_REGION", "us-west-2")
+AURORA_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+CLUSTER_ARN = os.getenv("AURORA_CLUSTER_ARN")
+SECRET_ARN = os.getenv("AURORA_SECRET_ARN")
+DATABASE = os.getenv("AURORA_DATABASE", "meridian")
 
 
+def bedrock():
+    return boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
 
-def get_bedrock_client():
-    """Create Bedrock Runtime client for embedding generation"""
-    return boto3.client(
-        'bedrock-runtime',
-        region_name=BEDROCK_REGION
+
+def rds():
+    return boto3.client("rds-data", region_name=AURORA_REGION)
+
+
+def run_sql(sql: str, parameters=None):
+    kwargs = dict(
+        resourceArn=CLUSTER_ARN,
+        secretArn=SECRET_ARN,
+        database=DATABASE,
+        sql=sql,
     )
+    if parameters:
+        kwargs["parameters"] = parameters
+    return rds().execute_statement(**kwargs)
 
 
-def get_rds_data_client():
-    """Create RDS Data API client"""
-    return boto3.client('rds-data', region_name=AURORA_REGION)
-
-
-def generate_embedding(bedrock_client, text: str) -> list:
-    """
-    Generate embedding using Cohere Embed v4
-
-    Args:
-        bedrock_client: Boto3 Bedrock Runtime client
-        text: Text to generate embedding for
-
-    Returns:
-        List of 1024 floats representing the embedding vector
-    """
-    request_body = {
+def embed(client, text: str) -> list[float]:
+    body = {
         "texts": [text],
         "input_type": "search_document",
         "embedding_types": ["float"],
         "truncate": "RIGHT",
-        "output_dimension": EMBEDDING_DIMENSION
+        "output_dimension": EMBEDDING_DIMENSION,
     }
-
-    response = bedrock_client.invoke_model(
+    resp = client.invoke_model(
         modelId=EMBEDDING_MODEL_ID,
-        body=json.dumps(request_body),
+        body=json.dumps(body),
         contentType="application/json",
-        accept="application/json"
+        accept="application/json",
     )
-
-    response_body = json.loads(response['body'].read())
-    return response_body['embeddings']['float'][0]
+    return json.loads(resp["body"].read())["embeddings"]["float"][0]
 
 
-def create_product_text(product: dict) -> str:
-    """
-    Create searchable text from product attributes for embedding generation
-    
-    Args:
-        product: Product dictionary
-        
-    Returns:
-        Combined text string for embedding
-    """
-    parts = [
-        product['name'],
-        product['description'],
-        f"Category: {product['category']}",
-        f"Brand: {product['brand']}"
-    ]
-    
-    if product.get('available_sizes'):
-        parts.append(f"Available sizes: {', '.join(product['available_sizes'])}")
-    
-    return ". ".join(parts)
+def package_text(pkg: dict) -> str:
+    return ". ".join([
+        pkg["name"],
+        pkg["description"],
+        f"Trip type: {pkg['trip_type']}",
+        f"Destination: {pkg['destination']}, {pkg['region']}",
+        f"Operator: {pkg['operator']}",
+        f"Durations: {', '.join(pkg['durations'])}",
+    ])
 
 
-def seed_database():
-    """
-    Seed the Aurora PostgreSQL database with products and Cohere Embed v4 embeddings
-    
-    Requirements covered:
-    - 2.7: Populate 30 travel packages across 6 categories
-    - 2.8: Generate 1024-dimensional embeddings using Cohere Embed v4
-    """
-    console.print("\n[bold blue]🌱 Seeding Meridian Database[/bold blue]")
-    console.print(f"[cyan]Embedding Model: {EMBEDDING_MODEL_ID}[/cyan]")
-    console.print(f"[cyan]Embedding Dimension: {EMBEDDING_DIMENSION}[/cyan]")
-    console.print(f"[cyan]Region: {BEDROCK_REGION}[/cyan]\n")
-    
-    if not CLUSTER_ARN or not SECRET_ARN:
-        console.print("[red]❌ Missing AURORA_CLUSTER_ARN or AURORA_SECRET_ARN in .env[/red]")
-        return
-    
-    # Initialize clients
-    console.print("[yellow]Initializing Amazon Bedrock client...[/yellow]")
-    try:
-        bedrock_client = get_bedrock_client()
-        rds_client = get_rds_data_client()
-        console.print("[green]✅ Clients initialized[/green]\n")
-    except Exception as e:
-        console.print(f"[bold red]❌ Failed to initialize clients: {e}[/bold red]")
-        raise
-    
-    # Clear existing products (for clean re-seeding)
-    console.print("[yellow]Clearing existing product data...[/yellow]")
-    try:
-        rds_client.execute_statement(
-            resourceArn=CLUSTER_ARN,
-            secretArn=SECRET_ARN,
-            database=DATABASE,
-            sql="DELETE FROM order_items WHERE TRUE"
-        )
-        rds_client.execute_statement(
-            resourceArn=CLUSTER_ARN,
-            secretArn=SECRET_ARN,
-            database=DATABASE,
-            sql="DELETE FROM orders WHERE TRUE"
-        )
-        rds_client.execute_statement(
-            resourceArn=CLUSTER_ARN,
-            secretArn=SECRET_ARN,
-            database=DATABASE,
-            sql="DELETE FROM products WHERE TRUE"
-        )
-        console.print("[green]✅ Existing data cleared[/green]\n")
-    except Exception as e:
-        console.print(f"[yellow]⚠️  Could not clear data (tables may be empty): {e}[/yellow]\n")
-    
-    # Insert products with embeddings
-    console.print(f"[yellow]Inserting {len(PRODUCTS)} products with embeddings...[/yellow]\n")
-    
-    successful = 0
-    failed = 0
-    
-    for product in track(PRODUCTS, description="Processing products"):
+def clear_data():
+    for sql in [
+        "DELETE FROM booking_lines",
+        "DELETE FROM bookings",
+        "DELETE FROM trip_interactions",
+        "DELETE FROM conversation_messages",
+        "DELETE FROM conversations",
+        "DELETE FROM traveler_preferences",
+        "DELETE FROM traveler_profiles",
+        "DELETE FROM travelers",
+        "DELETE FROM trip_packages",
+    ]:
         try:
-            # Generate embedding for product
-            product_text = create_product_text(product)
-            embedding = generate_embedding(bedrock_client, product_text)
-            
-            # Format embedding as PostgreSQL array string
-            embedding_str = '[' + ','.join(str(x) for x in embedding) + ']'
-            
-            # Insert product into database using RDS Data API (UPSERT)
-            sql = """
-                INSERT INTO products (
-                    product_id, name, category, price, brand, description,
-                    image_url, available_sizes, inventory, embedding
-                ) VALUES (
-                    :product_id, :name, :category, :price, :brand, :description,
-                    :image_url, :available_sizes::jsonb, :inventory::jsonb, :embedding::vector
-                )
-                ON CONFLICT (product_id) DO UPDATE SET
-                    name = EXCLUDED.name,
-                    category = EXCLUDED.category,
-                    price = EXCLUDED.price,
-                    brand = EXCLUDED.brand,
-                    description = EXCLUDED.description,
-                    image_url = EXCLUDED.image_url,
-                    available_sizes = EXCLUDED.available_sizes,
-                    inventory = EXCLUDED.inventory,
-                    embedding = EXCLUDED.embedding
+            run_sql(sql)
+        except Exception:
+            pass
+
+
+def seed_packages(bedrock_client):
+    ok = 0
+    for pkg in track(TRIP_PACKAGES, description="Packages"):
+        vec = embed(bedrock_client, package_text(pkg))
+        vec_str = "[" + ",".join(str(x) for x in vec) + "]"
+        run_sql(
             """
-            
-            parameters = [
-                {'name': 'product_id', 'value': {'stringValue': product['product_id']}},
-                {'name': 'name', 'value': {'stringValue': product['name']}},
-                {'name': 'category', 'value': {'stringValue': product['category']}},
-                {'name': 'price', 'value': {'doubleValue': float(product['price'])}},
-                {'name': 'brand', 'value': {'stringValue': product['brand']}},
-                {'name': 'description', 'value': {'stringValue': product['description']}},
-                {'name': 'image_url', 'value': {'stringValue': product['image_url']}},
-                {'name': 'available_sizes', 'value': {'stringValue': json.dumps(product['available_sizes']) if product['available_sizes'] else 'null'}},
-                {'name': 'inventory', 'value': {'stringValue': json.dumps(product['inventory'])}},
-                {'name': 'embedding', 'value': {'stringValue': embedding_str}},
-            ]
-            
-            rds_client.execute_statement(
-                resourceArn=CLUSTER_ARN,
-                secretArn=SECRET_ARN,
-                database=DATABASE,
-                sql=sql,
-                parameters=parameters
+            INSERT INTO trip_packages (
+                package_id, name, trip_type, destination, region,
+                price_per_person, operator, description, image_url,
+                durations, availability, highlights, embedding
+            ) VALUES (
+                :package_id, :name, :trip_type, :destination, :region,
+                :price_per_person, :operator, :description, :image_url,
+                :durations::jsonb, :availability::jsonb, :highlights::jsonb, :embedding::vector
             )
-            
-            successful += 1
-            
-        except Exception as e:
-            console.print(f"[red]❌ Failed to process {product['product_id']}: {e}[/red]")
-            failed += 1
-            continue
-    
-    # Display summary
-    console.print("\n[bold green]🎉 Seeding Complete![/bold green]\n")
-    
-    summary_table = Table(title="Seed Data Summary")
-    summary_table.add_column("Metric", style="cyan")
-    summary_table.add_column("Value", style="green")
-    
-    summary_table.add_row("Total Products", str(len(PRODUCTS)))
-    summary_table.add_row("Successfully Inserted", str(successful))
-    summary_table.add_row("Failed", str(failed))
-    summary_table.add_row("Embedding Model", EMBEDDING_MODEL_ID)
-    summary_table.add_row("Embedding Dimension", str(EMBEDDING_DIMENSION))
-    
-    console.print(summary_table)
-    
-    # Display category breakdown
-    console.print("\n")
-    category_table = Table(title="Products by Category")
-    category_table.add_column("Category", style="cyan")
-    category_table.add_column("Count", style="green")
-    
-    categories = {}
-    for product in PRODUCTS:
-        cat = product['category']
-        categories[cat] = categories.get(cat, 0) + 1
-    
-    for cat, count in sorted(categories.items()):
-        category_table.add_row(cat, str(count))
-    
-    console.print(category_table)
-    
-    if failed > 0:
-        console.print(f"\n[yellow]⚠️  {failed} products failed to insert. Check logs above.[/yellow]")
-    else:
-        console.print("\n[green]✅ All products seeded successfully with embeddings![/green]")
+            ON CONFLICT (package_id) DO UPDATE SET
+                name = EXCLUDED.name,
+                trip_type = EXCLUDED.trip_type,
+                destination = EXCLUDED.destination,
+                region = EXCLUDED.region,
+                price_per_person = EXCLUDED.price_per_person,
+                operator = EXCLUDED.operator,
+                description = EXCLUDED.description,
+                image_url = EXCLUDED.image_url,
+                durations = EXCLUDED.durations,
+                availability = EXCLUDED.availability,
+                highlights = EXCLUDED.highlights,
+                embedding = EXCLUDED.embedding
+            """,
+            [
+                {"name": "package_id", "value": {"stringValue": pkg["package_id"]}},
+                {"name": "name", "value": {"stringValue": pkg["name"]}},
+                {"name": "trip_type", "value": {"stringValue": pkg["trip_type"]}},
+                {"name": "destination", "value": {"stringValue": pkg["destination"]}},
+                {"name": "region", "value": {"stringValue": pkg["region"]}},
+                {"name": "price_per_person", "value": {"doubleValue": float(pkg["price_per_person"])}},
+                {"name": "operator", "value": {"stringValue": pkg["operator"]}},
+                {"name": "description", "value": {"stringValue": pkg["description"]}},
+                {"name": "image_url", "value": {"stringValue": pkg["image_url"]}},
+                {"name": "durations", "value": {"stringValue": json.dumps(pkg["durations"])}},
+                {"name": "availability", "value": {"stringValue": json.dumps(pkg["availability"])}},
+                {"name": "highlights", "value": {"stringValue": json.dumps(pkg["highlights"])}},
+                {"name": "embedding", "value": {"stringValue": vec_str}},
+            ],
+        )
+        ok += 1
+    return ok
 
 
-def verify_embeddings():
-    """Verify that all products have embeddings with correct dimensions"""
-    console.print("\n[bold blue]🔍 Verifying Embeddings[/bold blue]\n")
-    
+def seed_travelers():
+    for t in TRAVELERS:
+        run_sql(
+            """
+            INSERT INTO travelers (traveler_id, full_name, email, home_airport)
+            VALUES (:traveler_id, :full_name, :email, :home_airport)
+            ON CONFLICT (traveler_id) DO UPDATE SET
+                full_name = EXCLUDED.full_name,
+                email = EXCLUDED.email,
+                home_airport = EXCLUDED.home_airport
+            """,
+            [
+                {"name": "traveler_id", "value": {"stringValue": t["traveler_id"]}},
+                {"name": "full_name", "value": {"stringValue": t["full_name"]}},
+                {"name": "email", "value": {"stringValue": t["email"]}},
+                {"name": "home_airport", "value": {"stringValue": t["home_airport"]}},
+            ],
+        )
+    for p in TRAVELER_PROFILES:
+        run_sql(
+            """
+            INSERT INTO traveler_profiles (
+                traveler_id, party_size, budget_min, budget_max,
+                preferred_cabin, seat_preference, dietary_notes, trip_goal, loyalty_programs
+            ) VALUES (
+                :traveler_id, :party_size, :budget_min, :budget_max,
+                :preferred_cabin, :seat_preference, :dietary_notes, :trip_goal, :loyalty_programs::jsonb
+            )
+            ON CONFLICT (traveler_id) DO UPDATE SET
+                party_size = EXCLUDED.party_size,
+                budget_min = EXCLUDED.budget_min,
+                budget_max = EXCLUDED.budget_max,
+                preferred_cabin = EXCLUDED.preferred_cabin,
+                seat_preference = EXCLUDED.seat_preference,
+                dietary_notes = EXCLUDED.dietary_notes,
+                trip_goal = EXCLUDED.trip_goal,
+                loyalty_programs = EXCLUDED.loyalty_programs,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            [
+                {"name": "traveler_id", "value": {"stringValue": p["traveler_id"]}},
+                {"name": "party_size", "value": {"longValue": p["party_size"]}},
+                {"name": "budget_min", "value": {"doubleValue": float(p["budget_min"])}},
+                {"name": "budget_max", "value": {"doubleValue": float(p["budget_max"])}},
+                {"name": "preferred_cabin", "value": {"stringValue": p["preferred_cabin"]}},
+                {"name": "seat_preference", "value": {"stringValue": p["seat_preference"]}},
+                {"name": "dietary_notes", "value": {"stringValue": p["dietary_notes"]}},
+                {"name": "trip_goal", "value": {"stringValue": p["trip_goal"]}},
+                {"name": "loyalty_programs", "value": {"stringValue": json.dumps(p["loyalty_programs"])}},
+            ],
+        )
+    for pref in TRAVELER_PREFERENCES:
+        pref_id = f"pref_{uuid.uuid4().hex[:10]}"
+        run_sql(
+            """
+            INSERT INTO traveler_preferences (
+                preference_id, traveler_id, preference_type, preference_key,
+                preference_value, confidence, signal_count, source
+            ) VALUES (
+                :preference_id, :traveler_id, :preference_type, :preference_key,
+                :preference_value, :confidence, 1, :source
+            )
+            ON CONFLICT (traveler_id, preference_type, preference_key) DO UPDATE SET
+                preference_value = EXCLUDED.preference_value,
+                confidence = EXCLUDED.confidence,
+                source = EXCLUDED.source,
+                last_seen_at = CURRENT_TIMESTAMP
+            """,
+            [
+                {"name": "preference_id", "value": {"stringValue": pref_id}},
+                {"name": "traveler_id", "value": {"stringValue": DEMO_TRAVELER_ID}},
+                {"name": "preference_type", "value": {"stringValue": pref["preference_type"]}},
+                {"name": "preference_key", "value": {"stringValue": pref["preference_key"]}},
+                {"name": "preference_value", "value": {"stringValue": pref["preference_value"]}},
+                {"name": "confidence", "value": {"doubleValue": float(pref["confidence"])}},
+                {"name": "source", "value": {"stringValue": pref["source"]}},
+            ],
+        )
+
+
+def main():
     if not CLUSTER_ARN or not SECRET_ARN:
-        console.print("[red]❌ Missing AURORA_CLUSTER_ARN or AURORA_SECRET_ARN in .env[/red]")
+        console.print("[red]Missing Aurora credentials in .env[/red]")
         return
-    
-    rds_client = get_rds_data_client()
-    
-    # Check total products
-    result = rds_client.execute_statement(
-        resourceArn=CLUSTER_ARN,
-        secretArn=SECRET_ARN,
-        database=DATABASE,
-        sql="SELECT COUNT(*) FROM products"
-    )
-    total = result['records'][0][0]['longValue']
-    
-    # Check products with embeddings
-    result = rds_client.execute_statement(
-        resourceArn=CLUSTER_ARN,
-        secretArn=SECRET_ARN,
-        database=DATABASE,
-        sql="SELECT COUNT(*) FROM products WHERE embedding IS NOT NULL"
-    )
-    with_embeddings = result['records'][0][0]['longValue']
-    
-    # Check embedding dimensions
-    result = rds_client.execute_statement(
-        resourceArn=CLUSTER_ARN,
-        secretArn=SECRET_ARN,
-        database=DATABASE,
-        sql="""
-            SELECT product_id, name, vector_dims(embedding) as dims
-            FROM products
-            WHERE embedding IS NOT NULL
-            LIMIT 5
-        """
-    )
-    sample_products = [(r[0]['stringValue'], r[1]['stringValue'], r[2]['longValue']) for r in result.get('records', [])]
-    
-    # Check category distribution
-    result = rds_client.execute_statement(
-        resourceArn=CLUSTER_ARN,
-        secretArn=SECRET_ARN,
-        database=DATABASE,
-        sql="""
-            SELECT category, COUNT(*) as count
-            FROM products
-            GROUP BY category
-            ORDER BY category
-        """
-    )
-    category_counts = [(r[0]['stringValue'], r[1]['longValue']) for r in result.get('records', [])]
-    
-    # Display verification results
-    verify_table = Table(title="Embedding Verification")
-    verify_table.add_column("Check", style="cyan")
-    verify_table.add_column("Result", style="green")
-    
-    verify_table.add_row("Total Products", str(total))
-    verify_table.add_row("Products with Embeddings", str(with_embeddings))
-    verify_table.add_row("Expected Dimension", str(EMBEDDING_DIMENSION))
-    
-    console.print(verify_table)
-    
-    # Show sample products with dimensions
-    console.print("\n")
-    sample_table = Table(title="Sample Products (First 5)")
-    sample_table.add_column("Product ID", style="cyan")
-    sample_table.add_column("Name", style="white")
-    sample_table.add_column("Embedding Dims", style="green")
-    
-    for product_id, name, dims in sample_products:
-        status = "✅" if dims == EMBEDDING_DIMENSION else "❌"
-        sample_table.add_row(product_id, name[:40], f"{dims} {status}")
-    
-    console.print(sample_table)
-    
-    # Show category distribution
-    console.print("\n")
-    cat_table = Table(title="Category Distribution")
-    cat_table.add_column("Category", style="cyan")
-    cat_table.add_column("Count", style="green")
-    
-    for category, count in category_counts:
-        cat_table.add_row(category, str(count))
-    
-    console.print(cat_table)
-    
-    # Final status
-    if with_embeddings == total and total == 30:
-        console.print("\n[bold green]✅ All 30 products have embeddings![/bold green]")
-    else:
-        console.print(f"\n[bold yellow]⚠️  Expected 30 products, found {total} ({with_embeddings} with embeddings)[/bold yellow]")
+    console.print("[bold]Seeding Meridian travel data[/bold]")
+    clear_data()
+    bc = bedrock()
+    n = seed_packages(bc)
+    seed_travelers()
+    table = Table(title="Seed summary")
+    table.add_column("Entity")
+    table.add_column("Count")
+    table.add_row("trip_packages", str(n))
+    table.add_row("travelers", str(len(TRAVELERS)))
+    table.add_row("traveler_profiles", str(len(TRAVELER_PROFILES)))
+    table.add_row("traveler_preferences", str(len(TRAVELER_PREFERENCES)))
+    console.print(table)
 
 
 if __name__ == "__main__":
-    import sys
-    
-    if len(sys.argv) > 1 and sys.argv[1] == "--verify":
-        verify_embeddings()
-    else:
-        seed_database()
-        console.print("\n[cyan]Run with --verify to check embedding status[/cyan]")
+    main()

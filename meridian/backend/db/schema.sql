@@ -1,183 +1,207 @@
--- Meridian 2026 Refresh - Products Table Schema
--- Requirements: 1.1, 1.3, 5.1, 5.2, 5.3
---
--- This file documents the refreshed products table schema for the consumer
--- electronics/smart home domain. The schema uses:
--- - JSONB fields for flexible product specifications and compatibility data
--- - pgvector for 1024-dimensional Cohere Embed v4 embeddings
--- - Generated tsvector column for full-text search optimization
--- - HNSW index for approximate nearest neighbor vector search
--- - GIN indexes for JSONB pre-filtering during vector search
--- Enable pgvector extension
+-- Meridian — Travel concierge schema for Aurora PostgreSQL 17 + pgvector
+-- Supports all demo phases:
+--   1 Direct SQL filters on trip_packages
+--   2 MCP tool access to the same tables
+--   3 Hybrid semantic + lexical search (embeddings + tsvector)
+--   4 Traveler profile, preferences, and conversation memory
+
 CREATE EXTENSION IF NOT EXISTS vector;
--- Drop existing products table for clean reinstall
-DROP TABLE IF EXISTS products CASCADE;
--- Products table with Cohere Embed v4 embeddings (1024 dimensions)
--- Requirement 1.3: Fields include product_id, name, category, price, brand, description,
---   image_url, available_variants (JSONB), inventory (JSONB), specifications (JSONB),
---   compatibility (JSONB), embedding vector(1024), search_vector (generated tsvector)
-CREATE TABLE products (
-    product_id VARCHAR(50) PRIMARY KEY,
+
+-- =============================================================================
+-- Trip catalog (Phases 1–4 search target)
+-- =============================================================================
+DROP TABLE IF EXISTS booking_lines CASCADE;
+DROP TABLE IF EXISTS bookings CASCADE;
+DROP TABLE IF EXISTS trip_interactions CASCADE;
+DROP TABLE IF EXISTS conversation_messages CASCADE;
+DROP TABLE IF EXISTS traveler_preferences CASCADE;
+DROP TABLE IF EXISTS conversations CASCADE;
+DROP TABLE IF EXISTS traveler_profiles CASCADE;
+DROP TABLE IF EXISTS travelers CASCADE;
+DROP TABLE IF EXISTS agent_traces CASCADE;
+DROP TABLE IF EXISTS trip_packages CASCADE;
+
+CREATE TABLE trip_packages (
+    package_id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    category VARCHAR(100) NOT NULL,
-    -- Smart Home, Wearable Tech, Audio, Productivity, Gaming, Wellness
-    price DECIMAL(10, 2) NOT NULL,
-    brand VARCHAR(100),
+    trip_type VARCHAR(100) NOT NULL,
+    destination VARCHAR(150) NOT NULL,
+    region VARCHAR(100),
+    price_per_person DECIMAL(10, 2) NOT NULL,
+    operator VARCHAR(100),
     description TEXT,
     image_url VARCHAR(500),
-    available_sizes JSONB,
-    available_variants JSONB,
-    -- Replaces available_sizes: {"colors": [...], "sizes": [...], "configs": [...]}
-    inventory JSONB NOT NULL,
-    -- {"variant_key": quantity, ...}
-    specifications JSONB,
-    -- Technical specs: {"connectivity": "WiFi 6E", "battery": "12h", ...}
-    compatibility JSONB,
-    -- Ecosystem: {"works_with": ["Matter", "HomeKit"], "requires": [...]}
+    durations JSONB NOT NULL DEFAULT '[]',
+  -- e.g. ["5 nights", "7 nights"]
+    availability JSONB NOT NULL DEFAULT '{}',
+  -- e.g. {"5 nights": 8, "7 nights": 5}
+    highlights JSONB,
+  -- e.g. ["guided tours", "airport transfer"]
     embedding vector(1024),
-    -- Cohere Embed v4 (text + image in same space)
     search_vector tsvector GENERATED ALWAYS AS (
         to_tsvector(
             'english',
-            name || ' ' || COALESCE(description, '') || ' ' || COALESCE(brand, '')
+            name || ' ' || COALESCE(description, '') || ' ' ||
+            COALESCE(operator, '') || ' ' || COALESCE(destination, '') || ' ' ||
+            COALESCE(trip_type, '')
         )
     ) STORED,
-    -- Auto-generated for lexical search (Requirement 5.3)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
--- HNSW index for fast vector similarity search
--- Requirement 5.1: pgvector 0.8+ HNSW with improved recall, m=16, ef_construction=100
-CREATE INDEX idx_products_embedding_hnsw ON products USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 100);
--- GIN index for full-text search on generated tsvector column
-CREATE INDEX idx_products_search_vector ON products USING gin(search_vector);
--- GIN indexes for JSONB pre-filtering during vector search
--- Requirement 5.2: JSONB capabilities for querying specifications and compatibility
-CREATE INDEX idx_products_specs ON products USING gin(specifications jsonb_path_ops);
-CREATE INDEX idx_products_compat ON products USING gin(compatibility jsonb_path_ops);
--- B-tree indexes for category, brand, and price filtering
-CREATE INDEX idx_products_category ON products(category);
-CREATE INDEX idx_products_brand ON products(brand);
-CREATE INDEX idx_products_price ON products(price);
--- Semantic product search function (legacy, kept for Phase 1/2 compatibility)
--- Returns products ranked by cosine similarity to the query embedding
-CREATE OR REPLACE FUNCTION semantic_product_search(
-        query_embedding vector(1024),
-        result_limit integer DEFAULT 5
-    ) RETURNS TABLE (
-        product_id varchar,
-        name varchar,
-        brand varchar,
-        price decimal,
-        description text,
-        image_url varchar,
-        category varchar,
-        similarity float
-    ) AS $$ BEGIN RETURN QUERY
-SELECT p.product_id,
-    p.name,
-    p.brand,
-    p.price,
-    p.description,
-    p.image_url,
-    p.category,
-    1 - (p.embedding <=> query_embedding) as similarity
-FROM products p
-WHERE p.embedding IS NOT NULL
-ORDER BY p.embedding <=> query_embedding
-LIMIT result_limit;
+
+CREATE INDEX IF NOT EXISTS idx_packages_embedding_hnsw ON trip_packages
+    USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 100);
+CREATE INDEX IF NOT EXISTS idx_packages_search_vector ON trip_packages USING gin(search_vector);
+CREATE INDEX IF NOT EXISTS idx_packages_trip_type ON trip_packages(trip_type);
+CREATE INDEX IF NOT EXISTS idx_packages_destination ON trip_packages(destination);
+CREATE INDEX IF NOT EXISTS idx_packages_operator ON trip_packages(operator);
+CREATE INDEX IF NOT EXISTS idx_packages_price ON trip_packages(price_per_person);
+CREATE INDEX IF NOT EXISTS idx_packages_highlights ON trip_packages USING gin(highlights jsonb_path_ops);
+
+CREATE OR REPLACE FUNCTION semantic_trip_search(
+    query_embedding vector(1024),
+    result_limit integer DEFAULT 5
+) RETURNS TABLE (
+    package_id varchar,
+    name varchar,
+    operator varchar,
+    price_per_person decimal,
+    description text,
+    image_url varchar,
+    trip_type varchar,
+    destination varchar,
+    region varchar,
+    durations jsonb,
+    similarity float
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        p.package_id,
+        p.name,
+        p.operator,
+        p.price_per_person,
+        p.description,
+        p.image_url,
+        p.trip_type,
+        p.destination,
+        p.region,
+        p.durations,
+        1 - (p.embedding <=> query_embedding) AS similarity
+    FROM trip_packages p
+    WHERE p.embedding IS NOT NULL
+    ORDER BY p.embedding <=> query_embedding
+    LIMIT result_limit;
 END;
 $$ LANGUAGE plpgsql;
--- Table and column documentation
-COMMENT ON TABLE products IS 'Product catalog with Cohere Embed v4 vector embeddings, JSONB specs/compatibility, and generated tsvector for hybrid search';
-COMMENT ON COLUMN products.embedding IS 'Vector embedding for semantic/visual product search (1024-dim Cohere Embed v4)';
-COMMENT ON COLUMN products.search_vector IS 'Auto-generated tsvector from name, description, and brand for full-text search';
-COMMENT ON COLUMN products.specifications IS 'Technical specifications as JSONB (connectivity, battery, audio, etc.)';
-COMMENT ON COLUMN products.compatibility IS 'Ecosystem compatibility as JSONB (works_with, requires, pairs_with)';
-COMMENT ON COLUMN products.available_variants IS 'Product variants as JSONB (colors, sizes, configs) - replaces available_sizes';
--- ============================================================================
--- Memory Schema (Phase 4 - Agentic Memory and Personalization)
--- Requirements: 3.1, 5.1, 5.2
---
--- These tables support Phase 4's Memory Agent which stores conversation history,
--- customer preferences, and interaction embeddings for semantic memory retrieval.
--- Aurora PostgreSQL serves as the persistent memory store, demonstrating that a
--- single database handles transactional, vector, and memory workloads.
--- ============================================================================
--- Conversation history - stores high-level conversation metadata
+
+-- =============================================================================
+-- Travelers & profiles (Phase 4 long-term memory)
+-- =============================================================================
+CREATE TABLE travelers (
+    traveler_id VARCHAR(50) PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    home_airport VARCHAR(10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE traveler_profiles (
+    traveler_id VARCHAR(50) PRIMARY KEY REFERENCES travelers(traveler_id),
+    party_size INTEGER DEFAULT 1,
+    budget_min DECIMAL(10, 2),
+    budget_max DECIMAL(10, 2),
+    preferred_cabin VARCHAR(50),
+    seat_preference VARCHAR(100),
+    dietary_notes TEXT,
+    trip_goal TEXT,
+    loyalty_programs JSONB,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE traveler_preferences (
+    preference_id VARCHAR(50) PRIMARY KEY,
+    traveler_id VARCHAR(50) NOT NULL REFERENCES travelers(traveler_id),
+    preference_type VARCHAR(50) NOT NULL,
+  -- destination, activity, dining, logistics, budget
+    preference_key VARCHAR(100) NOT NULL,
+    preference_value TEXT NOT NULL,
+    confidence FLOAT DEFAULT 0.5,
+    signal_count INTEGER DEFAULT 1,
+    source VARCHAR(80),
+    first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(traveler_id, preference_type, preference_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_traveler_prefs ON traveler_preferences(traveler_id, confidence DESC);
+
+-- =============================================================================
+-- Bookings (demo order flow)
+-- =============================================================================
+CREATE TABLE bookings (
+    booking_id VARCHAR(50) PRIMARY KEY,
+    traveler_id VARCHAR(50) REFERENCES travelers(traveler_id),
+    status VARCHAR(50) DEFAULT 'pending',
+    total_amount DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    confirmed_at TIMESTAMP
+);
+
+CREATE TABLE booking_lines (
+    line_id SERIAL PRIMARY KEY,
+    booking_id VARCHAR(50) REFERENCES bookings(booking_id),
+    package_id VARCHAR(50) REFERENCES trip_packages(package_id),
+    duration VARCHAR(50),
+    travelers_count INTEGER DEFAULT 1,
+    unit_price DECIMAL(10, 2) NOT NULL
+);
+
+-- =============================================================================
+-- Conversation memory (Phase 4 short-term + semantic recall)
+-- =============================================================================
 CREATE TABLE conversations (
     conversation_id VARCHAR(50) PRIMARY KEY,
-    customer_id VARCHAR(50) NOT NULL,
+    traveler_id VARCHAR(50) NOT NULL REFERENCES travelers(traveler_id),
     started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     message_count INTEGER DEFAULT 0,
-    summary TEXT -- LLM-generated conversation summary
+    summary TEXT
 );
--- Individual messages with embeddings for semantic retrieval of past interactions
+
 CREATE TABLE conversation_messages (
     message_id VARCHAR(50) PRIMARY KEY,
     conversation_id VARCHAR(50) REFERENCES conversations(conversation_id),
     role VARCHAR(20) NOT NULL,
-    -- 'user' or 'assistant'
     content TEXT NOT NULL,
     embedding vector(1024),
-    -- For semantic retrieval of past interactions
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
--- Customer preferences extracted by Memory Agent
--- Preference signals: brand_affinity, price_sensitivity, category_interest, feature_priority
-CREATE TABLE customer_preferences (
-    preference_id VARCHAR(50) PRIMARY KEY,
-    customer_id VARCHAR(50) NOT NULL,
-    preference_type VARCHAR(50) NOT NULL,
-    -- 'brand_affinity', 'price_sensitivity', 'category_interest', 'feature_priority'
-    preference_key VARCHAR(100) NOT NULL,
-    -- e.g., "Sonos", "under_200", "smart_home", "noise_cancellation"
-    confidence FLOAT DEFAULT 0.5,
-    -- 0.0 to 1.0, increases with repeated signals
-    signal_count INTEGER DEFAULT 1,
-    first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(customer_id, preference_type, preference_key)
-);
--- Interaction embeddings for semantic memory retrieval
--- Stores full interaction context with vector embeddings for finding similar past conversations
-CREATE TABLE interaction_embeddings (
+
+CREATE TABLE trip_interactions (
     interaction_id VARCHAR(50) PRIMARY KEY,
-    customer_id VARCHAR(50) NOT NULL,
+    traveler_id VARCHAR(50) NOT NULL REFERENCES travelers(traveler_id),
     conversation_id VARCHAR(50) REFERENCES conversations(conversation_id),
     query_text TEXT NOT NULL,
     response_summary TEXT,
-    products_shown JSONB,
-    -- [{product_id, name, was_selected}]
+    packages_shown JSONB,
+  -- [{package_id, name, was_selected}]
     embedding vector(1024),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
--- B-tree indexes for memory retrieval by customer and time
-CREATE INDEX idx_conversations_customer ON conversations(customer_id, last_message_at DESC);
-CREATE INDEX idx_messages_conversation ON conversation_messages(conversation_id, created_at);
-CREATE INDEX idx_preferences_customer ON customer_preferences(customer_id, preference_type);
-CREATE INDEX idx_preferences_confidence ON customer_preferences(customer_id, confidence DESC);
-CREATE INDEX idx_interactions_customer ON interaction_embeddings(customer_id, created_at DESC);
--- HNSW indexes for vector similarity search on memory embeddings
--- Requirement 5.1: pgvector HNSW with m=16, ef_construction=64 (smaller than products due to fewer rows)
-CREATE INDEX idx_messages_embedding ON conversation_messages USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
-CREATE INDEX idx_interactions_embedding ON interaction_embeddings USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
--- Memory table documentation
-COMMENT ON TABLE conversations IS 'Conversation history metadata for Phase 4 agentic memory';
-COMMENT ON TABLE conversation_messages IS 'Individual messages with vector embeddings for semantic retrieval';
-COMMENT ON TABLE customer_preferences IS 'Customer preference signals extracted by Memory Agent (brand affinity, price sensitivity, etc.)';
-COMMENT ON TABLE interaction_embeddings IS 'Full interaction embeddings for semantic memory retrieval of past conversations';
--- ============================================================================
--- Observability Tables (Agent Tracing)
--- Requirements: 8.1, 8.2, 8.4
---
--- These tables support agent observability: token usage tracking, latency
--- waterfall visualization, and cost estimation per interaction. The
--- parent_trace_id self-reference enables nested trace hierarchies for
--- multi-agent delegation tracking (e.g., Supervisor → Search Agent).
--- ============================================================================
--- Agent execution traces for observability
+
+CREATE INDEX IF NOT EXISTS idx_conversations_traveler ON conversations(traveler_id, last_message_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON conversation_messages(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_interactions_traveler ON trip_interactions(traveler_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_embedding ON conversation_messages
+    USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
+CREATE INDEX IF NOT EXISTS idx_interactions_embedding ON trip_interactions
+    USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
+
+-- =============================================================================
+-- Agent observability
+-- =============================================================================
 CREATE TABLE agent_traces (
     trace_id VARCHAR(50) PRIMARY KEY,
     parent_trace_id VARCHAR(50) REFERENCES agent_traces(trace_id),
@@ -191,104 +215,15 @@ CREATE TABLE agent_traces (
     total_latency_ms INTEGER,
     estimated_cost_usd DECIMAL(10, 6),
     status VARCHAR(20) DEFAULT 'success',
-    -- 'success', 'error', 'timeout'
     error_message TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
--- Index for querying traces by conversation (observability dashboard)
-CREATE INDEX idx_traces_conversation ON agent_traces(conversation_id, created_at);
--- Index for querying traces by phase (phase comparison and filtering)
-CREATE INDEX idx_traces_phase ON agent_traces(phase, created_at DESC);
--- Observability table documentation
-COMMENT ON TABLE agent_traces IS 'Agent execution traces for observability: token usage, latency, and cost tracking';
-COMMENT ON COLUMN agent_traces.parent_trace_id IS 'References parent trace for nested multi-agent delegation tracking';
-COMMENT ON COLUMN agent_traces.estimated_cost_usd IS 'Estimated cost based on Bedrock pricing for Claude + Cohere Embed v4';
--- =============================================================================
--- Memory Schema (Phase 4 - Agentic Memory and Personalization)
--- Requirements: 3.1, 5.1, 5.2
---
--- These tables support Phase 4's Memory Agent which stores conversation history,
--- customer preferences, and interaction embeddings for semantic memory retrieval.
--- Aurora PostgreSQL serves as the persistent memory store, demonstrating that a
--- single database handles transactional, vector, and memory workloads.
--- =============================================================================
--- Drop existing memory tables for clean reinstall
-DROP TABLE IF EXISTS interaction_embeddings CASCADE;
-DROP TABLE IF EXISTS conversation_messages CASCADE;
-DROP TABLE IF EXISTS customer_preferences CASCADE;
-DROP TABLE IF EXISTS conversations CASCADE;
--- Conversations table - stores high-level conversation metadata
--- Each conversation tracks a session between a customer and the agent system
-CREATE TABLE conversations (
-    conversation_id VARCHAR(50) PRIMARY KEY,
-    customer_id VARCHAR(50) NOT NULL,
-    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    message_count INTEGER DEFAULT 0,
-    summary TEXT -- LLM-generated conversation summary
-);
--- Conversation messages table - individual messages with embeddings for semantic retrieval
--- The embedding column enables finding semantically similar past messages
-CREATE TABLE conversation_messages (
-    message_id VARCHAR(50) PRIMARY KEY,
-    conversation_id VARCHAR(50) REFERENCES conversations(conversation_id),
-    role VARCHAR(20) NOT NULL,
-    -- 'user' or 'assistant'
-    content TEXT NOT NULL,
-    embedding vector(1024),
-    -- Cohere Embed v4 for semantic retrieval of past interactions
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
--- Customer preferences table - preference signals extracted by Memory Agent
--- Tracks brand affinity, price sensitivity, category interests, feature priorities
--- The UNIQUE constraint ensures one entry per (customer, type, key) combination
-CREATE TABLE customer_preferences (
-    preference_id VARCHAR(50) PRIMARY KEY,
-    customer_id VARCHAR(50) NOT NULL,
-    preference_type VARCHAR(50) NOT NULL,
-    -- 'brand_affinity', 'price_sensitivity', 'category_interest', 'feature_priority'
-    preference_key VARCHAR(100) NOT NULL,
-    -- e.g., "Sonos", "under_200", "smart_home", "noise_cancellation"
-    confidence FLOAT DEFAULT 0.5,
-    -- 0.0 to 1.0, increases with repeated signals
-    signal_count INTEGER DEFAULT 1,
-    first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(customer_id, preference_type, preference_key)
-);
--- Interaction embeddings table - embeddings of full interactions for semantic memory
--- Stores the complete interaction context (query + response + products shown) with
--- a vector embedding for finding semantically similar past conversations
-CREATE TABLE interaction_embeddings (
-    interaction_id VARCHAR(50) PRIMARY KEY,
-    customer_id VARCHAR(50) NOT NULL,
-    conversation_id VARCHAR(50) REFERENCES conversations(conversation_id),
-    query_text TEXT NOT NULL,
-    response_summary TEXT,
-    products_shown JSONB,
-    -- [{product_id, name, was_selected}]
-    embedding vector(1024),
-    -- Cohere Embed v4 for semantic memory retrieval
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
--- =============================================================================
--- Memory Schema Indexes
--- =============================================================================
--- B-tree indexes for efficient memory retrieval by customer and time
-CREATE INDEX idx_conversations_customer ON conversations(customer_id, last_message_at DESC);
-CREATE INDEX idx_messages_conversation ON conversation_messages(conversation_id, created_at);
-CREATE INDEX idx_preferences_customer ON customer_preferences(customer_id, preference_type);
-CREATE INDEX idx_preferences_confidence ON customer_preferences(customer_id, confidence DESC);
-CREATE INDEX idx_interactions_customer ON interaction_embeddings(customer_id, created_at DESC);
--- HNSW indexes for vector similarity search on memory embeddings
--- Requirement 5.1: pgvector HNSW indexes for semantic retrieval
--- Using m=16, ef_construction=64 (slightly lower than products since memory tables are smaller)
-CREATE INDEX idx_messages_embedding ON conversation_messages USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
-CREATE INDEX idx_interactions_embedding ON interaction_embeddings USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
--- =============================================================================
--- Memory Schema Documentation
--- =============================================================================
-COMMENT ON TABLE conversations IS 'Conversation history metadata for Phase 4 agentic memory';
-COMMENT ON TABLE conversation_messages IS 'Individual messages with vector embeddings for semantic retrieval';
-COMMENT ON TABLE customer_preferences IS 'Customer preference signals extracted by Memory Agent (brand affinity, price sensitivity, etc.)';
-COMMENT ON TABLE interaction_embeddings IS 'Full interaction embeddings for semantic memory retrieval of past conversations';
+
+CREATE INDEX IF NOT EXISTS idx_traces_conversation ON agent_traces(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_traces_phase ON agent_traces(phase, created_at DESC);
+
+COMMENT ON TABLE trip_packages IS 'Curated trip catalog with hybrid search vectors';
+COMMENT ON TABLE travelers IS 'Registered travelers for bookings and personalization';
+COMMENT ON TABLE traveler_profiles IS 'Structured travel context used in Phase 4';
+COMMENT ON TABLE traveler_preferences IS 'Learned preference signals for memory recall';
+COMMENT ON TABLE trip_interactions IS 'Semantic memory of past concierge turns';

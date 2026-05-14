@@ -348,16 +348,25 @@ export function enrichTraceActivities(
   msgs: Message[],
   options?: { productCount?: number }
 ): ActivityEntry[] {
-  const preamble =
-    phase === 4
-      ? buildPhase4Preamble(query, traceId, msgs)
-      : phase === 2
-        ? buildPhase2Preamble(query, traceId, msgs)
-        : phase === 1
-          ? buildPhase1Preamble(query, traceId)
-          : [];
+  const hasBackendMemory = activities.some(
+    (a) => a.telemetry?.memory || a.activity_type === 'tool_call'
+  );
 
-  const enriched = activities.map((a) => enrichActivity(a, phase, query));
+  const preamble =
+    phase === 4 && hasBackendMemory
+      ? []
+      : phase === 4
+        ? buildPhase4Preamble(query, traceId, msgs)
+        : phase === 2
+          ? buildPhase2Preamble(query, traceId, msgs)
+          : phase === 1
+            ? buildPhase1Preamble(query, traceId)
+            : [];
+
+  const enriched = activities.map((a) => {
+    if (a.telemetry) return a;
+    return enrichActivity(a, phase, query);
+  });
 
   const hasResult = enriched.some((a) => a.activity_type === 'result');
   const tail =

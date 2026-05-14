@@ -1,7 +1,7 @@
 /**
  * API client for Meridian backend
  */
-import type { Product, ProductListResponse, ChatRequest, ChatResponse, OrderRequest, OrderResponse } from '../types';
+import type { Product, ProductListResponse, ChatRequest, ChatResponse, OrderRequest, OrderResponse, MemoryProfileResponse } from '../types';
 
 const API_BASE = 'http://localhost:8000/api';
 
@@ -50,6 +50,17 @@ export async function sendChatMessage(request: ChatRequest): Promise<ChatRespons
     throw new Error(`Chat request failed: ${response.statusText}`);
   }
   
+  return response.json();
+}
+
+/**
+ * Fetch long-term memory profile from Aurora (Phase 4)
+ */
+export async function fetchMemoryProfile(travelerId = 'trv_meridian_demo'): Promise<MemoryProfileResponse> {
+  const response = await fetch(`${API_BASE}/memory/${travelerId}`);
+  if (!response.ok) {
+    throw new Error(`Memory profile request failed: ${response.statusText}`);
+  }
   return response.json();
 }
 

@@ -10,7 +10,7 @@ Handles chat interactions with the AI shopping assistant across all three phases
 import re
 import uuid
 from datetime import datetime
-from typing import Literal, Optional, List
+from typing import Literal, Optional, List, Any
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 
@@ -22,8 +22,9 @@ from backend.search_utils import (
     parse_search_query,
     execute_keyword_search,
     build_search_sql,
-    results_to_products,
+    results_to_packages,
 )
+from backend.catalog_compat import row_to_api_product, rows_to_api_products
 
 # MCP client import with graceful fallback
 try:
@@ -43,6 +44,16 @@ class ChatRequest(BaseModel):
     conversation_id: Optional[str] = None
 
 
+class TraceTelemetry(BaseModel):
+    """Optional rich telemetry for trace UI."""
+    category: Optional[str] = None
+    component: Optional[str] = None
+    status: Optional[str] = None
+    fields: Optional[List[dict]] = None
+    memory: Optional[dict] = None
+    tokens: Optional[dict] = None
+
+
 class ActivityEntry(BaseModel):
     """Model for agent activity entries."""
     id: str
@@ -54,10 +65,11 @@ class ActivityEntry(BaseModel):
     execution_time_ms: Optional[int] = None
     agent_name: Optional[str] = None
     agent_file: Optional[str] = None
+    telemetry: Optional[TraceTelemetry] = None
 
 
 class Product(BaseModel):
-    """Model for product data."""
+    """Trip package in API shape (legacy field names for frontend)."""
     product_id: str
     name: str
     brand: str
@@ -90,6 +102,14 @@ class Order(BaseModel):
     estimated_delivery: Optional[str] = None
 
 
+class MemoryFact(BaseModel):
+    """Long-term preference fact from Aurora."""
+    key: str
+    value: str
+    source: Optional[str] = None
+    confidence: Optional[float] = None
+
+
 class ChatResponse(BaseModel):
     """Response model for chat endpoint."""
     message: str
@@ -97,6 +117,8 @@ class ChatResponse(BaseModel):
     order: Optional[Order] = None
     activities: List[ActivityEntry]
     follow_ups: Optional[List[str]] = None
+    conversation_id: Optional[str] = None
+    memory_facts: Optional[List[MemoryFact]] = None
 
 
 class ImageSearchResponse(BaseModel):
@@ -133,7 +155,7 @@ def create_activity(
 def generate_follow_ups(query: str, products: List[Product], phase: int) -> List[str]:
     """Generate contextual follow-up suggestions based on the query and results.
 
-    Phase 1 & 2: Keyword-based search (category, brand, price filters)
+    Phase 1 & 2: Keyword-based search (trip_type, operator, price filters)
     Phase 3: Hybrid semantic + lexical search (understands natural language)
 
     Suggestions are designed to:
@@ -265,7 +287,7 @@ def generate_follow_ups(query: str, products: List[Product], phase: int) -> List
 async def phase1_search(query: str, limit: int = 5) -> tuple[List[Product], List[ActivityEntry]]:
     """
     Phase 1: Direct database search using RDS Data API.
-    Simple category matching and LIKE queries.
+    Simple trip_type matching and LIKE queries.
     """
     activities = []
     start_time = datetime.utcnow()
@@ -307,8 +329,8 @@ async def phase1_search(query: str, limit: int = 5) -> tuple[List[Product], List
     ))
 
     # Convert results to Product models
-    product_dicts = results_to_products(results)
-    products = [Product(**p) for p in product_dicts]
+    product_dicts = results_to_packages(results)
+    products = [Product(**row_to_api_product(p)) for p in product_dicts]
 
     return products, activities
 
@@ -347,30 +369,58 @@ async def phase2_search(query: str, limit: int = 5) -> tuple[List[Product], List
     # Parse search query using shared utilities
     params = parse_search_query(query)
 
-    # Build SQL for MCP
     sql, display_sql, search_title = build_search_sql(params, limit)
+    results: List[dict] = []
+    used_mcp = False
 
-    # MCP connection activity
-    activities.append(create_activity(
-        activity_type="mcp",
-        title="MCP: connect_to_database",
-        details="Connecting to Aurora PostgreSQL via postgres-mcp-server",
-        agent_name="Phase2Agent",
-        agent_file="agents/phase2/agent.py"
-    ))
+    if MCP_AVAILABLE:
+        activities.append(create_activity(
+            activity_type="mcp",
+            title="MCP: connect_to_database",
+            details="Connecting to Aurora PostgreSQL via postgres-mcp-server",
+            agent_name="Phase2Agent",
+            agent_file="agents/phase2/agent.py"
+        ))
+        try:
+            async with mcp_session() as client:
+                results = await client.run_query(sql)
+            used_mcp = True
+            activities.append(create_activity(
+                activity_type="mcp",
+                title="MCP: run_query",
+                details=f"Executing via MCP: {search_title}",
+                sql_query=display_sql,
+                agent_name="Phase2Agent",
+                agent_file="agents/phase2/agent.py"
+            ))
+        except Exception as e:
+            log_error("phase2_mcp_fallback", error=str(e))
+            activities.append(create_activity(
+                activity_type="error",
+                title="MCP failed — falling back to RDS Data API",
+                details=str(e),
+                agent_name="Phase2Agent",
+                agent_file="agents/phase2/agent.py"
+            ))
+    else:
+        activities.append(create_activity(
+            activity_type="database",
+            title="MCP SDK unavailable — using RDS Data API",
+            details="Install MCP dependencies to enable postgres-mcp-server",
+            agent_name="Phase2Agent",
+            agent_file="agents/phase2/agent.py"
+        ))
 
-    # Execute query through MCP abstraction
-    db = get_rds_data_client()
-    results, display_sql, search_title = await execute_keyword_search(db, params, limit)
-
-    activities.append(create_activity(
-        activity_type="mcp",
-        title="MCP: run_query",
-        details=f"Executing via MCP: {search_title}",
-        sql_query=display_sql,
-        agent_name="Phase2Agent",
-        agent_file="agents/phase2/agent.py"
-    ))
+    if not used_mcp:
+        db = get_rds_data_client()
+        results, display_sql, search_title = await execute_keyword_search(db, params, limit)
+        activities.append(create_activity(
+            activity_type="database",
+            title=f"RDS Data API: {search_title}",
+            sql_query=display_sql,
+            agent_name="Phase2Agent",
+            agent_file="agents/phase2/agent.py"
+        ))
 
     execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
@@ -386,8 +436,8 @@ async def phase2_search(query: str, limit: int = 5) -> tuple[List[Product], List
         agent_file="agents/phase2/agent.py"
     ))
 
-    product_dicts = results_to_products(results)
-    products = [Product(**p) for p in product_dicts]
+    product_dicts = results_to_packages(results)
+    products = [Product(**row_to_api_product(p)) for p in product_dicts]
 
     return products, activities
 
@@ -464,28 +514,28 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
         if price_filter:
             sql = """
                 WITH semantic_search AS (
-                    SELECT product_id, name, brand, price, description, 
-                           image_url, category, available_sizes,
+                    SELECT package_id, name, operator, price_per_person, description, 
+                           image_url, trip_type, durations,
                            1 - (embedding <=> %s::vector) as semantic_score
-                    FROM products
-                    WHERE price <= %s
+                    FROM trip_packages
+                    WHERE price_per_person <= %s
                 ),
                 lexical_search AS (
-                    SELECT product_id,
+                    SELECT package_id,
                            ts_rank(
                                to_tsvector('english', name || ' ' || COALESCE(description, '') || ' ' || COALESCE(brand, '')),
                                plainto_tsquery('english', %s)
                            ) as lexical_score
-                    FROM products
-                    WHERE price <= %s
+                    FROM trip_packages
+                    WHERE price_per_person <= %s
                 )
-                SELECT s.product_id, s.name, s.brand, s.price, s.description,
-                       s.image_url, s.category, s.available_sizes,
+                SELECT s.package_id, s.name, s.operator, s.price_per_person, s.description,
+                       s.image_url, s.trip_type, s.durations,
                        s.semantic_score,
                        COALESCE(l.lexical_score, 0) as lexical_score,
                        (0.7 * s.semantic_score + 0.3 * COALESCE(l.lexical_score, 0)) as combined_score
                 FROM semantic_search s
-                LEFT JOIN lexical_search l ON s.product_id = l.product_id
+                LEFT JOIN lexical_search l ON s.package_id = l.package_id
                 ORDER BY combined_score DESC
                 LIMIT %s
             """
@@ -493,26 +543,26 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
         else:
             sql = """
                 WITH semantic_search AS (
-                    SELECT product_id, name, brand, price, description, 
-                           image_url, category, available_sizes,
+                    SELECT package_id, name, operator, price_per_person, description, 
+                           image_url, trip_type, durations,
                            1 - (embedding <=> %s::vector) as semantic_score
-                    FROM products
+                    FROM trip_packages
                 ),
                 lexical_search AS (
-                    SELECT product_id,
+                    SELECT package_id,
                            ts_rank(
                                to_tsvector('english', name || ' ' || COALESCE(description, '') || ' ' || COALESCE(brand, '')),
                                plainto_tsquery('english', %s)
                            ) as lexical_score
-                    FROM products
+                    FROM trip_packages
                 )
-                SELECT s.product_id, s.name, s.brand, s.price, s.description,
-                       s.image_url, s.category, s.available_sizes,
+                SELECT s.package_id, s.name, s.operator, s.price_per_person, s.description,
+                       s.image_url, s.trip_type, s.durations,
                        s.semantic_score,
                        COALESCE(l.lexical_score, 0) as lexical_score,
                        (0.7 * s.semantic_score + 0.3 * COALESCE(l.lexical_score, 0)) as combined_score
                 FROM semantic_search s
-                LEFT JOIN lexical_search l ON s.product_id = l.product_id
+                LEFT JOIN lexical_search l ON s.package_id = l.package_id
                 ORDER BY combined_score DESC
                 LIMIT %s
             """
@@ -522,9 +572,9 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
 
         # Build display SQL based on whether price filter was used
         if price_filter:
-            display_sql = f"WITH semantic_search AS (SELECT ..., 1 - (embedding <=> query_vector) as score FROM products WHERE price <= {price_filter}), lexical_search AS (SELECT ..., ts_rank(...) FROM products) SELECT ... ORDER BY (0.7 * semantic + 0.3 * lexical) DESC LIMIT {limit}"
+            display_sql = f"WITH semantic_search AS (SELECT ..., 1 - (embedding <=> query_vector) as score FROM trip_packages WHERE price_per_person <= {price_filter}), lexical_search AS (SELECT ..., ts_rank(...) FROM trip_packages) SELECT ... ORDER BY (0.7 * semantic + 0.3 * lexical) DESC LIMIT {limit}"
         else:
-            display_sql = f"WITH semantic_search AS (SELECT ..., 1 - (embedding <=> query_vector) as score FROM products), lexical_search AS (SELECT ..., ts_rank(...) FROM products) SELECT ... ORDER BY (0.7 * semantic + 0.3 * lexical) DESC LIMIT {limit}"
+            display_sql = f"WITH semantic_search AS (SELECT ..., 1 - (embedding <=> query_vector) as score FROM trip_packages), lexical_search AS (SELECT ..., ts_rank(...) FROM trip_packages) SELECT ... ORDER BY (0.7 * semantic + 0.3 * lexical) DESC LIMIT {limit}"
 
         activities.append(create_activity(
             activity_type="search",
@@ -545,20 +595,7 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
             agent_file="agents/phase3/supervisor.py"
         ))
         
-        products = [
-            Product(
-                product_id=row['product_id'],
-                name=row['name'],
-                brand=row['brand'] or '',
-                price=float(row['price']),
-                description=row['description'] or '',
-                image_url=row['image_url'] or '',
-                category=row['category'],
-                available_sizes=row.get('available_sizes'),
-                similarity=float(row.get('combined_score', row.get('semantic_score', 0)))
-            )
-            for row in results
-        ]
+        products = [Product(**row_to_api_product(row)) for row in results]
         
         return products, activities
         
@@ -576,13 +613,63 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
 
 
 # =============================================================================
+# PHASE 4: Strands PartnerRuntime + MemoryAgent (@tool) + Aurora memory
+# =============================================================================
+
+def _memory_activity_to_entry(entry: Any) -> ActivityEntry:
+    """Convert MemoryAgent/PartnerRuntime activity to API ActivityEntry."""
+    if isinstance(entry, ActivityEntry):
+        return entry
+    data = entry.model_dump() if hasattr(entry, "model_dump") else dict(entry)
+    telemetry = data.pop("telemetry", None)
+    return ActivityEntry(
+        **data,
+        telemetry=TraceTelemetry(**telemetry) if telemetry else None,
+    )
+
+
+async def phase4_search(
+    query: str,
+    customer_id: str,
+    conversation_id: Optional[str] = None,
+    limit: int = 5,
+) -> tuple[List[Product], List[ActivityEntry], str, str, List[MemoryFact]]:
+    """
+    Phase 4: Recall Aurora memory via Strands @tool, hybrid search, persist turn.
+    """
+    from backend.agents.phase4.concierge import create_concierge
+    from backend.memory.store import DEMO_TRAVELER_ID
+
+    tid = customer_id or DEMO_TRAVELER_ID
+    runtime = create_concierge()
+    products, raw_activities, message, conv_id, facts = await runtime.process_turn(
+        query,
+        tid,
+        conversation_id,
+        limit,
+        search_fn=phase3_search,
+    )
+    activities = [_memory_activity_to_entry(a) for a in raw_activities]
+    memory_facts = [
+        MemoryFact(
+            key=f["key"],
+            value=f["value"],
+            source=f.get("source"),
+            confidence=f.get("confidence"),
+        )
+        for f in facts
+    ]
+    return products, activities, message, conv_id, memory_facts
+
+
+# =============================================================================
 # PHASE 3: ProductAgent - Inventory and Product Details
 # Handles stock checks and detailed product information
 # =============================================================================
 
-async def phase3_inventory_check(query: str) -> tuple[List[Product], List[ActivityEntry], str]:
+async def phase3_availability_check(query: str) -> tuple[List[Product], List[ActivityEntry], str]:
     """
-    Phase 3: ProductAgent handles inventory and stock queries.
+    Phase 3: ProductAgent handles availability and stock queries.
     Supervisor delegates to ProductAgent for stock/availability questions.
     
     Returns: (products, activities, message)
@@ -596,7 +683,7 @@ async def phase3_inventory_check(query: str) -> tuple[List[Product], List[Activi
     activities.append(create_activity(
         activity_type="reasoning",
         title="Delegating to ProductAgent",
-        details="Supervisor routing inventory request to specialized agent",
+        details="Supervisor routing availability request to specialized agent",
         agent_name="SupervisorAgent",
         agent_file="agents/phase3/supervisor.py"
     ))
@@ -615,9 +702,9 @@ async def phase3_inventory_check(query: str) -> tuple[List[Product], List[Activi
     
     # Search for the product by name similarity
     sql = """
-        SELECT product_id, name, brand, price, description, 
-               image_url, category, available_sizes, inventory
-        FROM products
+        SELECT package_id, name, operator, price_per_person, description, 
+               image_url, trip_type, durations, availability
+        FROM trip_packages
         WHERE LOWER(name) LIKE %s OR LOWER(brand) LIKE %s
         LIMIT 1
     """
@@ -653,37 +740,37 @@ async def phase3_inventory_check(query: str) -> tuple[List[Product], List[Activi
             agent_file="agents/phase3/supervisor.py"
         ))
         
-        return [], activities, "I couldn't find that specific product. Try searching for it by name or category."
+        return [], activities, "I couldn't find that specific product. Try searching for it by name or trip_type."
     
     product = results[0]
-    inventory = product.get('inventory', {})
+    availability = product.get('availability', {})
     
-    # Check inventory
+    # Check availability
     activities.append(create_activity(
-        activity_type="inventory",
-        title=f"ProductAgent: Checking inventory",
+        activity_type="availability",
+        title=f"ProductAgent: Checking availability",
         details=f"Product: {product['name']}",
-        sql_query="SELECT inventory, available_sizes FROM products WHERE product_id = ?",
+        sql_query="SELECT availability, durations FROM trip_packages WHERE package_id = ?",
         agent_name="ProductAgent",
         agent_file="agents/phase3/product_agent.py"
     ))
     
     # Calculate total stock
-    if isinstance(inventory, dict):
-        if 'quantity' in inventory:
-            total_stock = inventory['quantity']
+    if isinstance(availability, dict):
+        if 'quantity' in availability:
+            total_stock = availability['quantity']
         else:
-            total_stock = sum(inventory.values()) if inventory else 0
+            total_stock = sum(availability.values()) if availability else 0
     else:
         total_stock = 0
     
-    inventory_time = int((datetime.utcnow() - start_time).total_seconds() * 1000) - search_time
+    availability_time = int((datetime.utcnow() - start_time).total_seconds() * 1000) - search_time
     
     activities.append(create_activity(
         activity_type="result",
         title=f"ProductAgent: Stock verified",
         details=f"Total: {total_stock} units available",
-        execution_time_ms=inventory_time,
+        execution_time_ms=availability_time,
         agent_name="ProductAgent",
         agent_file="agents/phase3/product_agent.py"
     ))
@@ -698,10 +785,10 @@ async def phase3_inventory_check(query: str) -> tuple[List[Product], List[Activi
     ))
     
     # Build response message
-    available_sizes = product.get('available_sizes', [])
+    durations = product.get('durations', [])
     if total_stock > 0:
-        if available_sizes:
-            sizes_str = ', '.join(available_sizes[:5])
+        if durations:
+            sizes_str = ', '.join(durations[:5])
             message = f"**{product['name']}** is in stock! We have {total_stock} units available in sizes: {sizes_str}."
         else:
             message = f"**{product['name']}** is in stock with {total_stock} units available."
@@ -709,29 +796,20 @@ async def phase3_inventory_check(query: str) -> tuple[List[Product], List[Activi
         message = f"**{product['name']}** is currently out of stock. Would you like me to find similar alternatives?"
     
     # Return the product
-    products = [Product(
-        product_id=product['product_id'],
-        name=product['name'],
-        brand=product['brand'] or '',
-        price=float(product['price']),
-        description=product['description'] or '',
-        image_url=product['image_url'] or '',
-        category=product['category'],
-        available_sizes=available_sizes
-    )]
+    products = [Product(**row_to_api_product(product))]
     
     return products, activities, message
 
 
-def is_inventory_query(query: str) -> bool:
-    """Check if the query is asking about inventory/stock."""
+def is_availability_query(query: str) -> bool:
+    """Check if the query is asking about availability/stock."""
     query_lower = query.lower()
-    inventory_patterns = [
+    availability_patterns = [
         'in stock', 'available', 'do you have', 'check stock',
-        'inventory', 'how many', 'what sizes', 'size available',
+        'availability', 'how many', 'what sizes', 'size available',
         'is the', 'is there', 'got any'
     ]
-    return any(pattern in query_lower for pattern in inventory_patterns)
+    return any(pattern in query_lower for pattern in availability_patterns)
 
 
 @router.post("", response_model=ChatResponse)
@@ -749,8 +827,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
     """
     activities = []
 
-    # Phase 3/4: Check if this is an inventory query -> route to ProductAgent
-    if request.phase in (3, 4) and is_inventory_query(request.message):
+    # Phase 3/4: Check if this is an availability query -> route to ProductAgent
+    if request.phase in (3, 4) and is_availability_query(request.message):
         activities.append(create_activity(
             activity_type="reasoning",
             title="Processing with Multi-Agent Orchestration",
@@ -760,8 +838,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
         ))
         
         try:
-            products, inventory_activities, message = await phase3_inventory_check(request.message)
-            activities.extend(inventory_activities)
+            products, availability_activities, message = await phase3_availability_check(request.message)
+            activities.extend(availability_activities)
             
             follow_ups = ["Show me similar products", "What other sizes do you have?", "Find me alternatives"]
             
@@ -782,11 +860,56 @@ async def chat(request: ChatRequest) -> ChatResponse:
             ))
             # Fall through to regular search
 
+    # Phase 4: Strands PartnerRuntime + Aurora memory (@tool)
+    if request.phase == 4:
+        from backend.memory.store import DEMO_TRAVELER_ID
+
+        activities.append(create_activity(
+            activity_type="reasoning",
+            title="Processing with personal concierge (Strands + Aurora memory)",
+            details=f"Query: {request.message[:80]}{'...' if len(request.message) > 80 else ''}",
+            agent_name="ConciergeOrchestrator",
+            agent_file="agents/phase4/concierge.py",
+        ))
+        try:
+            products, search_activities, message, conv_id, memory_facts = await phase4_search(
+                request.message,
+                customer_id=request.customer_id or DEMO_TRAVELER_ID,
+                conversation_id=request.conversation_id,
+                limit=5,
+            )
+            activities.extend(search_activities)
+            follow_ups = generate_follow_ups(request.message, products, request.phase)
+            return ChatResponse(
+                message=message,
+                products=products if products else None,
+                order=None,
+                activities=activities,
+                follow_ups=follow_ups,
+                conversation_id=conv_id,
+                memory_facts=memory_facts,
+            )
+        except Exception as e:
+            log_error("phase4_search", error=str(e))
+            activities.append(create_activity(
+                activity_type="error",
+                title="Concierge error",
+                details=str(e),
+                agent_name="ConciergeOrchestrator",
+                agent_file="agents/phase4/concierge.py",
+            ))
+            return ChatResponse(
+                message="I encountered an error loading memory. Please try again.",
+                products=None,
+                order=None,
+                activities=activities,
+                follow_ups=["Romantic week in Europe", "Family-friendly beach resort", "Tokyo culture trip"],
+            )
+
     phase_configs = {
         1: ("Phase1Agent", "Direct RDS Data API", phase1_search, "agents/phase1/agent.py"),
         2: ("Phase2Agent", "MCP (postgres-mcp-server)", phase2_search, "agents/phase2/agent.py"),
         3: ("SupervisorAgent", "Hybrid Search (Semantic + Lexical)", phase3_search, "agents/phase3/supervisor.py"),
-        4: ("PartnerRuntime", "Production Partner (AgentCore + Memory)", phase3_search, "agents/phase4/partner_runtime.py"),
     }
 
     agent_name, method, search_fn, agent_file = phase_configs[request.phase]
@@ -898,16 +1021,16 @@ async def image_search(
         #    image_embedding = json.loads(response['body'].read())['embedding']
         #
         # 2. Query products table using pgvector cosine similarity:
-        #    SELECT ... FROM products
+        #    SELECT ... FROM trip_packages
         #    ORDER BY embedding <=> %s::vector
         #    LIMIT 5
         #
         # 3. The embedding_service already supports generate_image_embedding()
         #    but requires base64 encoding of the uploaded image.
         sql = """
-            SELECT product_id, name, brand, price, description, 
-                   image_url, category, available_sizes
-            FROM products
+            SELECT package_id, name, operator, price_per_person, description, 
+                   image_url, trip_type, durations
+            FROM trip_packages
             LIMIT 5
         """
         results = await db.execute(sql, None)
@@ -920,20 +1043,7 @@ async def image_search(
             agent_file="agents/phase3/search_agent.py"
         ))
         
-        products = [
-            Product(
-                product_id=row['product_id'],
-                name=row['name'],
-                brand=row['brand'] or '',
-                price=float(row['price']),
-                description=row['description'] or '',
-                image_url=row['image_url'] or '',
-                category=row['category'],
-                available_sizes=row.get('available_sizes'),
-                similarity=0.95 - (i * 0.05)
-            )
-            for i, row in enumerate(results)
-        ]
+        products = [Product(**row_to_api_product(row)) for i, row in enumerate(results)]
         
         follow_ups = generate_follow_ups("image search", products, 3)
         
@@ -953,7 +1063,7 @@ async def image_search(
 # =============================================================================
 
 class OrderRequest(BaseModel):
-    """Request model for order processing."""
+    """Request model for booking processing."""
     product_id: str
     size: Optional[str] = None
     quantity: int = 1
@@ -1000,7 +1110,7 @@ async def process_order(request: OrderRequest) -> OrderResponse:
         activities.append(create_activity(
             activity_type="search",
             title="Looking up product details",
-            details=f"Product ID: {request.product_id}",
+            details=f"Package ID: {request.product_id}",
             agent_name=agent_name,
             agent_file=agent_file
         ))
@@ -1009,10 +1119,10 @@ async def process_order(request: OrderRequest) -> OrderResponse:
         await asyncio.sleep(0.3)
 
         sql = """
-            SELECT product_id, name, brand, price, description,
-                   image_url, category, available_sizes
-            FROM products
-            WHERE product_id = %s
+            SELECT package_id, name, operator, price_per_person, description,
+                   image_url, trip_type, durations
+            FROM trip_packages
+            WHERE package_id = %s
         """
         results = await db.execute(sql, (request.product_id,))
 
@@ -1020,7 +1130,7 @@ async def process_order(request: OrderRequest) -> OrderResponse:
             activities.append(create_activity(
                 activity_type="error",
                 title="Product not found",
-                details=f"No product with ID {request.product_id}",
+                details=f"No package with ID {request.product_id}",
                 agent_name=agent_name,
                 agent_file=agent_file
             ))
@@ -1031,12 +1141,13 @@ async def process_order(request: OrderRequest) -> OrderResponse:
             )
 
         product = results[0]
+        pkg = row_to_api_product(product)
         lookup_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
         activities.append(create_activity(
             activity_type="result",
-            title=f"Found: {product['name']}",
-            details=f"${float(product['price']):.2f} - {product['brand']}",
+            title=f"Found: {pkg['name']}",
+            details=f"${pkg['price']:.2f} pp — {pkg['brand']}",
             execution_time_ms=lookup_time,
             agent_name=agent_name,
             agent_file=agent_file
@@ -1044,8 +1155,8 @@ async def process_order(request: OrderRequest) -> OrderResponse:
 
         # Step 2: Inventory check
         activities.append(create_activity(
-            activity_type="inventory",
-            title="Checking inventory",
+            activity_type="availability",
+            title="Checking availability",
             details=f"Size: {request.size or 'One Size'}, Qty: {request.quantity}",
             agent_name=agent_name,
             agent_file=agent_file
@@ -1053,17 +1164,17 @@ async def process_order(request: OrderRequest) -> OrderResponse:
 
         await asyncio.sleep(0.2)
 
-        # Mock inventory check - always in stock for demo
+        # Mock availability check - always in stock for demo
         in_stock = True
         stock_qty = random.randint(5, 50)
 
-        inventory_time = int((datetime.utcnow() - start_time).total_seconds() * 1000) - lookup_time
+        availability_time = int((datetime.utcnow() - start_time).total_seconds() * 1000) - lookup_time
 
         activities.append(create_activity(
-            activity_type="inventory",
+            activity_type="availability",
             title="In Stock" if in_stock else "Out of Stock",
             details=f"{stock_qty} units available",
-            execution_time_ms=inventory_time,
+            execution_time_ms=availability_time,
             agent_name=agent_name,
             agent_file=agent_file
         ))
@@ -1087,12 +1198,12 @@ async def process_order(request: OrderRequest) -> OrderResponse:
         await asyncio.sleep(0.4)
 
         # Calculate order totals using config values
-        subtotal = float(product['price']) * request.quantity
+        subtotal = pkg['price'] * request.quantity
         tax = round(subtotal * config.order.tax_rate, 2)
         shipping = 0.0 if subtotal >= config.order.free_shipping_threshold else config.order.shipping_fee
         total = round(subtotal + tax + shipping, 2)
 
-        payment_time = int((datetime.utcnow() - start_time).total_seconds() * 1000) - lookup_time - inventory_time
+        payment_time = int((datetime.utcnow() - start_time).total_seconds() * 1000) - lookup_time - availability_time
 
         activities.append(create_activity(
             activity_type="order",
@@ -1123,11 +1234,11 @@ async def process_order(request: OrderRequest) -> OrderResponse:
             order_id=order_id,
             items=[
                 OrderItem(
-                    product_id=product['product_id'],
-                    name=product['name'],
+                    product_id=pkg['product_id'],
+                    name=pkg['name'],
                     size=request.size,
                     quantity=request.quantity,
-                    unit_price=float(product['price'])
+                    unit_price=pkg['price']
                 )
             ],
             subtotal=subtotal,
@@ -1149,7 +1260,7 @@ async def process_order(request: OrderRequest) -> OrderResponse:
             agent_file=agent_file
         ))
 
-        message = f"Great choice! I've placed your order for **{product['name']}**.\n\n" \
+        message = f"Great choice! I've placed your booking for **{pkg['name']}**.\n\n" \
                   f"**Order #{order_id}**\n" \
                   f"- Subtotal: ${subtotal:.2f}\n" \
                   f"- Tax: ${tax:.2f}\n" \

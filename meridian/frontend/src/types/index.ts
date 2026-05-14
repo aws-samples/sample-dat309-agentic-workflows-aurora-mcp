@@ -113,6 +113,14 @@ export interface ChatResponse {
   order?: Order;
   activities: ActivityEntry[];
   follow_ups?: string[];
+  conversation_id?: string;
+  memory_facts?: LongTermMemoryFact[];
+}
+
+export interface MemoryProfileResponse {
+  traveler_id: string;
+  facts: LongTermMemoryFact[];
+  profile?: Record<string, unknown>;
 }
 
 export interface Message {

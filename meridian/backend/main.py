@@ -21,7 +21,7 @@ from pydantic import BaseModel
 load_dotenv()
 
 # Import routers
-from backend.routers import chat_router, products_router, websocket_router
+from backend.routers import chat_router, products_router, packages_router, websocket_router, memory_router
 
 
 class HealthResponse(BaseModel):
@@ -94,8 +94,10 @@ app.add_middleware(
 
 # Include routers
 app.include_router(chat_router)
+app.include_router(packages_router)
 app.include_router(products_router)
 app.include_router(websocket_router)
+app.include_router(memory_router)
 
 
 @app.get("/", response_model=HealthResponse)

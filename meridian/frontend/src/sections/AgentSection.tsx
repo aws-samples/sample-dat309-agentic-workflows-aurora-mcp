@@ -9,14 +9,16 @@ import { TraceSpan } from '../components/TraceSpan';
 import { ProductThumb } from '../components/ProductThumb';
 import { enrichTraceActivities } from '../utils/traceTelemetry';
 import { sendChatMessage, processOrder } from '../api/client';
-import type { Product, ActivityEntry, Message, Phase } from '../types';
+import type { Product, ActivityEntry, Message, Phase, LongTermMemoryFact } from '../types';
+
+const DEMO_TRAVELER_ID = 'trv_meridian_demo';
 
 const phaseColors = ['#3b82f6', '#a855f7', '#10b981', '#ff5b1f'];
 const phaseLabels = [
-  'Phase 1 · Keywords',
+  'Phase 1 · Filters',
   'Phase 2 · MCP',
-  'Phase 3 · Semantic',
-  'Phase 4 · Memory',
+  'Phase 3 · Intent',
+  'Phase 4 · Personal',
 ];
 
 // Phase information for educational display
@@ -29,41 +31,40 @@ const phaseInfo: Record<Phase, {
   tech: string;
 }> = {
   1: {
-    name: 'Keyword concierge',
-    beat: 'Exact trip type & operator lookup — no natural language yet.',
-    description: 'Hardcoded SQL via RDS Data API',
-    capabilities: ['Trip-type filter', 'Operator filter', 'Price filter'],
-    limitations: ['No semantic understanding', 'Exact keyword match only'],
-    tech: 'RDS Data API → Aurora PostgreSQL',
+    name: 'Direct filters',
+    beat: 'SQL filters on trip_packages — destination, operator, price.',
+    description: 'RDS Data API → Aurora',
+    capabilities: ['Trip type filter', 'Operator filter', 'Price filter'],
+    limitations: ['No natural language', 'Exact keyword match only'],
+    tech: 'trip_packages · RDS Data API',
   },
   2: {
-    name: 'MCP discovery',
-    beat: 'Tools discovered at runtime — still keyword search underneath.',
-    description: 'Model Context Protocol tool layer',
-    capabilities: ['Trip-type filter', 'Operator filter', 'Price filter', 'MCP tool discovery'],
+    name: 'MCP tools',
+    beat: 'Same catalog queries through postgres-mcp-server.',
+    description: 'Model Context Protocol',
+    capabilities: ['Trip type filter', 'Operator filter', 'MCP run_query'],
     limitations: ['Still keyword-based', 'No vector search'],
-    tech: 'MCP Server → RDS Data API → Aurora',
+    tech: 'MCP → trip_packages',
   },
   3: {
-    name: 'Specialist team',
-    beat: 'Hybrid pgvector search — vague travel intent maps to real packages.',
-    description: 'Supervisor + semantic retrieval',
-    capabilities: ['Natural language', 'Supervisor routing', 'Hybrid pgvector search'],
-    limitations: ['No durable memory', 'Stateless across sessions'],
-    tech: 'Supervisor → [Search · Availability · Booking] → Aurora',
+    name: 'Intent search',
+    beat: 'Hybrid pgvector + full-text — vague requests map to packages.',
+    description: 'Semantic retrieval',
+    capabilities: ['Natural language', 'Hybrid ranking', 'Cohere embeddings'],
+    limitations: ['No traveler memory', 'Stateless across sessions'],
+    tech: 'semantic_trip_search · tsvector',
   },
   4: {
-    name: 'Partner runtime',
-    beat: 'Remembers party size, dates, and dietary needs before every turn.',
-    description: 'AgentCore + Aurora memory.facts',
+    name: 'Personal concierge',
+    beat: 'Loads traveler_profiles + traveler_preferences before every search.',
+    description: 'Strands @tool + Aurora memory',
     capabilities: [
-      'Short- & long-term memory',
-      'AgentCore session + trace',
-      'Multi-turn travel planning',
-      'Plan → confirm → book',
+      'Traveler profile & preferences',
+      'Session + trip_interactions',
+      'Strands @tool recall/persist',
     ],
     limitations: [],
-    tech: 'AgentCore · Memory · LangGraph · MCP · Aurora',
+    tech: 'travelers · traveler_preferences · Strands Agents',
   },
 };
 
@@ -85,6 +86,8 @@ export function AgentSection() {
   const [phaseTransition, setPhaseTransition] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
   const [traceId, setTraceId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [memoryFacts, setMemoryFacts] = useState<LongTermMemoryFact[]>([]);
   // Cart state - setCart is used but cart value not read directly (used in callback)
   const [, setCart] = useState<CartItem[]>([]);
   const chatEnd = useRef<HTMLDivElement>(null);
@@ -206,7 +209,20 @@ export function AgentSection() {
       const response = await sendChatMessage({
         message: text,
         phase,
+        ...(phase === 4
+          ? {
+              customer_id: DEMO_TRAVELER_ID,
+              conversation_id: conversationId ?? undefined,
+            }
+          : {}),
       });
+
+      if (response.conversation_id) {
+        setConversationId(response.conversation_id);
+      }
+      if (response.memory_facts?.length) {
+        setMemoryFacts(response.memory_facts);
+      }
 
       // Store the response for use after activities are revealed
       const botResponse = response;
@@ -550,7 +566,7 @@ export function AgentSection() {
                     }}
                   />
                   <span className="chat-title">Travel Concierge</span>
-                  {phase === 4 && <MemoryChip compact />}
+                  {phase === 4 && <MemoryChip compact facts={memoryFacts} />}
                   {connectionStatus === 'disconnected' && (
                     <span style={{ 
                       fontSize: 9, 

@@ -12,7 +12,7 @@ export function ProductsSection() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProducts(undefined, 8, true)
+    fetchProducts(undefined, 10, true)
       .then(setProducts)
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -42,7 +42,7 @@ export function ProductsSection() {
             Featured trips
           </h2>
           <div style={{ fontSize: 13, color: 'var(--dl-muted)' }}>
-            Showing <b style={{ color: 'var(--dl-ink)' }}>6 trip types</b> · sorted by{' '}
+            Showing <b style={{ color: 'var(--dl-ink)' }}>10 featured trips</b> · sorted by{' '}
             <b style={{ color: 'var(--dl-ink)' }}>Relevance</b>
           </div>
         </div>
@@ -56,7 +56,7 @@ export function ProductsSection() {
         }}
       >
         {loading
-          ? Array.from({ length: 8 }).map((_, i) => (
+          ? Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="product-card" style={{ opacity: 0.5 }}>
                 <div className="product-card-image" style={{ background: 'var(--dl-grid-bg)' }} />
                 <div style={{ height: 14, background: 'var(--dl-grid-bg)', borderRadius: 4 }} />

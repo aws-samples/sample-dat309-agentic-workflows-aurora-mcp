@@ -122,8 +122,8 @@ class RDSDataClient:
                     value = self._parse_value(field)
                     # Try to parse JSON strings for JSONB columns
                     if isinstance(value, str) and column_names[i] in [
-                        'inventory', 'available_sizes', 'available_variants',
-                        'specifications', 'compatibility', 'products_shown'
+                        'durations', 'availability', 'highlights',
+                        'loyalty_programs', 'packages_shown',
                     ]:
                         try:
                             value = json.loads(value)

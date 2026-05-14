@@ -1,287 +1,204 @@
 """
-Shared search utilities for Meridian.
-
-Provides common search logic used by Phase 1 and Phase 2 to eliminate code duplication.
+Shared keyword search utilities for trip_packages (Phases 1 & 2).
 """
 
 import re
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
 from backend.config import config
 
+PACKAGE_COLUMNS = """package_id, name, trip_type, destination, region,
+                     price_per_person, operator, description, image_url,
+                     durations, availability, highlights"""
+
 
 @dataclass
 class SearchParams:
-    """Parsed search parameters from a query string."""
     query: str
     query_lower: str
     price_filter: Optional[float]
-    matched_category: Optional[str]
+    matched_trip_type: Optional[str]
     search_pattern: str
 
 
 def parse_search_query(query: str) -> SearchParams:
-    """
-    Parse a search query to extract filters and patterns.
-
-    Args:
-        query: Raw search query string
-
-    Returns:
-        SearchParams with extracted filters
-    """
     query_lower = query.lower()
-
-    # Parse price filter
     price_filter = None
-    price_match = re.search(r'(?:under|below|less than|<)\s*\$?(\d+(?:\.\d{2})?)', query_lower)
+    price_match = re.search(r"(?:under|below|less than|<)\s*\$?(\d+(?:\.\d{2})?)", query_lower)
     if price_match:
         price_filter = float(price_match.group(1))
 
-    # Match category from keywords
-    matched_category = None
-    for keyword, category in config.search.category_keywords.items():
-        if keyword in query_lower:
-            matched_category = category
+    matched_trip_type = None
+    for keyword, trip_type in config.search.category_keywords.items():
+        if keyword in query_lower and trip_type:
+            matched_trip_type = trip_type
             break
-
-    # Build search pattern for LIKE queries
-    search_pattern = f"%{query}%"
 
     return SearchParams(
         query=query,
         query_lower=query_lower,
         price_filter=price_filter,
-        matched_category=matched_category,
-        search_pattern=search_pattern,
+        matched_trip_type=matched_trip_type,
+        search_pattern=f"%{query}%",
     )
 
 
 async def execute_keyword_search(
     db: Any,
     params: SearchParams,
-    limit: int = 5
+    limit: int = 5,
 ) -> Tuple[List[Dict], str, str]:
-    """
-    Execute a keyword-based search query.
-
-    Args:
-        db: Database client
-        params: Parsed search parameters
-        limit: Maximum results to return
-
-    Returns:
-        Tuple of (results, display_sql, search_title)
-    """
-    results = []
+    results: List[Dict] = []
     display_sql = ""
     search_title = ""
 
-    if params.matched_category:
-        # Category-based search
+    if params.matched_trip_type:
         if params.price_filter:
-            sql = """
-                SELECT product_id, name, brand, price, description,
-                       image_url, category, available_sizes
-                FROM products
-                WHERE category = %s AND price <= %s
-                ORDER BY price ASC
+            sql = f"""
+                SELECT {PACKAGE_COLUMNS}
+                FROM trip_packages
+                WHERE trip_type = %s AND price_per_person <= %s
+                ORDER BY price_per_person ASC
                 LIMIT %s
             """
-            display_sql = f"SELECT ... FROM products WHERE category = '{params.matched_category}' AND price <= {params.price_filter} ORDER BY price ASC LIMIT {limit}"
-            results = await db.execute(sql, (params.matched_category, params.price_filter, limit))
+            display_sql = (
+                f"SELECT … FROM trip_packages WHERE trip_type = '{params.matched_trip_type}' "
+                f"AND price_per_person <= {params.price_filter} LIMIT {limit}"
+            )
+            results = await db.execute(sql, (params.matched_trip_type, params.price_filter, limit))
         else:
-            sql = """
-                SELECT product_id, name, brand, price, description,
-                       image_url, category, available_sizes
-                FROM products
-                WHERE category = %s
-                ORDER BY price ASC
+            sql = f"""
+                SELECT {PACKAGE_COLUMNS}
+                FROM trip_packages
+                WHERE trip_type = %s
+                ORDER BY price_per_person ASC
                 LIMIT %s
             """
-            display_sql = f"SELECT ... FROM products WHERE category = '{params.matched_category}' ORDER BY price ASC LIMIT {limit}"
-            results = await db.execute(sql, (params.matched_category, limit))
-
-        search_title = f"Category filter: {params.matched_category}"
-
-    elif "shoes" in params.query_lower or "sneakers" in params.query_lower:
-        # Match if query contains "shoes" or "sneakers"
-        if params.price_filter:
-            sql = """
-                SELECT product_id, name, brand, price, description,
-                       image_url, category, available_sizes
-                FROM products
-                WHERE category IN ('Running Shoes', 'Training Shoes') AND price <= %s
-                ORDER BY price ASC
-                LIMIT %s
-            """
-            display_sql = f"SELECT ... FROM products WHERE category IN ('Running Shoes', 'Training Shoes') AND price <= {params.price_filter} ORDER BY price ASC LIMIT {limit}"
-            results = await db.execute(sql, (params.price_filter, limit))
-        else:
-            sql = """
-                SELECT product_id, name, brand, price, description,
-                       image_url, category, available_sizes
-                FROM products
-                WHERE category IN ('Running Shoes', 'Training Shoes')
-                ORDER BY price ASC
-                LIMIT %s
-            """
-            display_sql = f"SELECT ... FROM products WHERE category IN ('Running Shoes', 'Training Shoes') ORDER BY price ASC LIMIT {limit}"
-            results = await db.execute(sql, (limit,))
-
-        search_title = "Searching shoe categories"
+            display_sql = f"SELECT … FROM trip_packages WHERE trip_type = '{params.matched_trip_type}' LIMIT {limit}"
+            results = await db.execute(sql, (params.matched_trip_type, limit))
+        search_title = f"Trip type filter: {params.matched_trip_type}"
 
     else:
-        # ILIKE text search
         if params.price_filter:
-            sql = """
-                SELECT product_id, name, brand, price, description,
-                       image_url, category, available_sizes
-                FROM products
-                WHERE (name ILIKE %s OR description ILIKE %s OR brand ILIKE %s)
-                      AND price <= %s
-                ORDER BY price ASC
+            sql = f"""
+                SELECT {PACKAGE_COLUMNS}
+                FROM trip_packages
+                WHERE (name ILIKE %s OR description ILIKE %s OR operator ILIKE %s
+                       OR destination ILIKE %s OR trip_type ILIKE %s)
+                  AND price_per_person <= %s
+                ORDER BY price_per_person ASC
                 LIMIT %s
             """
-            display_sql = f"SELECT ... FROM products WHERE (name ILIKE '%{params.query}%' OR description ILIKE ... OR brand ILIKE ...) AND price <= {params.price_filter} ORDER BY price ASC LIMIT {limit}"
+            display_sql = f"SELECT … FROM trip_packages WHERE text ILIKE '%{params.query}%' AND price <= {params.price_filter}"
             results = await db.execute(
                 sql,
-                (params.search_pattern, params.search_pattern, params.search_pattern, params.price_filter, limit)
+                (
+                    params.search_pattern,
+                    params.search_pattern,
+                    params.search_pattern,
+                    params.search_pattern,
+                    params.search_pattern,
+                    params.price_filter,
+                    limit,
+                ),
             )
         else:
-            sql = """
-                SELECT product_id, name, brand, price, description,
-                       image_url, category, available_sizes
-                FROM products
-                WHERE name ILIKE %s OR description ILIKE %s OR brand ILIKE %s
-                ORDER BY price ASC
+            sql = f"""
+                SELECT {PACKAGE_COLUMNS}
+                FROM trip_packages
+                WHERE name ILIKE %s OR description ILIKE %s OR operator ILIKE %s
+                   OR destination ILIKE %s OR trip_type ILIKE %s
+                ORDER BY price_per_person ASC
                 LIMIT %s
             """
-            display_sql = f"SELECT ... FROM products WHERE (name ILIKE '%{params.query}%' OR description ILIKE ... OR brand ILIKE ...) ORDER BY price ASC LIMIT {limit}"
+            display_sql = f"SELECT … FROM trip_packages WHERE text ILIKE '%{params.query}%'"
             results = await db.execute(
                 sql,
-                (params.search_pattern, params.search_pattern, params.search_pattern, limit)
+                (
+                    params.search_pattern,
+                    params.search_pattern,
+                    params.search_pattern,
+                    params.search_pattern,
+                    params.search_pattern,
+                    limit,
+                ),
             )
-
-        search_title = f"Text search: {params.query}"
+        search_title = f"Keyword search: {params.query}"
 
     return results, display_sql, search_title
 
 
 def build_search_sql(params: SearchParams, limit: int = 5) -> Tuple[str, str, str]:
-    """
-    Build SQL query string for search (used by MCP which takes raw SQL).
+    safe = params.query.replace("'", "''")
+    pattern = f"%{safe}%"
 
-    Unlike execute_keyword_search which uses parameterized queries,
-    this builds a complete SQL string for MCP's run_query tool.
-
-    Args:
-        params: Parsed search parameters
-        limit: Maximum results to return
-
-    Returns:
-        Tuple of (full_sql, display_sql, search_title)
-    """
-    base_columns = """product_id, name, brand, price, description,
-                      image_url, category, available_sizes"""
-
-    if params.matched_category:
-        # Category-based search
+    if params.matched_trip_type:
         if params.price_filter:
             sql = f"""
-                SELECT {base_columns}
-                FROM products
-                WHERE category = '{params.matched_category}' AND price <= {params.price_filter}
-                ORDER BY price ASC
+                SELECT {PACKAGE_COLUMNS}
+                FROM trip_packages
+                WHERE trip_type = '{params.matched_trip_type}' AND price_per_person <= {params.price_filter}
+                ORDER BY price_per_person ASC
                 LIMIT {limit}
             """
-            display_sql = f"SELECT ... FROM products WHERE category = '{params.matched_category}' AND price <= {params.price_filter} ORDER BY price ASC LIMIT {limit}"
+            display_sql = f"trip_type = '{params.matched_trip_type}' AND price <= {params.price_filter}"
         else:
             sql = f"""
-                SELECT {base_columns}
-                FROM products
-                WHERE category = '{params.matched_category}'
-                ORDER BY price ASC
+                SELECT {PACKAGE_COLUMNS}
+                FROM trip_packages
+                WHERE trip_type = '{params.matched_trip_type}'
+                ORDER BY price_per_person ASC
                 LIMIT {limit}
             """
-            display_sql = f"SELECT ... FROM products WHERE category = '{params.matched_category}' ORDER BY price ASC LIMIT {limit}"
-
-        search_title = f"Category filter: {params.matched_category}"
-
-    elif "shoes" in params.query_lower or "sneakers" in params.query_lower:
-        # Shoe categories search
-        if params.price_filter:
-            sql = f"""
-                SELECT {base_columns}
-                FROM products
-                WHERE category IN ('Running Shoes', 'Training Shoes') AND price <= {params.price_filter}
-                ORDER BY price ASC
-                LIMIT {limit}
-            """
-            display_sql = f"SELECT ... FROM products WHERE category IN ('Running Shoes', 'Training Shoes') AND price <= {params.price_filter} ORDER BY price ASC LIMIT {limit}"
-        else:
-            sql = f"""
-                SELECT {base_columns}
-                FROM products
-                WHERE category IN ('Running Shoes', 'Training Shoes')
-                ORDER BY price ASC
-                LIMIT {limit}
-            """
-            display_sql = f"SELECT ... FROM products WHERE category IN ('Running Shoes', 'Training Shoes') ORDER BY price ASC LIMIT {limit}"
-
-        search_title = "Searching shoe categories"
-
+            display_sql = f"trip_type = '{params.matched_trip_type}'"
+        title = f"Trip type filter: {params.matched_trip_type}"
+    elif params.price_filter:
+        sql = f"""
+            SELECT {PACKAGE_COLUMNS}
+            FROM trip_packages
+            WHERE (name ILIKE '{pattern}' OR description ILIKE '{pattern}'
+                   OR operator ILIKE '{pattern}' OR destination ILIKE '{pattern}')
+              AND price_per_person <= {params.price_filter}
+            ORDER BY price_per_person ASC
+            LIMIT {limit}
+        """
+        display_sql = f"ILIKE '{pattern}' AND price <= {params.price_filter}"
+        title = f"Keyword search: {params.query}"
     else:
-        # ILIKE text search - escape single quotes in query
-        safe_query = params.query.replace("'", "''")
-        safe_pattern = f"%{safe_query}%"
+        sql = f"""
+            SELECT {PACKAGE_COLUMNS}
+            FROM trip_packages
+            WHERE name ILIKE '{pattern}' OR description ILIKE '{pattern}'
+               OR operator ILIKE '{pattern}' OR destination ILIKE '{pattern}'
+            ORDER BY price_per_person ASC
+            LIMIT {limit}
+        """
+        display_sql = f"ILIKE '{pattern}'"
+        title = f"Keyword search: {params.query}"
 
-        if params.price_filter:
-            sql = f"""
-                SELECT {base_columns}
-                FROM products
-                WHERE (name ILIKE '{safe_pattern}' OR description ILIKE '{safe_pattern}' OR brand ILIKE '{safe_pattern}')
-                      AND price <= {params.price_filter}
-                ORDER BY price ASC
-                LIMIT {limit}
-            """
-            display_sql = f"SELECT ... FROM products WHERE (name ILIKE '%{params.query}%' OR ...) AND price <= {params.price_filter} ORDER BY price ASC LIMIT {limit}"
-        else:
-            sql = f"""
-                SELECT {base_columns}
-                FROM products
-                WHERE name ILIKE '{safe_pattern}' OR description ILIKE '{safe_pattern}' OR brand ILIKE '{safe_pattern}'
-                ORDER BY price ASC
-                LIMIT {limit}
-            """
-            display_sql = f"SELECT ... FROM products WHERE (name ILIKE '%{params.query}%' OR ...) ORDER BY price ASC LIMIT {limit}"
-
-        search_title = f"Text search: {params.query}"
-
-    return sql.strip(), display_sql, search_title
+    return sql.strip(), display_sql, title
 
 
-def results_to_products(results: List[Dict]) -> List[Dict]:
-    """
-    Convert database results to product dictionaries.
-
-    Args:
-        results: Raw database results
-
-    Returns:
-        List of product dictionaries with proper types
-    """
+def results_to_packages(results: List[Dict]) -> List[Dict]:
     return [
         {
-            "product_id": row["product_id"],
+            "package_id": row["package_id"],
             "name": row["name"],
-            "brand": row["brand"] or "",
-            "price": float(row["price"]),
-            "description": row["description"] or "",
-            "image_url": row["image_url"] or "",
-            "category": row["category"],
-            "available_sizes": row.get("available_sizes"),
+            "trip_type": row["trip_type"],
+            "destination": row.get("destination") or "",
+            "region": row.get("region") or "",
+            "price_per_person": float(row["price_per_person"]),
+            "operator": row.get("operator") or "",
+            "description": row.get("description") or "",
+            "image_url": row.get("image_url") or "",
+            "durations": row.get("durations"),
+            "availability": row.get("availability"),
+            "highlights": row.get("highlights"),
         }
         for row in results
     ]
+
+
+# Back-compat alias used during migration
+results_to_products = results_to_packages

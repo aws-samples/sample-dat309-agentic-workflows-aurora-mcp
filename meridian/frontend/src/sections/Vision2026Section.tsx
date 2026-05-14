@@ -69,7 +69,7 @@ export function Vision2026Section() {
     >
       <FadeIn>
         <div style={{ marginBottom: 40 }}>
-          <span className="section-label">DAT309 · 2026</span>
+          <span className="section-label">Deep dive</span>
           <h2 className="section-headline">
             Memory, runtime, and <em className="serif">orchestration</em>.
           </h2>
