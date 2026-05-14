@@ -1,5 +1,5 @@
 """
-Phase 3 Product Agent - Specialized in product details and inventory.
+Phase 3 Package Agent - Specialized in trip details and availability.
 
 Implements product operations using:
 - RDS Data API for Aurora PostgreSQL access
@@ -17,7 +17,7 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 from pydantic import BaseModel
 
-from db.rds_data_client import get_rds_data_client
+from backend.db.rds_data_client import get_rds_data_client
 
 
 class ActivityEntry(BaseModel):
@@ -34,7 +34,7 @@ class ActivityEntry(BaseModel):
 
 class ProductAgent:
     """
-    Product Agent specialized in product details and inventory.
+    Package Agent specialized in trip details and departure availability.
     
     Requirements:
     - 11.3: Product_Agent specialized in product details and inventory
@@ -65,16 +65,16 @@ class ProductAgent:
     
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the product agent."""
-        return """You are a Product Agent specialized in providing product information.
+        return """You are a Package Agent specialized in trip package information.
 
 Your capabilities:
-- Get detailed product information by ID
-- Check inventory status and available sizes
+- Get detailed package information by ID
+- Check departure availability and duration options
 
-When helping customers:
-- Provide accurate product details
-- Check stock availability before recommending
-- Suggest alternatives if items are out of stock"""
+When helping travelers:
+- Provide accurate package details (destination, operator, highlights)
+- Check slot availability before recommending
+- Suggest alternatives if departures are sold out"""
     
     def _log_activity(
         self,
@@ -124,105 +124,81 @@ When helping customers:
         """
         return await self.check_inventory_status(product_id, size)
     
-    async def get_product_details(self, product_id: str) -> dict:
-        """
-        Get detailed information about a product.
-        
-        Args:
-            product_id: Product identifier
-            
-        Returns:
-            Product details dictionary
-        """
+    async def get_product_details(self, package_id: str) -> dict:
+        """Get detailed information about a trip package."""
         start_time = datetime.utcnow()
-        
+
         query = """
-            SELECT product_id, name, brand, price, description,
-                   image_url, category, available_sizes, inventory
-            FROM products
-            WHERE product_id = %s
+            SELECT package_id, name, operator, price_per_person, description,
+                   image_url, trip_type, destination, durations, availability, highlights
+            FROM trip_packages
+            WHERE package_id = %s
         """
-        
-        result = await self.db.execute_one(query, (product_id,))
-        
+
+        result = await self.db.execute_one(query, (package_id,))
+
         execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-        
+
         self._log_activity(
             activity_type="search",
-            title=f"Product details: {product_id}",
+            title=f"Package details: {package_id}",
             details=f"Found: {result['name'] if result else 'Not found'}",
             sql_query=query.strip(),
             execution_time_ms=execution_time
         )
-        
+
         if not result:
-            return {"error": f"Product {product_id} not found"}
-        
-        result['price'] = float(result['price'])
+            return {"error": f"Package {package_id} not found"}
+
+        result['price_per_person'] = float(result['price_per_person'])
         return dict(result)
-    
-    async def check_inventory_status(self, product_id: str, size: Optional[str] = None) -> dict:
-        """
-        Check inventory status for a product.
-        
-        Args:
-            product_id: Product identifier
-            size: Optional size to check
-            
-        Returns:
-            Inventory status with availability
-        """
+
+    async def check_inventory_status(self, package_id: str, duration: Optional[str] = None) -> dict:
+        """Check departure availability for a trip package."""
         start_time = datetime.utcnow()
-        
+
         query = """
-            SELECT product_id, name, inventory, available_sizes
-            FROM products
-            WHERE product_id = %s
+            SELECT package_id, name, durations, availability
+            FROM trip_packages
+            WHERE package_id = %s
         """
-        
-        result = await self.db.execute_one(query, (product_id,))
-        
+
+        result = await self.db.execute_one(query, (package_id,))
+
         execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-        
+
         self._log_activity(
-            activity_type="inventory",
-            title=f"Inventory check: {product_id}" + (f" size {size}" if size else ""),
+            activity_type="availability",
+            title=f"Availability check: {package_id}" + (f" duration {duration}" if duration else ""),
             sql_query=query.strip(),
             execution_time_ms=execution_time
         )
-        
+
         if not result:
-            return {"error": f"Product {product_id} not found"}
-        
-        inventory = result['inventory']
-        
-        if size:
-            quantity = inventory.get(size, 0)
+            return {"error": f"Package {package_id} not found"}
+
+        availability = result.get('availability') or {}
+
+        if duration:
+            slots = availability.get(duration, 0)
             return {
-                "product_id": product_id,
+                "package_id": package_id,
                 "name": result['name'],
-                "size": size,
-                "quantity": quantity,
-                "in_stock": quantity > 0,
-                "available_sizes": result['available_sizes']
+                "duration": duration,
+                "slots": slots,
+                "available": slots > 0,
+                "durations": result.get('durations'),
             }
-        else:
-            if isinstance(inventory, dict):
-                if 'quantity' in inventory:
-                    total = inventory['quantity']
-                else:
-                    total = sum(inventory.values())
-            else:
-                total = 0
-            
-            return {
-                "product_id": product_id,
-                "name": result['name'],
-                "total_quantity": total,
-                "inventory_by_size": inventory,
-                "in_stock": total > 0,
-                "available_sizes": result['available_sizes']
-            }
+
+        total = sum(availability.values()) if isinstance(availability, dict) else 0
+        return {
+            "package_id": package_id,
+            "name": result['name'],
+            "total_slots": total,
+            "availability_by_duration": availability,
+            "available": total > 0,
+            "durations": result.get('durations'),
+        }
 
 
 def create_product_agent(

@@ -42,7 +42,7 @@ class AgentResponse(BaseModel):
 
 class Phase2Agent:
     """
-    Phase 2 Shopping Agent with MCP abstraction layer.
+    Phase 2 travel concierge with MCP abstraction layer.
     
     Uses Strands SDK with MCP client for database operations via RDS Data API.
     
@@ -129,34 +129,29 @@ class Phase2Agent:
         )
     
     def _get_system_prompt(self) -> str:
-        """Get the system prompt for the shopping assistant."""
-        return """You are a helpful shopping assistant for Meridian, an athletic and fitness equipment store.
+        """Get the system prompt for the travel concierge."""
+        return """You are a helpful travel concierge for Meridian.
 
 You have access to database tools through MCP (Model Context Protocol) that allow you to:
-- Query the products table for product information
-- Check inventory levels
-- Process orders
-- Search for products
+- Query trip_packages for catalog search and filters
+- Check departure availability on packages
+- Process bookings for travelers
 
 The database schema includes:
-- products: product_id, name, brand, price, description, image_url, category, available_sizes, inventory, embedding
-- customers: customer_id, name, email
-- orders: order_id, customer_id, status, total_amount
-- order_items: item_id, order_id, product_id, size, quantity, unit_price
+- trip_packages: package_id, name, operator, price_per_person, description, image_url, trip_type, destination, durations, availability, embedding
+- travelers: traveler_id, full_name, email, home_airport
+- traveler_profiles: party_size, budget_min, budget_max, trip_goal, dietary_notes
+- bookings: booking_id, traveler_id, status, total_amount
+- booking_lines: booking_id, package_id, duration, travelers_count, unit_price
 
 Guidelines:
 - Be friendly and helpful
-- Use SQL queries through the MCP tools to get accurate product information
-- Recommend products based on customer needs
-- Always confirm order details before processing
+- Use SQL queries through MCP tools for accurate trip information
+- Recommend packages based on traveler needs
+- Always confirm booking details before processing
 
-Available product categories:
-- Running Shoes
-- Training Shoes
-- Fitness Equipment
-- Apparel
-- Accessories
-- Recovery"""
+Trip types:
+- City Breaks, Beach & Resort, Adventure & Outdoors, Wellness & Luxury, Family Trips, Business Travel"""
     
     def _log_activity(
         self,

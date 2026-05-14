@@ -88,23 +88,23 @@ class SupervisorAgent:
     
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the supervisor."""
-        return """You are a supervisor agent for Meridian, coordinating specialized agents to help customers.
+        return """You are a supervisor agent for Meridian, coordinating specialized travel agents.
 
 You have three specialized agents you can delegate to:
-1. Search Agent - For finding products via semantic text search or visual image search
-2. Product Agent - For getting product details and checking inventory
-3. Order Agent - For calculating totals and processing orders
+1. Search Agent - For finding trip packages via semantic text search
+2. Package Agent - For package details and departure availability
+3. Booking Agent - For calculating totals and processing reservations
 
 Your role is to:
-- Understand customer requests
+- Understand traveler requests
 - Delegate to the appropriate specialized agent
-- Coordinate multi-step workflows (e.g., search -> details -> order)
+- Coordinate multi-step workflows (e.g., search -> availability -> book)
 - Synthesize responses from multiple agents
 
 Guidelines:
-- For product searches, delegate to Search Agent
-- For specific product info or inventory, delegate to Product Agent
-- For orders and pricing, delegate to Order Agent
+- For trip discovery, delegate to Search Agent
+- For package details or departure slots, delegate to Package Agent
+- For bookings and pricing, delegate to Booking Agent
 - You can delegate to multiple agents in sequence for complex requests"""
     
     def _log_activity(
@@ -159,7 +159,7 @@ Guidelines:
         self._log_activity(
             activity_type="delegation",
             title="Search Agent completed",
-            details=f"Found {len(result.get('products', []))} products",
+            details=f"Found {len(result.get('packages', result.get('products', [])))} packages",
             execution_time_ms=execution_time,
             agent_name="SearchAgent"
         )
@@ -182,8 +182,8 @@ Guidelines:
         
         self._log_activity(
             activity_type="delegation",
-            title="Delegating to Product Agent",
-            details=f"Action: {action}, Product: {product_id}"
+            title="Delegating to Package Agent",
+            details=f"Action: {action}, Package: {product_id}"
         )
         
         if action == "details":
@@ -197,7 +197,7 @@ Guidelines:
         
         self._log_activity(
             activity_type="delegation",
-            title="Product Agent completed",
+            title="Package Agent completed",
             execution_time_ms=execution_time,
             agent_name="ProductAgent"
         )
@@ -220,7 +220,7 @@ Guidelines:
         
         self._log_activity(
             activity_type="delegation",
-            title="Delegating to Order Agent",
+            title="Delegating to Booking Agent",
             details=f"Action: {action}, Items: {len(items or [])}"
         )
         
@@ -235,7 +235,7 @@ Guidelines:
         
         self._log_activity(
             activity_type="delegation",
-            title="Order Agent completed",
+            title="Booking Agent completed",
             execution_time_ms=execution_time,
             agent_name="OrderAgent"
         )

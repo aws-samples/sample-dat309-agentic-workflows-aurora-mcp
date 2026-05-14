@@ -1,5 +1,5 @@
 """
-Phase 3 Search Agent - Specialized in semantic product search.
+Phase 3 Search Agent - Specialized in semantic trip package search.
 
 Implements semantic search using:
 - Cohere Embed v4 (1024 dimensions)
@@ -21,7 +21,7 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 from pydantic import BaseModel
 
-from db.rds_data_client import get_rds_data_client
+from backend.db.rds_data_client import get_rds_data_client
 
 
 class ActivityEntry(BaseModel):
@@ -37,13 +37,13 @@ class ActivityEntry(BaseModel):
 
 
 # Cohere Embed v4 Configuration (1024 dimensions)
-EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "global.cohere.embed-v4")
+EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "cohere.embed-v4:0")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
 
 
 class SearchAgent:
     """
-    Search Agent specialized in semantic product search.
+    Search Agent specialized in semantic trip package search.
 
     Requirements:
     - 11.2: Search_Agent specialized in semantic product search
@@ -72,17 +72,17 @@ class SearchAgent:
 
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the search agent."""
-        return """You are a Search Agent specialized in finding products for customers.
+        return """You are a Search Agent specialized in finding trip packages for travelers.
 
 Your capabilities:
-- Semantic text search: Find products based on natural language descriptions
+- Semantic text search over the trip catalog using natural language
 
 You use Cohere Embed v4 embeddings with pgvector for high-quality semantic search.
 
 When searching:
-- Understand the customer's intent
-- Use semantic search for text queries
-- Return relevant products with similarity scores"""
+- Understand the traveler's intent (destination, vibe, party size hints)
+- Use semantic search for open-ended trip discovery
+- Return relevant packages with similarity scores"""
 
     def _log_activity(
         self,
@@ -127,7 +127,7 @@ When searching:
     @tool
     async def _semantic_search_tool(self, query: str, limit: int = 5) -> List[dict]:
         """
-        Search for products using semantic text search.
+        Search for trip packages using semantic text search.
 
         Args:
             query: Natural language search query
@@ -140,7 +140,7 @@ When searching:
 
     async def semantic_search(self, query: str, limit: int = 5) -> dict:
         """
-        Perform semantic product search using text embedding.
+        Perform semantic trip search using text embedding.
         
         Requirement 11.6: Semantic search using Cohere Embed v4 (1024 dims)
         
@@ -175,7 +175,7 @@ When searching:
         search_start = datetime.utcnow()
         
         sql = """
-            SELECT * FROM semantic_product_search(%s::vector, %s)
+            SELECT * FROM semantic_trip_search(%s::vector, %s)
         """
         
         # Convert embedding to PostgreSQL vector format
@@ -188,26 +188,27 @@ When searching:
         self._log_activity(
             activity_type="search",
             title=f"Semantic search: '{query}'",
-            details=f"Found {len(results)} products",
-            sql_query="SELECT * FROM semantic_product_search(...)",
+            details=f"Found {len(results)} packages",
+            sql_query="SELECT * FROM semantic_trip_search(...)",
             execution_time_ms=search_time
         )
         
         # Format results
-        products = []
+        packages = []
         for r in results:
-            products.append({
-                "product_id": r['product_id'],
+            packages.append({
+                "package_id": r['package_id'],
                 "name": r['name'],
-                "brand": r['brand'],
-                "price": float(r['price']),
+                "operator": r['operator'],
+                "price_per_person": float(r['price_per_person']),
                 "description": r['description'],
                 "image_url": r['image_url'],
-                "category": r['category'],
+                "trip_type": r['trip_type'],
+                "destination": r.get('destination'),
                 "similarity": float(r['similarity'])
             })
-        
-        return {"products": products, "query": query}
+
+        return {"packages": packages, "query": query}
     
 
 

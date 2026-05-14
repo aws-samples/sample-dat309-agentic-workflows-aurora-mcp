@@ -5,7 +5,7 @@ Implements the MVP pattern using:
 - Strands SDK (strands-agents) for agent framework
 - Claude Opus 4.7 via Amazon Bedrock (cross-region inference)
 - RDS Data API for Aurora PostgreSQL access
-- Tools for product lookup, inventory check, price calculation, order processing
+- Tools for package lookup, availability check, price calculation, booking processing
 
 Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
 """
@@ -21,7 +21,7 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 from pydantic import BaseModel
 
-from db.rds_data_client import get_rds_data_client
+from backend.db.rds_data_client import get_rds_data_client
 
 
 class ActivityEntry(BaseModel):
@@ -45,7 +45,7 @@ class AgentResponse(BaseModel):
 
 class Phase1Agent:
     """
-    Phase 1 Shopping Agent with direct database access.
+    Phase 1 travel concierge with direct database access.
     
     Uses Strands SDK with Claude Opus 4.7 via Bedrock (cross-region inference).
     Connects to Aurora PostgreSQL using RDS Data API.
@@ -54,7 +54,7 @@ class Phase1Agent:
     - 9.1: Implemented using Strands SDK
     - 9.2: Uses Claude Opus 4.7 via Amazon Bedrock
     - 9.3: Connects to Aurora PostgreSQL using RDS Data API
-    - 9.4: Has tools for product lookup, inventory check, price calculation, order processing
+    - 9.4: Has tools for package lookup, availability check, price calculation, booking processing
     - 9.5: Logs all database queries and execution times
     """
     
@@ -89,29 +89,29 @@ class Phase1Agent:
         )
     
     def _get_system_prompt(self) -> str:
-        """Get the system prompt for the shopping assistant."""
-        return """You are a helpful shopping assistant for Meridian, an athletic and fitness equipment store.
+        """Get the system prompt for the travel concierge."""
+        return """You are a helpful travel concierge for Meridian.
 
 Your capabilities:
-- Look up product details by ID or search for products
-- Check inventory and available sizes
-- Calculate order totals with tax and shipping
-- Process orders for customers
+- Look up trip package details by ID or search the catalog
+- Check departure availability and duration options
+- Calculate booking totals with tax and fees
+- Process bookings for travelers
 
 Guidelines:
 - Be friendly and helpful
-- Provide accurate product information
-- Recommend products based on customer needs
-- Always confirm order details before processing
-- If a product is out of stock, suggest alternatives
+- Provide accurate trip information (destination, operator, price per person)
+- Recommend packages based on traveler needs
+- Always confirm booking details before processing
+- If a package is sold out, suggest alternatives
 
-Available product categories:
-- Running Shoes
-- Training Shoes
-- Fitness Equipment
-- Apparel
-- Accessories
-- Recovery"""
+Trip types in the catalog:
+- City Breaks
+- Beach & Resort
+- Adventure & Outdoors
+- Wellness & Luxury
+- Family Trips
+- Business Travel"""
     
     def _log_activity(
         self,
@@ -135,161 +135,144 @@ Available product categories:
         self.activity_callback(entry)
     
     @tool
-    async def _lookup_product(self, product_id: str) -> dict:
+    async def _lookup_product(self, package_id: str) -> dict:
         """
-        Look up a product by its ID.
-        
+        Look up a trip package by its ID.
+
         Args:
-            product_id: The product identifier (e.g., 'RUN-001')
-            
-        Returns:
-            Product details including name, price, description, and availability
+            package_id: Package identifier (e.g., 'CTY-002')
         """
         start_time = datetime.utcnow()
-        
+
         query = """
-            SELECT product_id, name, brand, price, description, 
-                   image_url, category, available_sizes, inventory
-            FROM products
-            WHERE product_id = %s
+            SELECT package_id, name, operator, price_per_person, description,
+                   image_url, trip_type, destination, durations, availability
+            FROM trip_packages
+            WHERE package_id = %s
         """
-        
-        result = await self.db.execute_one(query, (product_id,))
-        
+
+        result = await self.db.execute_one(query, (package_id,))
+
         execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-        
+
         self._log_activity(
             activity_type="search",
-            title=f"Product lookup: {product_id}",
+            title=f"Package lookup: {package_id}",
             details=f"Found: {result['name'] if result else 'Not found'}",
             sql_query=query.strip(),
             execution_time_ms=execution_time
         )
-        
+
         if not result:
-            return {"error": f"Product {product_id} not found"}
-        
-        # Convert Decimal to float for JSON serialization
-        result['price'] = float(result['price'])
+            return {"error": f"Package {package_id} not found"}
+
+        result['price_per_person'] = float(result['price_per_person'])
         return dict(result)
     
     @tool
     async def _search_products(
         self,
         query: str,
-        category: Optional[str] = None,
+        trip_type: Optional[str] = None,
         limit: int = 5
     ) -> List[dict]:
         """
-        Search for products by text query.
-        
+        Search trip packages by text query.
+
         Args:
-            query: Search terms (e.g., 'running shoes', 'lightweight')
-            category: Optional category filter
+            query: Search terms (e.g., 'Tokyo', 'beach resort')
+            trip_type: Optional trip type filter
             limit: Maximum number of results (default 5)
-            
-        Returns:
-            List of matching products
         """
         start_time = datetime.utcnow()
-        
+
         sql = """
-            SELECT product_id, name, brand, price, description, 
-                   image_url, category, available_sizes
-            FROM products
-            WHERE (name ILIKE %s OR description ILIKE %s OR brand ILIKE %s)
+            SELECT package_id, name, operator, price_per_person, description,
+                   image_url, trip_type, destination, durations
+            FROM trip_packages
+            WHERE (name ILIKE %s OR description ILIKE %s OR operator ILIKE %s
+                   OR destination ILIKE %s)
         """
-        params = [f"%{query}%", f"%{query}%", f"%{query}%"]
-        
-        if category:
-            sql += " AND category = %s"
-            params.append(category)
-        
+        params = [f"%{query}%", f"%{query}%", f"%{query}%", f"%{query}%"]
+
+        if trip_type:
+            sql += " AND trip_type = %s"
+            params.append(trip_type)
+
         sql += " LIMIT %s"
         params.append(limit)
-        
+
         results = await self.db.execute(sql, tuple(params))
-        
+
         execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-        
+
         self._log_activity(
             activity_type="search",
-            title=f"Product search: '{query}'",
-            details=f"Found {len(results)} products" + (f" in {category}" if category else ""),
+            title=f"Package search: '{query}'",
+            details=f"Found {len(results)} packages" + (f" in {trip_type}" if trip_type else ""),
             sql_query=sql.strip(),
             execution_time_ms=execution_time
         )
-        
-        # Convert Decimal to float
+
         for r in results:
-            r['price'] = float(r['price'])
-        
+            r['price_per_person'] = float(r['price_per_person'])
+
         return [dict(r) for r in results]
     
     @tool
     async def _check_inventory(
         self,
-        product_id: str,
-        size: Optional[str] = None
+        package_id: str,
+        duration: Optional[str] = None
     ) -> dict:
         """
-        Check inventory status for a product.
-        
+        Check departure availability for a trip package.
+
         Args:
-            product_id: The product identifier
-            size: Optional size to check (for sized products like shoes/apparel)
-            
-        Returns:
-            Inventory status with quantity and availability
+            package_id: Package identifier
+            duration: Optional duration key (e.g., '7 nights')
         """
         start_time = datetime.utcnow()
-        
+
         query = """
-            SELECT product_id, name, inventory, available_sizes
-            FROM products
-            WHERE product_id = %s
+            SELECT package_id, name, durations, availability
+            FROM trip_packages
+            WHERE package_id = %s
         """
-        
-        result = await self.db.execute_one(query, (product_id,))
-        
+
+        result = await self.db.execute_one(query, (package_id,))
+
         execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-        
+
         self._log_activity(
-            activity_type="inventory",
-            title=f"Inventory check: {product_id}" + (f" size {size}" if size else ""),
+            activity_type="availability",
+            title=f"Availability check: {package_id}" + (f" duration {duration}" if duration else ""),
             sql_query=query.strip(),
             execution_time_ms=execution_time
         )
-        
+
         if not result:
-            return {"error": f"Product {product_id} not found"}
-        
-        inventory = result['inventory']
-        
-        if size:
-            quantity = inventory.get(size, 0)
+            return {"error": f"Package {package_id} not found"}
+
+        availability = result.get('availability') or {}
+
+        if duration:
+            slots = availability.get(duration, 0)
             return {
-                "product_id": product_id,
-                "size": size,
-                "quantity": quantity,
-                "in_stock": quantity > 0
+                "package_id": package_id,
+                "duration": duration,
+                "slots": slots,
+                "available": slots > 0,
             }
-        else:
-            # Return total inventory across all sizes/variants
-            if isinstance(inventory, dict):
-                if 'quantity' in inventory:
-                    total = inventory['quantity']
-                else:
-                    total = sum(inventory.values())
-            else:
-                total = 0
-            
-            return {
-                "product_id": product_id,
-                "total_quantity": total,
-                "inventory_by_size": inventory,
-                "in_stock": total > 0
-            }
+
+        total = sum(availability.values()) if isinstance(availability, dict) else 0
+        return {
+            "package_id": package_id,
+            "total_slots": total,
+            "availability_by_duration": availability,
+            "available": total > 0,
+            "durations": result.get('durations'),
+        }
     
     @tool
     async def _calculate_total(self, items: List[dict]) -> dict:
@@ -297,8 +280,8 @@ Available product categories:
         Calculate order total including tax and shipping.
         
         Args:
-            items: List of items with product_id, quantity, and optional size
-                   Example: [{"product_id": "RUN-001", "quantity": 1, "size": "10"}]
+            items: List of items with package_id, travelers_count, and optional duration
+                   Example: [{"package_id": "CTY-002", "travelers_count": 2, "duration": "7 nights"}]
             
         Returns:
             Order total breakdown with subtotal, tax, shipping, and total
@@ -309,18 +292,19 @@ Available product categories:
         item_details = []
         
         for item in items:
-            query = "SELECT product_id, name, price FROM products WHERE product_id = %s"
-            product = await self.db.execute_one(query, (item['product_id'],))
-            
-            if product:
-                item_total = product['price'] * item.get('quantity', 1)
+            query = "SELECT package_id, name, price_per_person FROM trip_packages WHERE package_id = %s"
+            package = await self.db.execute_one(query, (item['package_id'],))
+
+            if package:
+                travelers = item.get('travelers_count', item.get('quantity', 1))
+                item_total = package['price_per_person'] * travelers
                 subtotal += item_total
                 item_details.append({
-                    "product_id": product['product_id'],
-                    "name": product['name'],
-                    "quantity": item.get('quantity', 1),
-                    "size": item.get('size'),
-                    "unit_price": float(product['price']),
+                    "package_id": package['package_id'],
+                    "name": package['name'],
+                    "travelers_count": travelers,
+                    "duration": item.get('duration'),
+                    "unit_price": float(package['price_per_person']),
                     "total": float(item_total)
                 })
         
@@ -354,67 +338,59 @@ Available product categories:
         items: List[dict]
     ) -> dict:
         """
-        Process a new order for a customer.
-        
+        Process a new booking for a traveler.
+
         Args:
-            customer_id: Customer identifier
-            items: List of items with product_id, quantity, and optional size
-            
-        Returns:
-            Order confirmation with order_id, status, and estimated delivery
+            traveler_id: Traveler identifier
+            items: List of items with package_id, travelers_count, optional duration
         """
         start_time = datetime.utcnow()
-        
-        # Calculate totals first
+
         totals = await self._calculate_total(items)
-        
-        # Generate order ID
-        order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
-        
-        # Insert order
-        insert_order = """
-            INSERT INTO orders (order_id, customer_id, status, total_amount)
+
+        booking_id = f"BKG-{uuid.uuid4().hex[:8].upper()}"
+
+        insert_booking = """
+            INSERT INTO bookings (booking_id, traveler_id, status, total_amount)
             VALUES (%s, %s, 'confirmed', %s)
         """
-        await self.db.execute(insert_order, (order_id, customer_id, totals['total']))
-        
-        # Insert order items
+        await self.db.execute(insert_booking, (booking_id, customer_id, totals['total']))
+
         for item in totals['items']:
-            insert_item = """
-                INSERT INTO order_items (order_id, product_id, size, quantity, unit_price)
+            insert_line = """
+                INSERT INTO booking_lines (booking_id, package_id, duration, travelers_count, unit_price)
                 VALUES (%s, %s, %s, %s, %s)
             """
-            await self.db.execute(insert_item, (
-                order_id,
-                item['product_id'],
-                item.get('size'),
-                item['quantity'],
+            await self.db.execute(insert_line, (
+                booking_id,
+                item['package_id'],
+                item.get('duration'),
+                item['travelers_count'],
                 item['unit_price']
             ))
-        
+
         execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-        
+
         self._log_activity(
             activity_type="order",
-            title=f"Order processed: {order_id}",
-            details=f"Customer: {customer_id}, Total: ${totals['total']:.2f}",
-            sql_query="INSERT INTO orders...; INSERT INTO order_items...",
+            title=f"Booking processed: {booking_id}",
+            details=f"Traveler: {customer_id}, Total: ${totals['total']:.2f}",
+            sql_query="INSERT INTO bookings...; INSERT INTO booking_lines...",
             execution_time_ms=execution_time
         )
-        
-        # Calculate estimated delivery (5-7 business days)
+
         from datetime import timedelta
-        delivery_date = datetime.utcnow() + timedelta(days=7)
-        
+        departure_window = datetime.utcnow() + timedelta(days=30)
+
         return {
-            "order_id": order_id,
+            "booking_id": booking_id,
             "status": "confirmed",
             "items": totals['items'],
             "subtotal": totals['subtotal'],
             "tax": totals['tax'],
             "shipping": totals['shipping'],
             "total": totals['total'],
-            "estimated_delivery": delivery_date.strftime("%B %d, %Y")
+            "estimated_departure": departure_window.strftime("%B %d, %Y")
         }
     
     async def process_message(

@@ -1,5 +1,5 @@
 """
-Phase 3 Order Agent - Specialized in order processing.
+Phase 3 Booking Agent - Specialized in trip booking processing.
 
 Implements order operations using:
 - RDS Data API for Aurora PostgreSQL access
@@ -18,7 +18,7 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 from pydantic import BaseModel
 
-from db.rds_data_client import get_rds_data_client
+from backend.db.rds_data_client import get_rds_data_client
 
 
 class ActivityEntry(BaseModel):
@@ -66,17 +66,17 @@ class OrderAgent:
     
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the order agent."""
-        return """You are an Order Agent specialized in processing customer orders.
+        return """You are a Booking Agent specialized in processing trip reservations.
 
 Your capabilities:
-- Calculate order totals including tax and shipping
-- Process orders and create order records
+- Calculate booking totals including tax and service fees
+- Create booking records in Aurora
 
 Guidelines:
-- Always show order breakdown before processing
-- Apply free shipping for orders over $100
+- Always show price breakdown before confirming
+- Apply reduced fees for bookings over $2,000 per person
 - Tax rate is 8.5%
-- Confirm all details before finalizing orders"""
+- Confirm traveler count and duration before finalizing"""
     
     def _log_activity(
         self,
@@ -142,19 +142,19 @@ Guidelines:
         item_details = []
         
         for item in items:
-            query = "SELECT product_id, name, price FROM products WHERE product_id = %s"
-            product = await self.db.execute_one(query, (item['product_id'],))
-            
-            if product:
-                quantity = item.get('quantity', 1)
-                item_total = product['price'] * quantity
+            query = "SELECT package_id, name, price_per_person FROM trip_packages WHERE package_id = %s"
+            package = await self.db.execute_one(query, (item['package_id'],))
+
+            if package:
+                travelers = item.get('travelers_count', item.get('quantity', 1))
+                item_total = package['price_per_person'] * travelers
                 subtotal += item_total
                 item_details.append({
-                    "product_id": product['product_id'],
-                    "name": product['name'],
-                    "quantity": quantity,
-                    "size": item.get('size'),
-                    "unit_price": float(product['price']),
+                    "package_id": package['package_id'],
+                    "name": package['name'],
+                    "travelers_count": travelers,
+                    "duration": item.get('duration'),
+                    "unit_price": float(package['price_per_person']),
                     "total": float(item_total)
                 })
         
@@ -198,51 +198,48 @@ Guidelines:
         totals = await self.calculate_total(items)
         
         # Generate order ID
-        order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
-        
-        # Insert order
-        insert_order = """
-            INSERT INTO orders (order_id, customer_id, status, total_amount)
+        booking_id = f"BKG-{uuid.uuid4().hex[:8].upper()}"
+
+        insert_booking = """
+            INSERT INTO bookings (booking_id, traveler_id, status, total_amount)
             VALUES (%s, %s, 'confirmed', %s)
         """
-        await self.db.execute(insert_order, (order_id, customer_id, totals['total']))
-        
-        # Insert order items
+        await self.db.execute(insert_booking, (booking_id, customer_id, totals['total']))
+
         for item in totals['items']:
-            insert_item = """
-                INSERT INTO order_items (order_id, product_id, size, quantity, unit_price)
+            insert_line = """
+                INSERT INTO booking_lines (booking_id, package_id, duration, travelers_count, unit_price)
                 VALUES (%s, %s, %s, %s, %s)
             """
-            await self.db.execute(insert_item, (
-                order_id,
-                item['product_id'],
-                item.get('size'),
-                item['quantity'],
+            await self.db.execute(insert_line, (
+                booking_id,
+                item['package_id'],
+                item.get('duration'),
+                item['travelers_count'],
                 item['unit_price']
             ))
-        
+
         execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-        
+
         self._log_activity(
             activity_type="order",
-            title=f"Order processed: {order_id}",
-            details=f"Customer: {customer_id}, Total: ${totals['total']:.2f}",
-            sql_query="INSERT INTO orders...; INSERT INTO order_items...",
+            title=f"Booking processed: {booking_id}",
+            details=f"Traveler: {customer_id}, Total: ${totals['total']:.2f}",
+            sql_query="INSERT INTO bookings...; INSERT INTO booking_lines...",
             execution_time_ms=execution_time
         )
-        
-        # Estimated delivery (5-7 business days)
-        delivery_date = datetime.utcnow() + timedelta(days=7)
-        
+
+        departure_date = datetime.utcnow() + timedelta(days=30)
+
         return {
-            "order_id": order_id,
+            "booking_id": booking_id,
             "status": "confirmed",
             "items": totals['items'],
             "subtotal": totals['subtotal'],
             "tax": totals['tax'],
             "shipping": totals['shipping'],
             "total": totals['total'],
-            "estimated_delivery": delivery_date.strftime("%B %d, %Y")
+            "estimated_departure": departure_date.strftime("%B %d, %Y")
         }
 
 
