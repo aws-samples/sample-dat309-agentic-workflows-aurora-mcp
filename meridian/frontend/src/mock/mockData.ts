@@ -109,7 +109,7 @@ export function generateMockActivities(phase: 1 | 2 | 3, query: string): Activit
       id: crypto.randomUUID(),
       timestamp: new Date(now.getTime() - 2000).toISOString(),
       activity_type: 'mcp',
-      title: 'MCP tool discovery',
+      title: 'MCP tools connected',
       details: 'Connected to postgres-mcp-server, discovered 12 tools',
       execution_time_ms: 156,
     })

@@ -44,7 +44,7 @@ const phases = [
       { icon: Database, label: 'Aurora PostgreSQL', sublabel: 'RDS Data API' },
     ],
     techStack: ['Strands SDK', 'MCP Protocol', 'RDS Data API', 'pgvector'],
-    pros: ['Database portability', 'Connection pooling', 'Tool auto-discovery'],
+    pros: ['Database portability', 'Connection pooling', 'MCP tool catalog'],
     codeSnippet: `mcp = MCPClient(["postgres-mcp-server"])
 agent = Agent(
     model=BedrockModel("claude-opus"),

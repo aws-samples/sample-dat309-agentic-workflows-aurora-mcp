@@ -2,7 +2,7 @@
  * Vision2026Section — session narrative: memory, MCP, AgentCore runtime, orchestration
  */
 import { FadeIn } from '../components/FadeIn';
-import { MemoryChip } from '../components/MemoryChip';
+import { TravelerPersona } from '../components/TravelerPersona';
 
 const pillars = [
   {
@@ -16,15 +16,15 @@ const pillars = [
     num: '02',
     title: 'MCP',
     serif: 'servers',
-    desc: 'Model Context Protocol exposes Aurora tools with discovery, schemas, and IAM auth — so agents never hardcode SQL or connection strings.',
+    desc: 'Model Context Protocol exposes Aurora tools with schemas and IAM auth — so agents never hardcode SQL or connection strings.',
     tags: ['Tool catalog', 'RDS Data API', 'Secure connect'],
   },
   {
     num: '03',
     title: 'Agent',
     serif: 'runtime',
-    desc: 'Bedrock AgentCore hosts durable, governed execution. LangGraph models supervisor graphs. Strands Agents wire tools to Claude on Bedrock.',
-    tags: ['AgentCore', 'LangGraph', 'Strands SDK'],
+    desc: 'Bedrock AgentCore hosts durable, governed execution. Strands Agents wire supervisor delegation and @tool memory to Claude on Bedrock.',
+    tags: ['AgentCore', 'Strands SDK', 'Supervisor'],
   },
   {
     num: '04',
@@ -50,7 +50,7 @@ const pillars = [
 ];
 
 const runtimeStack = [
-  { label: 'Orchestration', value: 'LangGraph · Strands supervisor' },
+  { label: 'Orchestration', value: 'Strands supervisor · specialist agents' },
   { label: 'Runtime', value: 'Amazon Bedrock AgentCore' },
   { label: 'Models', value: 'Claude on Bedrock · Cohere Embed v4' },
   { label: 'Data plane', value: 'Aurora PostgreSQL · MCP · RDS Data API' },
@@ -75,7 +75,7 @@ export function Vision2026Section() {
           </h2>
           <p className="section-subtitle" style={{ maxWidth: 680 }}>
             Build agentic workflows with Aurora and MCP — contextual memory, multi-turn queries,
-            and multi-agent orchestration on Amazon Bedrock AgentCore, LangGraph, and Strands Agents.
+            and multi-agent orchestration on Amazon Bedrock AgentCore and Strands Agents.
           </p>
         </div>
       </FadeIn>
@@ -96,11 +96,11 @@ export function Vision2026Section() {
           <div>
             <div className="memory-preview-eyebrow">Wave 01 · Memory of me</div>
             <p className="memory-preview-copy">
-              Agents recall durable traveler facts from Aurora before routing — so
-              &ldquo;beach escape in October&rdquo; respects party size, dates, and dietary needs across turns.
+              Meet <strong>Alex & Jordan Chen</strong> — demo travelers from SFO planning a Tokyo culture
+              trip. Agents recall their party size, dates, and dietary needs from Aurora before routing.
             </p>
           </div>
-          <MemoryChip onInspect={() => document.getElementById('agent')?.scrollIntoView({ behavior: 'smooth' })} />
+          <TravelerPersona variant="card" />
         </div>
       </FadeIn>
 

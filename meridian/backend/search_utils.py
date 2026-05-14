@@ -124,7 +124,7 @@ async def execute_keyword_search(
                     limit,
                 ),
             )
-        search_title = f"Keyword search: {params.query}"
+        search_title = f"Filter search: {params.query}"
 
     return results, display_sql, search_title
 
@@ -164,7 +164,7 @@ def build_search_sql(params: SearchParams, limit: int = 5) -> Tuple[str, str, st
             LIMIT {limit}
         """
         display_sql = f"ILIKE '{pattern}' AND price <= {params.price_filter}"
-        title = f"Keyword search: {params.query}"
+        title = f"Filter search: {params.query}"
     else:
         sql = f"""
             SELECT {PACKAGE_COLUMNS}
@@ -175,7 +175,7 @@ def build_search_sql(params: SearchParams, limit: int = 5) -> Tuple[str, str, st
             LIMIT {limit}
         """
         display_sql = f"ILIKE '{pattern}'"
-        title = f"Keyword search: {params.query}"
+        title = f"Filter search: {params.query}"
 
     return sql.strip(), display_sql, title
 

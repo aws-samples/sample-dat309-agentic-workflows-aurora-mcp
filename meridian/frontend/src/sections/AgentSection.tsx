@@ -4,14 +4,12 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { FadeIn } from '../components/FadeIn';
-import { MemoryChip } from '../components/MemoryChip';
+import { TravelerPersona, DEMO_TRAVELER_ID } from '../components/TravelerPersona';
 import { TraceSpan } from '../components/TraceSpan';
 import { ProductThumb } from '../components/ProductThumb';
 import { enrichTraceActivities } from '../utils/traceTelemetry';
 import { sendChatMessage, processOrder } from '../api/client';
 import type { Product, ActivityEntry, Message, Phase, LongTermMemoryFact } from '../types';
-
-const DEMO_TRAVELER_ID = 'trv_meridian_demo';
 
 const phaseColors = ['#3b82f6', '#a855f7', '#10b981', '#ff5b1f'];
 const phaseLabels = [
@@ -35,7 +33,7 @@ const phaseInfo: Record<Phase, {
     beat: 'SQL filters on trip_packages — destination, operator, price.',
     description: 'RDS Data API → Aurora',
     capabilities: ['Trip type filter', 'Operator filter', 'Price filter'],
-    limitations: ['No natural language', 'Exact keyword match only'],
+    limitations: ['No natural language', 'Exact filter match only'],
     tech: 'trip_packages · RDS Data API',
   },
   2: {
@@ -43,7 +41,7 @@ const phaseInfo: Record<Phase, {
     beat: 'Same catalog queries through postgres-mcp-server.',
     description: 'Model Context Protocol',
     capabilities: ['Trip type filter', 'Operator filter', 'MCP run_query'],
-    limitations: ['Still keyword-based', 'No vector search'],
+    limitations: ['Still filter-based', 'No vector search'],
     tech: 'MCP → trip_packages',
   },
   3: {
@@ -444,12 +442,12 @@ export function AgentSection() {
     1: {
       works: ['City breaks', 'Beach & Resort', 'Business travel under $1500'],
       breaks: ['Romantic week in Europe', 'Family trip with kids who love theme parks'],
-      hint: 'Phase 1: keyword lookup only. Try "romantic week in Europe" in Phase 3 to feel the jump →',
+      hint: 'Phase 1: SQL filters only. Try "romantic week in Europe" in Phase 3 to feel the jump →',
     },
     2: {
       works: ['Adventure & Outdoors', 'Wellness & Luxury', 'Tokyo culture trip'],
       breaks: ['Beach vacation with snorkeling', 'Quick conference stopover in Singapore'],
-      hint: 'Phase 2: MCP discovers tools — still keywords underneath. Try natural language in Phase 3 →',
+      hint: 'Phase 2: MCP tools — still filters underneath. Try natural language in Phase 3 →',
     },
     3: {
       works: ['Weekend in Paris under $2k', 'Is the Maldives package available?', 'Family-friendly beach resort'],
@@ -463,7 +461,7 @@ export function AgentSection() {
         'What did we discuss last time about Iceland?',
       ],
       breaks: [],
-      hint: 'Phase 4: same semantic search as Phase 3, plus AgentCore session + Aurora memory in the trace.',
+      hint: 'You are Alex & Jordan Chen — a returning couple from SFO. The concierge loads your Aurora profile before every reply.',
     },
   };
 
@@ -488,10 +486,16 @@ export function AgentSection() {
               Talk to the <em className="serif">agent</em>.
             </h2>
             <p className="section-subtitle">
-              Climb the ladder: keywords → MCP → semantic search → memory. Phase 4 is the returning
-              traveler — same specialist team, but it remembers you.
+              Climb the ladder: filters → MCP → semantic search → memory. Phase 4 loads the
+              traveler profile below before every reply.
             </p>
           </div>
+          <TravelerPersona
+            variant="featured"
+            facts={memoryFacts}
+            active={phase === 4}
+            onActivate={() => switchPhase(3)}
+          />
         </FadeIn>
 
         <div
@@ -566,7 +570,11 @@ export function AgentSection() {
                     }}
                   />
                   <span className="chat-title">Travel Concierge</span>
-                  {phase === 4 && <MemoryChip compact facts={memoryFacts} />}
+                  {phase === 4 && (
+                    <span className="traveler-persona-badge" style={{ marginLeft: 4 }}>
+                      Alex & Jordan
+                    </span>
+                  )}
                   {connectionStatus === 'disconnected' && (
                     <span className="offline-badge">Offline</span>
                   )}

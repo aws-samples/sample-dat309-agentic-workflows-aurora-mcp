@@ -109,13 +109,13 @@ function buildPhase4Preamble(
     }),
     span({
       activity_type: 'reasoning',
-      title: 'Supervisor routing (LangGraph)',
+      title: 'Supervisor routing (Strands)',
       agent_name: 'SupervisorAgent',
       agent_file: 'agents/phase3/supervisor.py',
       execution_time_ms: 28,
       telemetry: {
         category: 'orchestration',
-        component: 'LangGraph',
+        component: 'Strands supervisor',
         status: 'delegated',
         tokens: { input: 1240, output: 86 },
         fields: [
@@ -155,7 +155,7 @@ function buildPhase2Preamble(query: string, traceId: string, msgs: Message[]): A
     }),
     span({
       activity_type: 'mcp',
-      title: 'MCP tool discovery',
+      title: 'MCP tools connected',
       agent_name: 'MCPClient',
       agent_file: 'mcp/mcp_client.py',
       execution_time_ms: 22,
@@ -237,7 +237,7 @@ function enrichActivity(a: ActivityEntry, phase: 1 | 2 | 3 | 4, query: string): 
                 : []),
             ]
           : [
-              { label: 'strategy', value: phase === 2 ? 'MCP → ILIKE' : 'ILIKE keyword' },
+              { label: 'strategy', value: phase === 2 ? 'MCP → ILIKE' : 'ILIKE filters' },
               { label: 'index', value: 'btree + sequential scan' },
             ],
     };
@@ -266,7 +266,7 @@ function enrichActivity(a: ActivityEntry, phase: 1 | 2 | 3 | 4, query: string): 
   } else if (type === 'delegation' || (type === 'reasoning' && a.agent_name?.includes('Supervisor'))) {
     base.telemetry = {
       category: 'orchestration',
-      component: 'LangGraph',
+      component: 'Strands supervisor',
       status: 'delegated',
       fields: [
         { label: 'from', value: a.agent_name ?? 'Supervisor' },
@@ -315,10 +315,10 @@ function buildSynthesisStep(phase: 1 | 2 | 3 | 4, productCount: number): Activit
   return span({
     activity_type: 'result',
     title: 'Compose grounded response',
-    agent_name: phase >= 3 ? (phase === 4 ? 'PartnerRuntime' : 'SupervisorAgent') : `Phase${phase}Agent`,
+    agent_name: phase >= 3 ? (phase === 4 ? 'ConciergeOrchestrator' : 'SupervisorAgent') : `Phase${phase}Agent`,
     agent_file:
       phase === 4
-        ? 'agents/phase4/partner_runtime.py'
+        ? 'agents/phase4/concierge.py'
         : phase === 3
           ? 'agents/phase3/supervisor.py'
           : `agents/phase${phase}/agent.py`,

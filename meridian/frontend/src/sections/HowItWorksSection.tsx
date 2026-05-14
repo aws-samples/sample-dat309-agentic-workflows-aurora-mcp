@@ -19,8 +19,8 @@ interface Phase {
 const phases: Phase[] = [
   {
     num: '01',
-    title: 'Keyword',
-    serifWord: 'concierge',
+    title: 'Direct',
+    serifWord: 'filters',
     subtitle: 'The lab',
     beat: 'Looks up trips by exact type, operator, or price — like reading a brochure.',
     scale: '50 bookings/day',
@@ -30,49 +30,49 @@ const phases: Phase[] = [
   tools=[search_packages, check_dates, book_trip]
 )
 agent("City breaks under $2000")`,
-    tags: ['Strands SDK', 'RDS Data API', 'Keyword SQL', 'Aurora PostgreSQL'],
+    tags: ['Strands SDK', 'RDS Data API', 'SQL filters', 'Aurora PostgreSQL'],
     flow: 'Traveler → Agent → RDS Data API → Aurora',
   },
   {
     num: '02',
     title: 'MCP',
-    serifWord: 'discovery',
+    serifWord: 'tools',
     subtitle: 'The toolkit',
-    beat: 'Same keyword brain — but tools are discovered via MCP, not baked into the agent.',
+    beat: 'Same catalog queries — but tools are exposed via MCP instead of hardcoded in the agent.',
     scale: '5K bookings/day',
-    desc: 'The agent discovers Aurora capabilities through MCP instead of hardcoding SQL. RDS Data API removes connection pools; Serverless v2 scales to zero between sessions.',
+    desc: 'The agent calls Aurora through postgres-mcp-server instead of baking SQL into code. RDS Data API removes connection pools; Serverless v2 scales to zero between sessions.',
     code: `mcp = MCPClient(awslabs.postgres_mcp_server)
 tools = mcp.list_tools()  # execute_sql, describe…
 → Aurora Serverless v2 · IAM auth`,
-    tags: ['MCP', 'Tool discovery', 'Serverless v2', 'IAM Auth'],
+    tags: ['MCP', 'postgres-mcp', 'Serverless v2', 'IAM Auth'],
     flow: 'Traveler → Agent → MCP → Data API → Aurora',
   },
   {
     num: '03',
     title: 'Specialist',
-    serifWord: 'team',
+    serifWord: 'agents',
     subtitle: 'Semantic scale',
-    beat: 'Natural language works — a supervisor routes to search, availability, and booking agents.',
+    beat: 'Natural language works — a supervisor routes to search, availability, and booking specialists.',
     scale: '50K bookings/day',
-    desc: 'Cohere Embed v4 vectors in pgvector power hybrid semantic + lexical search. A LangGraph supervisor delegates to specialists so vague requests map to real packages.',
+    desc: 'Cohere Embed v4 vectors in pgvector power hybrid semantic + lexical search. A Strands supervisor delegates to specialist agents so vague requests map to real packages.',
     code: `emb = cohere_embed("romantic week in Italy")
 SELECT *, 0.7*semantic + 0.3*lexical AS score
 FROM packages ORDER BY score DESC LIMIT 5`,
-    tags: ['Cohere Embed v4', 'pgvector 0.8', 'LangGraph', 'Hybrid search'],
+    tags: ['Cohere Embed v4', 'pgvector 0.8', 'Strands supervisor', 'Hybrid search'],
     flow: 'Traveler → Supervisor → [Search · Availability · Booking] → Aurora',
   },
   {
     num: '04',
-    title: 'Partner',
-    serifWord: 'runtime',
+    title: 'Personal',
+    serifWord: 'memory',
     subtitle: 'Production',
     beat: 'Remembers the traveler — party size, dates, allergies — before every search and booking.',
     scale: '50K+ bookings/day',
-    desc: 'Bedrock AgentCore hosts durable sessions. Short-term turn context plus long-term facts in Aurora feed the same specialist team — with governed plan→confirm flows and permalinked traces.',
+    desc: 'Bedrock AgentCore hosts durable sessions. Short-term turn context plus long-term facts in Aurora feed the same specialist agents — with governed plan→confirm flows and permalinked traces.',
     code: `session = AgentCore.start(trace_id=tr)
 facts = memory.recall(user_id, embed(query))
-graph = LangGraph.supervisor(memory=session + facts)
-result = graph.run(query)`,
+concierge = ConciergeOrchestrator(memory=session + facts)
+result = concierge.run(query)`,
     tags: ['AgentCore', 'memory.facts', 'Trace replay', 'Plan → confirm'],
     flow: 'Traveler → AgentCore → Memory → Supervisor → MCP → Aurora',
   },
@@ -84,7 +84,7 @@ export function HowItWorksSection() {
       id="howitworks"
       style={{
         padding: '64px 28px',
-        maxWidth: 1180,
+        maxWidth: 1280,
         margin: '0 auto',
         borderTop: '1px solid var(--dl-line)',
       }}
@@ -96,20 +96,14 @@ export function HowItWorksSection() {
             Four phases. One <em className="serif">ladder</em>.
           </h2>
           <p className="section-subtitle">
-            Each phase adds exactly one capability: <strong>keywords</strong> → <strong>MCP tools</strong> →{' '}
+            Each phase adds exactly one capability: <strong>filters</strong> → <strong>MCP tools</strong> →{' '}
             <strong>semantic search</strong> → <strong>memory</strong>. Phases 1–3 are the teaching path;
             Phase 4 is how Meridian runs in production.
           </p>
         </div>
       </FadeIn>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          gap: 20,
-        }}
-      >
+      <div className="howitworks-grid">
         {phases.map((p, i) => (
           <FadeIn key={p.num} delay={i * 0.08}>
             <div className="phase-card">

@@ -1,0 +1,126 @@
+/**
+ * TravelerPersona — demo traveler identity + Aurora-backed memory (Phase 4)
+ */
+import { useEffect, useState } from 'react';
+import { fetchMemoryProfile } from '../api/client';
+import type { LongTermMemoryFact, TravelerProfile } from '../types';
+
+export const DEMO_TRAVELER_ID = 'trv_meridian_demo';
+
+export const DEMO_PERSONA_FALLBACK: TravelerProfile = {
+  full_name: 'Alex & Jordan Chen',
+  home_airport: 'SFO',
+  party_size: 2,
+  budget_min: 2000,
+  budget_max: 3500,
+  seat_preference: 'Window on short-haul · aisle on long-haul',
+  dietary_notes: 'Shellfish allergy — exclude seafood dining',
+  trip_goal: 'Tokyo culture trip — target Oct 12–19',
+};
+
+interface TravelerPersonaProps {
+  travelerId?: string;
+  variant?: 'banner' | 'card' | 'featured';
+  facts?: LongTermMemoryFact[];
+  profile?: TravelerProfile | null;
+  active?: boolean;
+  onActivate?: () => void;
+}
+
+export function TravelerPersona({
+  travelerId = DEMO_TRAVELER_ID,
+  variant = 'banner',
+  facts: factsProp,
+  profile: profileProp,
+  active = true,
+  onActivate,
+}: TravelerPersonaProps) {
+  const [profile, setProfile] = useState<TravelerProfile>(
+    profileProp ?? DEMO_PERSONA_FALLBACK,
+  );
+  const [facts, setFacts] = useState<LongTermMemoryFact[]>(factsProp ?? []);
+
+  useEffect(() => {
+    if (profileProp) setProfile(profileProp);
+    if (factsProp?.length) setFacts(factsProp);
+  }, [profileProp, factsProp]);
+
+  useEffect(() => {
+    if (profileProp && factsProp?.length) return;
+    fetchMemoryProfile(travelerId)
+      .then((res) => {
+        if (res.profile) setProfile({ ...DEMO_PERSONA_FALLBACK, ...res.profile });
+        if (res.facts.length) setFacts(res.facts);
+      })
+      .catch(() => {
+        setProfile(DEMO_PERSONA_FALLBACK);
+      });
+  }, [travelerId, profileProp, factsProp]);
+
+  const name = profile.full_name ?? DEMO_PERSONA_FALLBACK.full_name!;
+  const initials = name
+    .split(/[&\s]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+
+  const meta = [
+    profile.home_airport ? `${profile.home_airport} home` : null,
+    profile.party_size ? `${profile.party_size} travelers` : null,
+    profile.trip_goal,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  const factLimit = variant === 'banner' ? 4 : 6;
+
+  return (
+    <div
+      className={`traveler-persona traveler-persona--${variant}${active ? ' is-active' : ' is-idle'}`}
+    >
+      <div className="traveler-persona-avatar" aria-hidden="true">
+        {initials}
+      </div>
+      <div className="traveler-persona-body">
+        <div className="traveler-persona-head">
+          <div>
+            <div className="traveler-persona-eyebrow">
+              {active ? 'Demo traveler · Phase 4 memory' : 'Demo traveler · switch to Phase 4'}
+            </div>
+            <div className="traveler-persona-name">{name}</div>
+          </div>
+          <span className="traveler-persona-badge">
+            {active ? 'Active in chat' : 'Aurora profile'}
+          </span>
+        </div>
+        {meta && <p className="traveler-persona-meta">{meta}</p>}
+        {(profile.dietary_notes || profile.seat_preference) && (
+          <p className="traveler-persona-notes">
+            {[profile.dietary_notes, profile.seat_preference].filter(Boolean).join(' · ')}
+          </p>
+        )}
+        {facts.length > 0 ? (
+          <div className="traveler-persona-facts">
+            {facts.slice(0, factLimit).map((f) => (
+              <span key={f.key} className="traveler-persona-fact" title={f.source}>
+                {f.value}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="traveler-persona-facts">
+            <span className="traveler-persona-fact">2 travelers</span>
+            <span className="traveler-persona-fact">Tokyo Oct 12–19</span>
+            <span className="traveler-persona-fact">Shellfish allergy</span>
+          </div>
+        )}
+        {!active && onActivate && (
+          <button type="button" className="traveler-persona-cta" onClick={onActivate}>
+            Chat as Alex & Jordan → Phase 4
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

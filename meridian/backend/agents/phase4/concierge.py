@@ -98,7 +98,10 @@ class ConciergeOrchestrator:
         packages, search_activities = await search_fn(message, limit=limit)
         activities.extend(search_activities)
 
-        shown = [{"package_id": getattr(p, "product_id", p.package_id), "name": p.name} for p in packages]
+        shown = [
+            {"package_id": getattr(p, "product_id", None) or getattr(p, "package_id", ""), "name": p.name}
+            for p in packages
+        ]
 
         if packages:
             hint = f" for {memory_facts[0]['value']}" if memory_facts else ""

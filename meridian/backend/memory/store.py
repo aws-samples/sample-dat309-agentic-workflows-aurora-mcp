@@ -110,16 +110,25 @@ class MemoryStore:
     ) -> str:
         message_id = f"msg_{uuid.uuid4().hex[:12]}"
         if with_embedding and content.strip():
-            vec = self._vector_literal(
-                self.embeddings.generate_text_embedding(content, input_type="search_document")
-            )
-            await self.db.execute(
-                """
-                INSERT INTO conversation_messages (message_id, conversation_id, role, content, embedding)
-                VALUES (%s, %s, %s, %s, %s::vector)
-                """,
-                (message_id, conversation_id, role, content, vec),
-            )
+            try:
+                vec = self._vector_literal(
+                    self.embeddings.generate_text_embedding(content, input_type="search_document")
+                )
+                await self.db.execute(
+                    """
+                    INSERT INTO conversation_messages (message_id, conversation_id, role, content, embedding)
+                    VALUES (%s, %s, %s, %s, %s::vector)
+                    """,
+                    (message_id, conversation_id, role, content, vec),
+                )
+            except Exception:
+                await self.db.execute(
+                    """
+                    INSERT INTO conversation_messages (message_id, conversation_id, role, content)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (message_id, conversation_id, role, content),
+                )
         else:
             await self.db.execute(
                 """

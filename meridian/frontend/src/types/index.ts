@@ -117,10 +117,21 @@ export interface ChatResponse {
   memory_facts?: LongTermMemoryFact[];
 }
 
+export interface TravelerProfile {
+  full_name?: string;
+  home_airport?: string;
+  party_size?: number;
+  budget_min?: number;
+  budget_max?: number;
+  seat_preference?: string;
+  dietary_notes?: string;
+  trip_goal?: string;
+}
+
 export interface MemoryProfileResponse {
   traveler_id: string;
   facts: LongTermMemoryFact[];
-  profile?: Record<string, unknown>;
+  profile?: TravelerProfile;
 }
 
 export interface Message {

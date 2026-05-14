@@ -155,7 +155,7 @@ def create_activity(
 def generate_follow_ups(query: str, products: List[Product], phase: int) -> List[str]:
     """Generate contextual follow-up suggestions based on the query and results.
 
-    Phase 1 & 2: Keyword-based search (trip_type, operator, price filters)
+    Phase 1 & 2: SQL filter search (trip_type, operator, price filters)
     Phase 3: Hybrid semantic + lexical search (understands natural language)
 
     Suggestions are designed to:
@@ -447,6 +447,44 @@ async def phase2_search(query: str, limit: int = 5) -> tuple[List[Product], List
 # Combines embedding similarity with PostgreSQL full-text search
 # =============================================================================
 
+async def phase3_lexical_search(query: str, limit: int = 5) -> tuple[List[Product], List[ActivityEntry]]:
+    """Lexical-only fallback when Bedrock embeddings are unavailable."""
+    activities = []
+    start_time = datetime.utcnow()
+    db = get_rds_data_client()
+
+    activities.append(create_activity(
+        activity_type="search",
+        title="Lexical fallback (tsvector)",
+        details="Embeddings unavailable — ranking with search_vector only",
+        agent_name="SearchAgent",
+        agent_file="agents/phase3/search_agent.py",
+    ))
+
+    sql = """
+        SELECT package_id, name, operator, price_per_person, description,
+               image_url, trip_type, durations,
+               ts_rank(search_vector, plainto_tsquery('english', %s)) AS lexical_score
+        FROM trip_packages
+        WHERE search_vector @@ plainto_tsquery('english', %s)
+        ORDER BY lexical_score DESC
+        LIMIT %s
+    """
+    results = await db.execute(sql, (query, query, limit))
+    search_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+
+    activities.append(create_activity(
+        activity_type="search",
+        title=f"Lexical search found {len(results)} packages",
+        execution_time_ms=search_time,
+        agent_name="SearchAgent",
+        agent_file="agents/phase3/search_agent.py",
+    ))
+
+    products = [Product(**row_to_api_product(row)) for row in results]
+    return products, activities
+
+
 async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List[ActivityEntry]]:
     """
     Phase 3: Hybrid search combining semantic and lexical approaches.
@@ -523,7 +561,7 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
                 lexical_search AS (
                     SELECT package_id,
                            ts_rank(
-                               to_tsvector('english', name || ' ' || COALESCE(description, '') || ' ' || COALESCE(brand, '')),
+                               to_tsvector('english', name || ' ' || COALESCE(description, '') || ' ' || COALESCE(operator, '')),
                                plainto_tsquery('english', %s)
                            ) as lexical_score
                     FROM trip_packages
@@ -551,7 +589,7 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
                 lexical_search AS (
                     SELECT package_id,
                            ts_rank(
-                               to_tsvector('english', name || ' ' || COALESCE(description, '') || ' ' || COALESCE(brand, '')),
+                               to_tsvector('english', name || ' ' || COALESCE(description, '') || ' ' || COALESCE(operator, '')),
                                plainto_tsquery('english', %s)
                            ) as lexical_score
                     FROM trip_packages
@@ -608,16 +646,22 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
             agent_file="agents/phase3/search_agent.py"
         ))
 
-        # Fallback to simple search
-        return await phase1_search(query, limit)
+        # Fallback to lexical search, then keyword search
+        lexical_products, lexical_activities = await phase3_lexical_search(query, limit)
+        activities.extend(lexical_activities)
+        if lexical_products:
+            return lexical_products, activities
+        fallback_products, fallback_activities = await phase1_search(query, limit)
+        activities.extend(fallback_activities)
+        return fallback_products, activities
 
 
 # =============================================================================
-# PHASE 4: Strands PartnerRuntime + MemoryAgent (@tool) + Aurora memory
+# PHASE 4: Strands ConciergeOrchestrator + MemoryAgent (@tool) + Aurora memory
 # =============================================================================
 
 def _memory_activity_to_entry(entry: Any) -> ActivityEntry:
-    """Convert MemoryAgent/PartnerRuntime activity to API ActivityEntry."""
+    """Convert MemoryAgent/ConciergeOrchestrator activity to API ActivityEntry."""
     if isinstance(entry, ActivityEntry):
         return entry
     data = entry.model_dump() if hasattr(entry, "model_dump") else dict(entry)
@@ -860,7 +904,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             ))
             # Fall through to regular search
 
-    # Phase 4: Strands PartnerRuntime + Aurora memory (@tool)
+    # Phase 4: Strands ConciergeOrchestrator + Aurora memory (@tool)
     if request.phase == 4:
         from backend.memory.store import DEMO_TRAVELER_ID
 

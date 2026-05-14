@@ -17,7 +17,7 @@ export function Footer() {
       <b style={{ color: 'var(--dl-ink)' }}>Meridian</b> — Plan. Fly. Land. · © Shayon Sanyal
       <br />
       <span style={{ fontFamily: "'SF Mono', monospace", fontSize: 11 }}>
-        Aurora PostgreSQL 17 · pgvector 0.8 · AgentCore · LangGraph · Strands · MCP · Claude · Cohere Embed v4
+        Aurora PostgreSQL 17 · pgvector 0.8 · AgentCore · Strands · MCP · Claude · Cohere Embed v4
       </span>
     </footer>
   );
