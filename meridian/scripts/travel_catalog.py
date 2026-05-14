@@ -4,7 +4,10 @@ Native travel fields (no product-catalog retrofit).
 """
 
 def _img(photo_id: str) -> str:
-    return f"https://images.unsplash.com/photo-{photo_id}?auto=format&fit=crop&w=800&h=600&q=80"
+    return (
+        f"https://images.unsplash.com/photo-{photo_id}"
+        "?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80"
+    )
 
 
 def _pkg(
@@ -56,7 +59,7 @@ TRIP_PACKAGES = [
     _pkg("CTY-004", "Barcelona Architecture Week", "City Breaks", "Barcelona", "Europe", 1599.0,
          "Iberia Escapes",
          "Gothic Quarter boutique stay, Sagrada Família skip-the-line, tapas tour.",
-         "1539037116277-4245f8591aa1", ["4 nights", "6 nights"],
+         "1449824913935-59a10b8d2000", ["4 nights", "6 nights"],
          {"4 nights": 11, "6 nights": 5}),
     _pkg("CTY-005", "Rome Ancient & Modern", "City Breaks", "Rome", "Europe", 1749.0,
          "Alitalia Tours",
@@ -76,7 +79,7 @@ TRIP_PACKAGES = [
     _pkg("BCH-003", "Bali Rice Terrace Retreat", "Beach & Resort", "Ubud", "Asia-Pacific", 1899.0,
          "Garuda Getaways",
          "Ubud villa, yoga mornings, temple tour, and Seminyak beach club day.",
-         "1537996194471-f6576d1ded6a", ["6 nights", "8 nights"],
+         "1528181304800-259b08848526", ["6 nights", "8 nights"],
          {"6 nights": 9, "8 nights": 6}),
     _pkg("BCH-004", "Santorini Caldera Views", "Beach & Resort", "Santorini", "Europe", 2799.0,
          "Aegean Blue",
@@ -96,12 +99,12 @@ TRIP_PACKAGES = [
     _pkg("ADV-002", "Iceland Ring Road", "Adventure & Outdoors", "Reykjavik", "Europe", 2799.0,
          "Nordic Trails",
          "4x4 camper or guided mini-bus, glacier hike, Blue Lagoon, northern lights chase.",
-         "1483342387746-4c8b0e99ec32", ["6 nights", "8 nights"],
+         "1439066615861-d1af74d74000", ["6 nights", "8 nights"],
          {"6 nights": 10, "8 nights": 7}),
     _pkg("ADV-003", "Costa Rica Rainforest & Zip", "Adventure & Outdoors", "Arenal", "Central America", 2199.0,
          "EcoVenture",
          "Volcano lodge, canopy zip lines, wildlife night walk, Pacific beach finale.",
-         "1519005039724-4f74e549e194", ["7 nights", "9 nights"],
+         "1501785888041-af3ef285b470", ["7 nights", "9 nights"],
          {"7 nights": 12, "9 nights": 8}),
     _pkg("ADV-004", "New Zealand South Island", "Adventure & Outdoors", "Queenstown", "Oceania", 3599.0,
          "Air New Zealand",
@@ -121,7 +124,7 @@ TRIP_PACKAGES = [
     _pkg("WEL-002", "Amalfi Coast Villa Week", "Wellness & Luxury", "Positano", "Europe", 3999.0,
          "Belmond",
          "Cliffside villa, private boat day, Positano dining, Ravello concert evening.",
-         "1534113414509-0bd4c19e7048", ["6 nights", "8 nights"],
+         "1570077188670-e3a8d69ac5ff", ["6 nights", "8 nights"],
          {"6 nights": 3, "8 nights": 2}),
     _pkg("WEL-003", "Dubai Luxury Stopover", "Wellness & Luxury", "Dubai", "Middle East", 2899.0,
          "Emirates",
@@ -141,7 +144,7 @@ TRIP_PACKAGES = [
     _pkg("FAM-001", "Orlando Theme Park Week", "Family Trips", "Orlando", "North America", 2499.0,
          "Disney Travel",
          "Resort hotel, multi-park tickets, character breakfast, pool days built in.",
-         "1568605114967-a37c8dd9d91a", ["5 nights", "7 nights"],
+         "1520250497591-112f2f40a3f4", ["5 nights", "7 nights"],
          {"5 nights": 18, "7 nights": 12}),
     _pkg("FAM-002", "Yellowstone Wildlife Safari", "Family Trips", "Yellowstone", "North America", 2799.0,
          "National Park Tours",
@@ -156,7 +159,7 @@ TRIP_PACKAGES = [
     _pkg("FAM-004", "Costa del Sol Beach Club", "Family Trips", "Marbella", "Europe", 1999.0,
          "TUI Family",
          "Family suite, kids pool, beach access, optional water park passes.",
-         "1473496163314-42ba249543ec", ["7 nights", "10 nights"],
+         "1507525428034-b723cf961d3e", ["7 nights", "10 nights"],
          {"7 nights": 16, "10 nights": 10}),
     _pkg("FAM-005", "London & Harry Potter Studio", "Family Trips", "London", "Europe", 2299.0,
          "British Airways",
@@ -166,12 +169,12 @@ TRIP_PACKAGES = [
     _pkg("BIZ-001", "London Executive Quick Trip", "Business Travel", "London", "Europe", 1499.0,
          "British Airways",
          "City airport hotel, lounge access, express train credit, flexible change policy.",
-         "1529655687286-ab3457b0123a", ["2 nights", "3 nights"],
+         "1513635269975-59663e0ac1ad", ["2 nights", "3 nights"],
          {"2 nights": 25, "3 nights": 18}),
     _pkg("BIZ-002", "Singapore Hub Stopover", "Business Travel", "Singapore", "Asia-Pacific", 1299.0,
          "Singapore Airlines",
          "Changi-area hotel, fast Wi‑Fi, meeting room credit, Gardens by the Bay evening.",
-         "1525625173904-bf99e5e99460", ["2 nights", "3 nights"],
+         "1524231757912-21f4fe3a7200", ["2 nights", "3 nights"],
          {"2 nights": 30, "3 nights": 20}),
     _pkg("BIZ-003", "Dubai Conference Package", "Business Travel", "Dubai", "Middle East", 1899.0,
          "Emirates Business",
@@ -186,7 +189,7 @@ TRIP_PACKAGES = [
     _pkg("BIZ-005", "Frankfurt Trade Fair Stay", "Business Travel", "Frankfurt", "Europe", 1399.0,
          "Lufthansa",
          "Messe-connected hotel, fair shuttle pass, early breakfast, rail pass to city center.",
-         "1467269207814-8dbca6048416", ["3 nights", "4 nights"],
+         "1488646953014-85cb44e25828", ["3 nights", "4 nights"],
          {"3 nights": 16, "4 nights": 10}),
 ]
 

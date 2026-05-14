@@ -7,6 +7,17 @@ import type { LongTermMemoryFact, TravelerProfile } from '../types';
 
 export const DEMO_TRAVELER_ID = 'trv_meridian_demo';
 
+export function personaInitials(fullName: string): string {
+  return fullName
+    .split(/[&\s]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+export const DEMO_PERSONA_INITIALS = personaInitials('Alex & Jordan Chen');
+
 export const DEMO_PERSONA_FALLBACK: TravelerProfile = {
   full_name: 'Alex & Jordan Chen',
   home_airport: 'SFO',
@@ -58,12 +69,7 @@ export function TravelerPersona({
   }, [travelerId, profileProp, factsProp]);
 
   const name = profile.full_name ?? DEMO_PERSONA_FALLBACK.full_name!;
-  const initials = name
-    .split(/[&\s]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
+  const initials = personaInitials(name);
 
   const meta = [
     profile.home_airport ? `${profile.home_airport} home` : null,

@@ -4,7 +4,7 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { FadeIn } from '../components/FadeIn';
-import { TravelerPersona, DEMO_TRAVELER_ID } from '../components/TravelerPersona';
+import { TravelerPersona, DEMO_TRAVELER_ID, DEMO_PERSONA_INITIALS } from '../components/TravelerPersona';
 import { TraceSpan } from '../components/TraceSpan';
 import { ProductThumb } from '../components/ProductThumb';
 import { enrichTraceActivities } from '../utils/traceTelemetry';
@@ -91,6 +91,8 @@ export function AgentSection() {
   const chatEnd = useRef<HTMLDivElement>(null);
   const activityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pc = phaseColors[phase - 1];
+  const personaActive = phase === 4;
+  const chatAvatar = personaActive ? DEMO_PERSONA_INITIALS : 'M';
 
   const ensureTraceId = (): string => {
     if (traceId) return traceId;
@@ -640,7 +642,7 @@ export function AgentSection() {
                   >
                     {m.role === 'bot' && (
                       <div className="message-avatar" style={{ '--phase-color': pc } as React.CSSProperties}>
-                        M
+                        {chatAvatar}
                       </div>
                     )}
                     <div className={`message ${m.role}`}>
@@ -665,7 +667,7 @@ export function AgentSection() {
                             />
                             <div style={{ flex: 1 }}>
                               <div className="product-result-name">{pr.name}</div>
-                              <div className="product-result-meta" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div className="product-result-meta">
                                 <span>${pr.price.toFixed(2)} · {pr.brand}</span>
                                 <span className="stock-badge">✓ Available</span>
                               </div>
@@ -788,7 +790,7 @@ export function AgentSection() {
                 {typing && (
                   <div className="message-row bot">
                     <div className="message-avatar" style={{ '--phase-color': pc } as React.CSSProperties}>
-                      M
+                      {chatAvatar}
                     </div>
                     <div className="typing-indicator">
                     {[0, 1, 2].map((k) => (

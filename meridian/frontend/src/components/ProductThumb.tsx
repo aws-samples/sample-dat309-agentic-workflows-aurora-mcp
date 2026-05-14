@@ -38,6 +38,8 @@ export function ProductThumb({
         <img
           src={imageUrl!}
           alt={alt}
+          loading="lazy"
+          referrerPolicy="no-referrer"
           style={{
             position: 'absolute',
             inset: 0,
