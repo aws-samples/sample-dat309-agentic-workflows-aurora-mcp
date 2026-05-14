@@ -1,19 +1,17 @@
 """
-Test semantic search with Cohere Embed v4.
-Verifies end-to-end search functionality using the RDS Data API.
+Test semantic trip search with Cohere Embed v4 against trip_packages.
 """
-import os
 import json
+import os
+
 import boto3
 from dotenv import load_dotenv
 from rich.console import Console
-from rich.table import Table
 
 load_dotenv()
 console = Console()
 
-# Configuration from environment
-EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "global.cohere.embed-v4")
+EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "cohere.embed-v4:0")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
 REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 CLUSTER_ARN = os.getenv("AURORA_CLUSTER_ARN")
@@ -22,62 +20,39 @@ DATABASE = os.getenv("AURORA_DATABASE", "meridian")
 
 
 def generate_query_embedding(bedrock_client, query: str) -> list:
-    """Generate embedding for search query using Cohere Embed v4."""
     request_body = {
         "texts": [query],
         "input_type": "search_query",
         "embedding_types": ["float"],
-        "truncate": "END"
+        "output_dimension": EMBEDDING_DIMENSION,
+        "truncate": "END",
     }
-
     response = bedrock_client.invoke_model(
         modelId=EMBEDDING_MODEL_ID,
         body=json.dumps(request_body),
         contentType="application/json",
-        accept="application/json"
+        accept="application/json",
     )
-
-    response_body = json.loads(response["body"].read())
-    return response_body["embeddings"]["float"][0]
+    body = json.loads(response["body"].read())
+    embeddings = body.get("embeddings", {})
+    if isinstance(embeddings, dict):
+        return embeddings["float"][0]
+    return embeddings[0]
 
 
 def semantic_search(rds_client, bedrock_client, query: str, limit: int = 5):
-    """
-    Perform semantic search using Cohere Embed v4 embeddings and pgvector.
-    
-    Args:
-        rds_client: RDS Data API client
-        bedrock_client: Bedrock Runtime client
-        query: Search query text
-        limit: Number of results to return
-        
-    Returns:
-        List of matching products with similarity scores
-    """
-    # Generate query embedding
-    console.print(f"\n[cyan]Generating embedding for query: '{query}'[/cyan]")
+    console.print(f"\n[cyan]Query: '{query}'[/cyan]")
     query_embedding = generate_query_embedding(bedrock_client, query)
-    console.print(f"[green]✅ Generated {len(query_embedding)}-dimensional embedding[/green]")
-    
-    # Format embedding for PostgreSQL
     embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
-    
-    # Execute semantic search using pgvector cosine similarity
+
     sql = """
-        SELECT 
-            product_id,
-            name,
-            category,
-            brand,
-            price,
-            description,
-            1 - (embedding <=> :query_embedding::vector) as similarity
-        FROM products
+        SELECT package_id, name, trip_type, destination, price_per_person,
+               1 - (embedding <=> :query_embedding::vector) AS similarity
+        FROM trip_packages
         WHERE embedding IS NOT NULL
         ORDER BY embedding <=> :query_embedding::vector
         LIMIT :limit
     """
-    
     response = rds_client.execute_statement(
         resourceArn=CLUSTER_ARN,
         secretArn=SECRET_ARN,
@@ -85,63 +60,35 @@ def semantic_search(rds_client, bedrock_client, query: str, limit: int = 5):
         sql=sql,
         parameters=[
             {"name": "query_embedding", "value": {"stringValue": embedding_str}},
-            {"name": "limit", "value": {"longValue": limit}}
-        ]
+            {"name": "limit", "value": {"longValue": limit}},
+        ],
     )
-    
     return response.get("records", [])
 
 
 def test_semantic_search():
-    """Run semantic search tests with various queries."""
-    console.print("\n[bold blue]🔍 Testing Semantic Search with Cohere Embed v4[/bold blue]")
-    console.print(f"[cyan]Model: {EMBEDDING_MODEL_ID}[/cyan]")
-    console.print(f"[cyan]Region: {REGION}[/cyan]")
-    console.print(f"[cyan]Dimensions: {EMBEDDING_DIMENSION}[/cyan]\n")
-    
+    console.print("\n[bold blue]Testing semantic trip search[/bold blue]")
     if not CLUSTER_ARN or not SECRET_ARN:
-        console.print("[red]❌ Missing AURORA_CLUSTER_ARN or AURORA_SECRET_ARN in .env[/red]")
+        console.print("[red]Missing AURORA_CLUSTER_ARN or AURORA_SECRET_ARN[/red]")
         return
-    
-    # Initialize clients
+
     bedrock_client = boto3.client("bedrock-runtime", region_name=REGION)
     rds_client = boto3.client("rds-data", region_name=REGION)
-    console.print("[green]✅ Clients initialized[/green]")
-    
-    # Test queries
-    test_queries = [
-        "comfortable running shoes for long distance",
-        "weightlifting equipment for home gym",
-        "recovery tools for sore muscles",
-        "waterproof fitness tracker",
-        "breathable workout clothes"
-    ]
-    
-    for query in test_queries:
-        console.print(f"\n{'='*60}")
+
+    for query in [
+        "Romantic week in Europe",
+        "Tokyo culture trip for two",
+        "Family-friendly beach resort",
+    ]:
         results = semantic_search(rds_client, bedrock_client, query, limit=3)
-        
-        if results:
-            console.print(f"\n[bold]Top 3 results for: '{query}'[/bold]\n")
-            
-            for i, record in enumerate(results, 1):
-                name = record[1].get("stringValue", "")
-                category = record[2].get("stringValue", "")
-                brand = record[3].get("stringValue", "")
-                # Price may be stored as string or double
-                price_val = record[4]
-                price = float(price_val.get("stringValue", "0") or price_val.get("doubleValue", 0))
-                similarity = record[6].get("doubleValue", 0)
-                
-                console.print(f"  {i}. [cyan]{name}[/cyan]")
-                console.print(f"     Category: {category} | Brand: {brand}")
-                console.print(f"     Price: [green]${price:.2f}[/green] | Similarity: [yellow]{similarity:.4f}[/yellow]\n")
-        else:
-            console.print("[yellow]No results found[/yellow]")
-    
-    console.print(f"\n{'='*60}")
-    console.print("\n[bold green]✅ Semantic search test complete![/bold green]")
-    console.print("[cyan]Cohere Embed v4 embeddings are working correctly with pgvector.[/cyan]\n")
+        if not results:
+            console.print("[yellow]No results[/yellow]")
+            continue
+        for i, record in enumerate(results, 1):
+            name = record[1].get("stringValue", "")
+            dest = record[3].get("stringValue", "")
+            sim = record[5].get("doubleValue", 0)
+            console.print(f"  {i}. {name} ({dest}) — similarity {sim:.3f}")
 
 
 if __name__ == "__main__":

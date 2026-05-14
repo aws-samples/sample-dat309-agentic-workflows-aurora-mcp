@@ -1,17 +1,18 @@
 """
 Chat API Router for Meridian.
 
-Handles chat interactions with the AI shopping assistant across all three phases:
-- Phase 1: Direct RDS Data API connection (simple SQL queries)
+Handles chat interactions with the AI travel concierge across four phases:
+- Phase 1: Direct RDS Data API connection (SQL filters on trip_packages)
 - Phase 2: Via MCP (awslabs.postgres-mcp-server) abstraction
-- Phase 3: Hybrid search - Semantic (pgvector) + Lexical (tsvector/tsrank)
+- Phase 3: Hybrid search — semantic (pgvector) + lexical (tsvector/tsrank)
+- Phase 4: Strands concierge + Aurora traveler memory
 """
 
 import re
 import uuid
 from datetime import datetime
 from typing import Literal, Optional, List, Any
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from backend.db.rds_data_client import get_rds_data_client
@@ -119,14 +120,6 @@ class ChatResponse(BaseModel):
     follow_ups: Optional[List[str]] = None
     conversation_id: Optional[str] = None
     memory_facts: Optional[List[MemoryFact]] = None
-
-
-class ImageSearchResponse(BaseModel):
-    """Response model for image search endpoint."""
-    message: str
-    products: List[Product]
-    activities: List[ActivityEntry]
-    follow_ups: Optional[List[str]] = None
 
 
 def create_activity(
@@ -707,49 +700,44 @@ async def phase4_search(
 
 
 # =============================================================================
-# PHASE 3: ProductAgent - Inventory and Product Details
-# Handles stock checks and detailed product information
+# PHASE 3: AvailabilityAgent — departure slots and package details
 # =============================================================================
 
 async def phase3_availability_check(query: str) -> tuple[List[Product], List[ActivityEntry], str]:
     """
-    Phase 3: ProductAgent handles availability and stock queries.
-    Supervisor delegates to ProductAgent for stock/availability questions.
-    
+    Phase 3: AvailabilityAgent handles departure and slot queries.
+    Supervisor delegates availability questions to the specialist agent.
+
     Returns: (products, activities, message)
     """
     activities = []
     start_time = datetime.utcnow()
-    
+
     db = get_rds_data_client()
-    
-    # Step 0: Supervisor delegates to ProductAgent
+
     activities.append(create_activity(
         activity_type="reasoning",
-        title="Delegating to ProductAgent",
-        details="Supervisor routing availability request to specialized agent",
+        title="Delegating to AvailabilityAgent",
+        details="Supervisor routing availability request to specialist agent",
         agent_name="SupervisorAgent",
         agent_file="agents/phase3/supervisor.py"
     ))
-    
-    # Extract product name from query
+
     query_lower = query.lower()
-    
-    # Try to find the product mentioned
+
     activities.append(create_activity(
         activity_type="search",
-        title="ProductAgent: Finding product",
-        details="Searching for mentioned product",
-        agent_name="ProductAgent",
+        title="AvailabilityAgent: Finding package",
+        details="Searching for mentioned trip package",
+        agent_name="AvailabilityAgent",
         agent_file="agents/phase3/product_agent.py"
     ))
-    
-    # Search for the product by name similarity
+
     sql = """
-        SELECT package_id, name, operator, price_per_person, description, 
+        SELECT package_id, name, operator, price_per_person, description,
                image_url, trip_type, durations, availability
         FROM trip_packages
-        WHERE LOWER(name) LIKE %s OR LOWER(brand) LIKE %s
+        WHERE LOWER(name) LIKE %s OR LOWER(operator) LIKE %s
         LIMIT 1
     """
     
@@ -770,32 +758,31 @@ async def phase3_availability_check(query: str) -> tuple[List[Product], List[Act
     if not results:
         activities.append(create_activity(
             activity_type="result",
-            title="ProductAgent: Product not found",
+            title="AvailabilityAgent: Package not found",
             execution_time_ms=search_time,
-            agent_name="ProductAgent",
+            agent_name="AvailabilityAgent",
             agent_file="agents/phase3/product_agent.py"
         ))
-        
+
         activities.append(create_activity(
             activity_type="result",
-            title="ProductAgent returned to Supervisor",
-            details="No matching product found",
+            title="AvailabilityAgent returned to Supervisor",
+            details="No matching package found",
             agent_name="SupervisorAgent",
             agent_file="agents/phase3/supervisor.py"
         ))
-        
-        return [], activities, "I couldn't find that specific product. Try searching for it by name or trip_type."
-    
+
+        return [], activities, "I couldn't find that trip package. Try searching by destination, operator, or trip type."
+
     product = results[0]
     availability = product.get('availability', {})
-    
-    # Check availability
+
     activities.append(create_activity(
         activity_type="availability",
-        title=f"ProductAgent: Checking availability",
-        details=f"Product: {product['name']}",
+        title="AvailabilityAgent: Checking departures",
+        details=f"Package: {product['name']}",
         sql_query="SELECT availability, durations FROM trip_packages WHERE package_id = ?",
-        agent_name="ProductAgent",
+        agent_name="AvailabilityAgent",
         agent_file="agents/phase3/product_agent.py"
     ))
     
@@ -812,32 +799,30 @@ async def phase3_availability_check(query: str) -> tuple[List[Product], List[Act
     
     activities.append(create_activity(
         activity_type="result",
-        title=f"ProductAgent: Stock verified",
-        details=f"Total: {total_stock} units available",
+        title="AvailabilityAgent: Departures verified",
+        details=f"Total: {total_stock} departure slots available",
         execution_time_ms=availability_time,
-        agent_name="ProductAgent",
+        agent_name="AvailabilityAgent",
         agent_file="agents/phase3/product_agent.py"
     ))
-    
-    # ProductAgent returns to Supervisor
+
     activities.append(create_activity(
         activity_type="result",
-        title="ProductAgent returned to Supervisor",
-        details=f"Inventory check complete for {product['name']}",
+        title="AvailabilityAgent returned to Supervisor",
+        details=f"Availability check complete for {product['name']}",
         agent_name="SupervisorAgent",
         agent_file="agents/phase3/supervisor.py"
     ))
-    
-    # Build response message
+
     durations = product.get('durations', [])
     if total_stock > 0:
         if durations:
-            sizes_str = ', '.join(durations[:5])
-            message = f"**{product['name']}** is in stock! We have {total_stock} units available in sizes: {sizes_str}."
+            durations_str = ', '.join(durations[:5])
+            message = f"**{product['name']}** has availability! {total_stock} departure slots across: {durations_str}."
         else:
-            message = f"**{product['name']}** is in stock with {total_stock} units available."
+            message = f"**{product['name']}** has {total_stock} departure slots available."
     else:
-        message = f"**{product['name']}** is currently out of stock. Would you like me to find similar alternatives?"
+        message = f"**{product['name']}** is currently sold out. Would you like similar alternatives?"
     
     # Return the product
     products = [Product(**row_to_api_product(product))]
@@ -846,12 +831,12 @@ async def phase3_availability_check(query: str) -> tuple[List[Product], List[Act
 
 
 def is_availability_query(query: str) -> bool:
-    """Check if the query is asking about availability/stock."""
+    """Check if the query is asking about availability or departure slots."""
     query_lower = query.lower()
     availability_patterns = [
-        'in stock', 'available', 'do you have', 'check stock',
-        'availability', 'how many', 'what sizes', 'size available',
-        'is the', 'is there', 'got any'
+        'in stock', 'available', 'do you have', 'check availability',
+        'availability', 'how many', 'what dates', 'dates available',
+        'departure', 'is the', 'is there', 'got any', 'slots'
     ]
     return any(pattern in query_lower for pattern in availability_patterns)
 
@@ -859,19 +844,17 @@ def is_availability_query(query: str) -> bool:
 @router.post("", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
     """
-    Process a chat message with the AI shopping assistant.
-    
-    Routes to appropriate search implementation based on phase:
-    - Phase 1: Direct RDS Data API
-    - Phase 2: Via MCP abstraction
-    - Phase 3: Multi-agent orchestration
-      - SearchAgent: Semantic search queries
-      - ProductAgent: Inventory/stock queries
-      - OrderAgent: Order processing (via /order endpoint)
+    Process a chat message with the AI travel concierge.
+
+    Routes to the appropriate search implementation based on phase:
+    - Phase 1: Direct RDS Data API filters
+    - Phase 2: MCP-backed SQL
+    - Phase 3: Hybrid semantic + lexical search; AvailabilityAgent for slot checks
+    - Phase 4: Strands concierge with Aurora traveler memory
     """
     activities = []
 
-    # Phase 3/4: Check if this is an availability query -> route to ProductAgent
+    # Phase 3/4: availability query -> route to AvailabilityAgent
     if request.phase in (3, 4) and is_availability_query(request.message):
         activities.append(create_activity(
             activity_type="reasoning",
@@ -885,7 +868,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             products, availability_activities, message = await phase3_availability_check(request.message)
             activities.extend(availability_activities)
             
-            follow_ups = ["Show me similar products", "What other sizes do you have?", "Find me alternatives"]
+            follow_ups = ["Show similar trips", "What other durations are available?", "Find alternatives"]
             
             return ChatResponse(
                 message=message,
@@ -897,9 +880,9 @@ async def chat(request: ChatRequest) -> ChatResponse:
         except Exception as e:
             activities.append(create_activity(
                 activity_type="error",
-                title="ProductAgent error",
+                title="AvailabilityAgent error",
                 details=str(e),
-                agent_name="ProductAgent",
+                agent_name="AvailabilityAgent",
                 agent_file="agents/phase3/product_agent.py"
             ))
             # Fall through to regular search
@@ -975,17 +958,16 @@ async def chat(request: ChatRequest) -> ChatResponse:
             if request.phase in (3, 4):
                 top_similarity = products[0].similarity
                 if top_similarity and top_similarity > 0.8:
-                    message = f"Great match! I found {len(products)} products that closely match what you're looking for:"
+                    message = f"Great match! I found {len(products)} trips that closely match what you're looking for:"
                 else:
-                    message = f"Here are {len(products)} products that might interest you:"
+                    message = f"Here are {len(products)} trips that might interest you:"
             else:
-                message = f"I found {len(products)} products for you:"
+                message = f"I found {len(products)} trips for you:"
         else:
-            # Phase-aware no-results message
             if request.phase in [1, 2]:
-                message = "No results found. Phase 1/2 uses keyword matching only. Try specific terms like 'running shoes' or 'Nike', or switch to Phase 3 for natural language search."
+                message = "No results found. Phase 1/2 uses keyword filters only. Try destination or operator names like 'Tokyo' or 'ANA Holidays', or switch to Phase 3 for natural language search."
             else:
-                message = "I couldn't find exact matches. Try different terms or browse our categories."
+                message = "I couldn't find exact matches. Try different destinations, trip types, or travel dates."
 
         # Generate contextual follow-up suggestions
         follow_ups = generate_follow_ups(request.message, products, request.phase)
@@ -1008,102 +990,16 @@ async def chat(request: ChatRequest) -> ChatResponse:
         ))
 
         return ChatResponse(
-            message="I encountered an error. Please try again or browse our product categories.",
+            message="I encountered an error. Please try again or browse featured trips.",
             products=None,
             order=None,
             activities=activities,
-            follow_ups=["Show me running shoes", "Browse fitness equipment", "What's on sale?"]
+            follow_ups=["Tokyo culture trip", "Beach resort for two", "City breaks in Europe"]
         )
-
-
-@router.post("/image", response_model=ImageSearchResponse)
-async def image_search(
-    image: UploadFile = File(...),
-    phase: Literal[3] = Form(3),
-    customer_id: Optional[str] = Form(None)
-) -> ImageSearchResponse:
-    """
-    Perform visual product search using an uploaded image.
-    Only available in Phase 3 which supports Cohere Embed v4 embeddings.
-    """
-    activities = []
-    
-    if phase != 3:
-        raise HTTPException(status_code=400, detail="Image search is only available in Phase 3")
-    
-    content_type = image.content_type
-    if content_type not in config.upload.allowed_image_types:
-        raise HTTPException(status_code=415, detail="Supported formats: jpeg, png, webp")
-
-    contents = await image.read()
-    if len(contents) > config.upload.max_image_size:
-        max_mb = config.upload.max_image_size // (1024 * 1024)
-        raise HTTPException(status_code=413, detail=f"Image exceeds {max_mb}MB limit")
-    
-    activities.append(create_activity(
-        activity_type="embedding",
-        title="Processing uploaded image",
-        details=f"Image size: {len(contents)} bytes",
-        agent_name="SearchAgent",
-        agent_file="agents/phase3/search_agent.py"
-    ))
-    
-    try:
-        db = get_rds_data_client()
-        
-        # IMAGE SEARCH LIMITATION:
-        # -----------------------
-        # This currently returns sample products as a placeholder.
-        #
-        # To implement actual visual search:
-        # 1. Use Amazon Bedrock with Cohere Embed v4 Embeddings:
-        #    bedrock = boto3.client('bedrock-runtime')
-        #    response = bedrock.invoke_model(
-        #        modelId='amazon.titan-embed-image-v1',
-        #        body=json.dumps({'inputImage': base64_image})
-        #    )
-        #    image_embedding = json.loads(response['body'].read())['embedding']
-        #
-        # 2. Query products table using pgvector cosine similarity:
-        #    SELECT ... FROM trip_packages
-        #    ORDER BY embedding <=> %s::vector
-        #    LIMIT 5
-        #
-        # 3. The embedding_service already supports generate_image_embedding()
-        #    but requires base64 encoding of the uploaded image.
-        sql = """
-            SELECT package_id, name, operator, price_per_person, description, 
-                   image_url, trip_type, durations
-            FROM trip_packages
-            LIMIT 5
-        """
-        results = await db.execute(sql, None)
-        
-        activities.append(create_activity(
-            activity_type="search",
-            title="Visual search completed",
-            details=f"Found {len(results)} similar products",
-            agent_name="SearchAgent",
-            agent_file="agents/phase3/search_agent.py"
-        ))
-        
-        products = [Product(**row_to_api_product(row)) for i, row in enumerate(results)]
-        
-        follow_ups = generate_follow_ups("image search", products, 3)
-        
-        return ImageSearchResponse(
-            message="Based on your image, here are similar products:",
-            products=products,
-            activities=activities,
-            follow_ups=follow_ups
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Error processing image: {str(e)}")
 
 
 # =============================================================================
-# ORDER PROCESSING - Demonstrates agentic order flow
+# BOOKING PROCESSING — demonstrates agentic booking flow
 # =============================================================================
 
 class OrderRequest(BaseModel):
@@ -1153,7 +1049,7 @@ async def process_order(request: OrderRequest) -> OrderResponse:
         # Step 1: Product lookup
         activities.append(create_activity(
             activity_type="search",
-            title="Looking up product details",
+            title="Looking up package details",
             details=f"Package ID: {request.product_id}",
             agent_name=agent_name,
             agent_file=agent_file
@@ -1173,13 +1069,13 @@ async def process_order(request: OrderRequest) -> OrderResponse:
         if not results:
             activities.append(create_activity(
                 activity_type="error",
-                title="Product not found",
+                title="Package not found",
                 details=f"No package with ID {request.product_id}",
                 agent_name=agent_name,
                 agent_file=agent_file
             ))
             return OrderResponse(
-                message="Sorry, I couldn't find that product. It may no longer be available.",
+                message="Sorry, I couldn't find that trip package. It may no longer be available.",
                 order=None,
                 activities=activities
             )
@@ -1201,7 +1097,7 @@ async def process_order(request: OrderRequest) -> OrderResponse:
         activities.append(create_activity(
             activity_type="availability",
             title="Checking availability",
-            details=f"Size: {request.size or 'One Size'}, Qty: {request.quantity}",
+            details=f"Duration: {request.size or 'default'}, Travelers: {request.quantity}",
             agent_name=agent_name,
             agent_file=agent_file
         ))
@@ -1217,7 +1113,7 @@ async def process_order(request: OrderRequest) -> OrderResponse:
         activities.append(create_activity(
             activity_type="availability",
             title="In Stock" if in_stock else "Out of Stock",
-            details=f"{stock_qty} units available",
+            details=f"{stock_qty} departure slots available",
             execution_time_ms=availability_time,
             agent_name=agent_name,
             agent_file=agent_file

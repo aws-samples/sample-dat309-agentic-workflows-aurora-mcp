@@ -1,73 +1,28 @@
 -- =============================================================================
--- Row-Level Security for AI Agents with RDS Data API
+-- Row-Level Security for AI Agents with RDS Data API (travel schema)
 -- =============================================================================
 --
--- THE PATTERN: Shared DB User + Session Variables + RLS
---
--- Why not one DB user per agent?
---   • Managing dozens of database users/secrets adds complexity
---   • Connection pooling works better with fewer users
---
--- Solution: App sets session context → RLS filters on that context
---   1. App: SET LOCAL app.agent_type = 'order_agent';
+-- Pattern: shared DB user + session variables + RLS
+--   1. App: SET LOCAL app.agent_type = 'booking_agent';
 --   2. RLS: USING (current_setting('app.agent_type') = ANY(agent_access))
 --
--- =============================================================================
+-- Example table: bookings (see backend/db/schema.sql)
 
--- Track which agents can access each row (ACL per row)
--- Each row stores its own access control list:
---
--- order_id | customer_id | total | agent_access
--- ---------|-------------|-------|------------------------------------------
--- ORD-001  | CUST-123   | 99.99 | {order_agent, supervisor_agent, product_agent}
--- ORD-002  | CUST-456   | 49.99 | {order_agent, supervisor_agent}  -- product_agent excluded
---
--- The ACL values ('order_agent', 'supervisor_agent', 'product_agent') are:
---   • String literals stored in the database
---   • Matched against the session variable app.agent_type set by your application
---   • Not tied to actual agent objects in Python code
---   • Just conventions - use any string values as long as they match
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS agent_access TEXT[]
+    DEFAULT ARRAY['booking_agent', 'supervisor_agent', 'concierge_agent'];
 
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS agent_access TEXT[] 
-    DEFAULT ARRAY['order_agent', 'supervisor_agent', 'product_agent']; -- New orders visible to these agent types by default
+UPDATE bookings SET agent_access = ARRAY['booking_agent', 'supervisor_agent', 'concierge_agent']
+WHERE agent_access IS NULL;
 
--- Tag existing orders
-UPDATE orders SET agent_access = ARRAY['order_agent', 'supervisor_agent', 'product_agent'];
-
--- RLS policy filters based on session context
-CREATE POLICY agent_orders_policy ON orders
+CREATE POLICY agent_bookings_policy ON bookings
     FOR ALL
     USING (
         current_setting('app.agent_type', true) = ANY(agent_access)
     );
 
-ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 
--- =============================================================================
--- HOW IT WORKS
--- =============================================================================
-
--- MCP server (or your app) sets context per request:
-SET LOCAL app.agent_type = 'order_agent';
-
--- Agent's query runs — RLS filters automatically:
-SELECT order_id, customer_id, total_amount FROM orders;
--- Only sees rows where 'order_agent' is in agent_access array
--- search_agent would see nothing (not in any order's ACL)
-
--- Application code example (Python):
--- cursor.execute("SET LOCAL app.agent_type = 'order_agent'")
--- cursor.execute("SELECT * FROM orders")  # RLS filters automatically
-
-
--- =============================================================================
--- WHY THIS IS SECURE
--- =============================================================================
---
---   [Agent] → [Trusted App Layer sets context] → [RLS enforces access]
---
---   • Your code (MCP server/app) determines agent identity
---   • Database enforces what that identity can see
---   • Even if agent writes malicious SQL, RLS still filters
---
--- =============================================================================
+-- Application code (Python via RDS Data API):
+-- execute("SET LOCAL app.agent_type = 'booking_agent'")
+-- execute("SELECT booking_id, traveler_id, total_amount FROM bookings")
+-- RLS filters rows automatically per agent type.

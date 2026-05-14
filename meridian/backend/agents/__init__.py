@@ -1,9 +1,6 @@
 """
 Agent implementations for Meridian.
 
-Contains:
-- phase1/: Single agent with direct database access
-- phase2/: Agent with MCP abstraction layer
-- phase3/: Multi-agent supervisor architecture
-- factory.py: Agent factory for creating phase-specific agents
+- phase1–3/: Reference Strands samples (not imported by the live API)
+- phase4/: Live concierge + memory agents used at runtime
 """

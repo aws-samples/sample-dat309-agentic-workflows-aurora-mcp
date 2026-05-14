@@ -1,11 +1,8 @@
 """
 Meridian Backend - FastAPI Application
 
-Main entry point for the Meridian demo backend server.
-Provides REST API endpoints for chat interactions, product catalog,
-and WebSocket streaming for real-time agent activity updates.
-
-Requirements: 8.1
+Main entry point for the Meridian travel concierge demo backend.
+Provides REST API endpoints for chat, trip catalog, and traveler memory.
 """
 
 import os
@@ -21,7 +18,7 @@ from pydantic import BaseModel
 load_dotenv()
 
 # Import routers
-from backend.routers import chat_router, products_router, packages_router, websocket_router, memory_router
+from backend.routers import chat_router, products_router, packages_router, memory_router
 
 
 class HealthResponse(BaseModel):
@@ -58,7 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # Create FastAPI application
 app = FastAPI(
     title="Meridian Backend",
-    description="Backend API for the Meridian agentic shopping demo",
+    description="Backend API for the Meridian agentic travel concierge demo",
     version="1.0.0",
     lifespan=lifespan,
     responses={
@@ -96,7 +93,6 @@ app.add_middleware(
 app.include_router(chat_router)
 app.include_router(packages_router)
 app.include_router(products_router)
-app.include_router(websocket_router)
 app.include_router(memory_router)
 
 

@@ -4,7 +4,7 @@ Property-based tests for Meridian - Embedding Properties
 # Feature: meridian, Property 1: Embedding Dimension Consistency
 
 This module contains property-based tests using Hypothesis to verify
-that all product embeddings conform to the expected 1024 dimensions
+that all trip package embeddings conform to the expected 1024 dimensions
 as specified by the Cohere Embed v4 model.
 
 **Validates: Requirements 2.8**
@@ -83,33 +83,33 @@ def execute_sql(sql: str, params: list = None) -> List[dict]:
         return []
 
 
-def get_all_products_with_embeddings() -> List[dict]:
+def get_all_packages_with_embeddings() -> List[dict]:
     """
-    Fetch all products that have non-null embeddings from the database.
-    
+    Fetch all trip packages that have non-null embeddings from the database.
+
     Returns:
-        List of product dictionaries with product_id, name, and embedding dimension
+        List of package dictionaries with package_id, name, and embedding dimension
     """
     return execute_sql("""
-        SELECT 
-            product_id,
+        SELECT
+            package_id,
             name,
             vector_dims(embedding) as embedding_dimension
-        FROM products
+        FROM trip_packages
         WHERE embedding IS NOT NULL
     """)
 
 
-def get_product_count_with_embeddings() -> int:
+def get_package_count_with_embeddings() -> int:
     """
-    Get the count of products with non-null embeddings.
-    
+    Get the count of trip packages with non-null embeddings.
+
     Returns:
-        Number of products with embeddings
+        Number of packages with embeddings
     """
     results = execute_sql("""
         SELECT COUNT(*) as count
-        FROM products
+        FROM trip_packages
         WHERE embedding IS NOT NULL
     """)
     return results[0]['count'] if results else 0
@@ -119,9 +119,9 @@ class TestEmbeddingDimensionConsistency:
     """
     Property-based tests for embedding dimension consistency.
     
-    # Feature: meridian-enhancement, Property 1: Embedding Dimension Consistency
-    
-    Property 1: For all products in the database with non-null embeddings,
+    # Feature: meridian, Property 1: Embedding Dimension Consistency
+
+    Property 1: For all trip packages in the database with non-null embeddings,
     the embedding vector dimension SHALL be exactly 1024.
     
     **Validates: Requirements 2.8**
@@ -129,40 +129,38 @@ class TestEmbeddingDimensionConsistency:
     
     @pytest.fixture(autouse=True)
     def setup(self):
-        """Setup test fixtures - fetch products with embeddings once."""
-        self.products_with_embeddings = get_all_products_with_embeddings()
-        self.product_count = len(self.products_with_embeddings)
-        
-        # Skip if no products with embeddings exist
-        if self.product_count == 0:
-            pytest.skip("No products with embeddings found in database")
+        """Setup test fixtures - fetch packages with embeddings once."""
+        self.packages_with_embeddings = get_all_packages_with_embeddings()
+        self.package_count = len(self.packages_with_embeddings)
+
+        if self.package_count == 0:
+            pytest.skip("No trip packages with embeddings found in database")
     
     def test_all_embeddings_have_correct_dimension(self):
         """
-        # Feature: meridian-enhancement, Property 1: Embedding Dimension Consistency
-        
-        Verify that ALL product embeddings have exactly 1024 dimensions.
+        # Feature: meridian, Property 1: Embedding Dimension Consistency
+
+        Verify that ALL package embeddings have exactly 1024 dimensions.
         This is a comprehensive check across all products.
         
         **Validates: Requirements 2.8**
         """
         incorrect_dimensions = []
         
-        for product in self.products_with_embeddings:
-            if product['embedding_dimension'] != EXPECTED_EMBEDDING_DIMENSION:
+        for package in self.packages_with_embeddings:
+            if package['embedding_dimension'] != EXPECTED_EMBEDDING_DIMENSION:
                 incorrect_dimensions.append({
-                    'product_id': product['product_id'],
-                    'name': product['name'],
-                    'actual_dimension': product['embedding_dimension'],
+                    'package_id': package['package_id'],
+                    'name': package['name'],
+                    'actual_dimension': package['embedding_dimension'],
                     'expected_dimension': EXPECTED_EMBEDDING_DIMENSION
                 })
-        
-        # Assert no products have incorrect dimensions
+
         assert len(incorrect_dimensions) == 0, (
-            f"Found {len(incorrect_dimensions)} products with incorrect embedding dimensions:\n"
+            f"Found {len(incorrect_dimensions)} packages with incorrect embedding dimensions:\n"
             + "\n".join([
-                f"  - {p['product_id']} ({p['name']}): {p['actual_dimension']} dims (expected {p['expected_dimension']})"
-                for p in incorrect_dimensions[:10]  # Show first 10
+                f"  - {p['package_id']} ({p['name']}): {p['actual_dimension']} dims (expected {p['expected_dimension']})"
+                for p in incorrect_dimensions[:10]
             ])
             + (f"\n  ... and {len(incorrect_dimensions) - 10} more" if len(incorrect_dimensions) > 10 else "")
         )
@@ -171,9 +169,9 @@ class TestEmbeddingDimensionConsistency:
     @given(index=st.integers(min_value=0))
     def test_property_embedding_dimension_consistency(self, index: int):
         """
-        # Feature: meridian-enhancement, Property 1: Embedding Dimension Consistency
-        
-        Property-based test: For all products in the database with non-null embeddings,
+        # Feature: meridian, Property 1: Embedding Dimension Consistency
+
+        Property-based test: For all trip packages with non-null embeddings,
         the embedding vector dimension SHALL be exactly 1024.
         
         This test uses Hypothesis to randomly sample products and verify their
@@ -181,17 +179,14 @@ class TestEmbeddingDimensionConsistency:
         
         **Validates: Requirements 2.8**
         """
-        # Ensure we have products to test
-        assume(self.product_count > 0)
-        
-        # Map the generated index to a valid product index
-        product_index = index % self.product_count
-        product = self.products_with_embeddings[product_index]
-        
-        # Property: embedding dimension must be exactly 1024
-        assert product['embedding_dimension'] == EXPECTED_EMBEDDING_DIMENSION, (
-            f"Product {product['product_id']} ({product['name']}) has embedding dimension "
-            f"{product['embedding_dimension']}, expected {EXPECTED_EMBEDDING_DIMENSION}"
+        assume(self.package_count > 0)
+
+        package_index = index % self.package_count
+        package = self.packages_with_embeddings[package_index]
+
+        assert package['embedding_dimension'] == EXPECTED_EMBEDDING_DIMENSION, (
+            f"Package {package['package_id']} ({package['name']}) has embedding dimension "
+            f"{package['embedding_dimension']}, expected {EXPECTED_EMBEDDING_DIMENSION}"
         )
     
     def test_embedding_dimension_statistics(self):
@@ -203,7 +198,7 @@ class TestEmbeddingDimensionConsistency:
         
         **Validates: Requirements 2.8**
         """
-        dimensions = [p['embedding_dimension'] for p in self.products_with_embeddings]
+        dimensions = [p['embedding_dimension'] for p in self.packages_with_embeddings]
         
         # All dimensions should be the same (1024)
         unique_dimensions = set(dimensions)
@@ -218,8 +213,8 @@ class TestEmbeddingDimensionConsistency:
             f"expected {EXPECTED_EMBEDDING_DIMENSION}"
         )
         
-        # Verify we have the expected number of products (30 per requirements)
-        print(f"\n✅ Verified {len(dimensions)} products all have {EXPECTED_EMBEDDING_DIMENSION}-dimensional embeddings")
+        # Verify we have the expected number of packages (30 in travel catalog)
+        print(f"\n✅ Verified {len(dimensions)} packages all have {EXPECTED_EMBEDDING_DIMENSION}-dimensional embeddings")
 
 
 class TestEmbeddingDimensionWithDatabaseQuery:
@@ -232,68 +227,66 @@ class TestEmbeddingDimensionWithDatabaseQuery:
     
     def test_database_embedding_dimension_check(self):
         """
-        # Feature: meridian-enhancement, Property 1: Embedding Dimension Consistency
-        
+        # Feature: meridian, Property 1: Embedding Dimension Consistency
+
         Direct database query to verify all embeddings have correct dimensions.
         This is more efficient for large datasets as it doesn't load embeddings.
         
         **Validates: Requirements 2.8**
         """
-        # Query for any products with incorrect embedding dimensions
-        incorrect_products = execute_sql(f"""
-            SELECT 
-                product_id,
+        incorrect_packages = execute_sql(f"""
+            SELECT
+                package_id,
                 name,
                 vector_dims(embedding) as actual_dimension
-            FROM products
+            FROM trip_packages
             WHERE embedding IS NOT NULL
             AND vector_dims(embedding) != {EXPECTED_EMBEDDING_DIMENSION}
         """)
-        
-        assert len(incorrect_products) == 0, (
-            f"Found {len(incorrect_products)} products with incorrect embedding dimensions:\n"
+
+        assert len(incorrect_packages) == 0, (
+            f"Found {len(incorrect_packages)} packages with incorrect embedding dimensions:\n"
             + "\n".join([
-                f"  - {p['product_id']} ({p['name']}): {p['actual_dimension']} dims"
-                for p in incorrect_products[:10]
+                f"  - {p['package_id']} ({p['name']}): {p['actual_dimension']} dims"
+                for p in incorrect_packages[:10]
             ])
         )
-        
-        # Verify we have products with embeddings
+
         count_result = execute_sql("""
             SELECT COUNT(*) as count
-            FROM products
+            FROM trip_packages
             WHERE embedding IS NOT NULL
         """)
         count = count_result[0]['count'] if count_result else 0
-        
-        assert count > 0, "No products with embeddings found in database"
-        
-        print(f"\n✅ All {count} products have {EXPECTED_EMBEDDING_DIMENSION}-dimensional embeddings")
+
+        assert count > 0, "No trip packages with embeddings found in database"
+
+        print(f"\n✅ All {count} packages have {EXPECTED_EMBEDDING_DIMENSION}-dimensional embeddings")
 
 
 # Standalone test function for pytest discovery
 def test_embedding_dimension_property():
     """
-    # Feature: meridian-enhancement, Property 1: Embedding Dimension Consistency
-    
+    # Feature: meridian, Property 1: Embedding Dimension Consistency
+
     Standalone property test for embedding dimension consistency.
-    For all products in the database with non-null embeddings,
+    For all trip packages with non-null embeddings,
     the embedding vector dimension SHALL be exactly 1024.
     
     **Validates: Requirements 2.8**
     """
-    products = get_all_products_with_embeddings()
-    
-    if len(products) == 0:
-        pytest.skip("No products with embeddings found in database")
-    
-    for product in products:
-        assert product['embedding_dimension'] == EXPECTED_EMBEDDING_DIMENSION, (
-            f"Product {product['product_id']} has embedding dimension "
-            f"{product['embedding_dimension']}, expected {EXPECTED_EMBEDDING_DIMENSION}"
+    packages = get_all_packages_with_embeddings()
+
+    if len(packages) == 0:
+        pytest.skip("No trip packages with embeddings found in database")
+
+    for package in packages:
+        assert package['embedding_dimension'] == EXPECTED_EMBEDDING_DIMENSION, (
+            f"Package {package['package_id']} has embedding dimension "
+            f"{package['embedding_dimension']}, expected {EXPECTED_EMBEDDING_DIMENSION}"
         )
-    
-    print(f"\n✅ Property verified: All {len(products)} products have {EXPECTED_EMBEDDING_DIMENSION}-dimensional embeddings")
+
+    print(f"\n✅ Property verified: All {len(packages)} packages have {EXPECTED_EMBEDDING_DIMENSION}-dimensional embeddings")
 
 
 class TestEmbeddingDimensionMock:
@@ -308,7 +301,7 @@ class TestEmbeddingDimensionMock:
     @given(embedding_dim=st.integers(min_value=1, max_value=10000))
     def test_property_dimension_validation_logic(self, embedding_dim: int):
         """
-        # Feature: meridian-enhancement, Property 1: Embedding Dimension Consistency
+        # Feature: meridian, Property 1: Embedding Dimension Consistency
         
         Test the dimension validation logic with generated dimensions.
         This verifies the property check works correctly.
@@ -335,28 +328,28 @@ class TestEmbeddingDimensionMock:
     
     @settings(max_examples=100)
     @given(
-        products=st.lists(
+        packages=st.lists(
             st.fixed_dictionaries({
-                'product_id': st.text(min_size=1, max_size=10, alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-'),
+                'package_id': st.text(min_size=1, max_size=10, alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-'),
                 'name': st.text(min_size=1, max_size=50),
-                'embedding_dimension': st.just(1024)  # All valid embeddings
+                'embedding_dimension': st.just(1024)
             }),
             min_size=1,
             max_size=30
         )
     )
-    def test_property_all_valid_embeddings_pass(self, products: List[dict]):
+    def test_property_all_valid_embeddings_pass(self, packages: List[dict]):
         """
-        # Feature: meridian-enhancement, Property 1: Embedding Dimension Consistency
+        # Feature: meridian, Property 1: Embedding Dimension Consistency
         
-        Property test: When all products have 1024-dimensional embeddings,
+        Property test: When all packages have 1024-dimensional embeddings,
         the validation should pass for all of them.
         
         **Validates: Requirements 2.8**
         """
-        for product in products:
-            assert product['embedding_dimension'] == EXPECTED_EMBEDDING_DIMENSION, (
-                f"Product {product['product_id']} should have {EXPECTED_EMBEDDING_DIMENSION} dimensions"
+        for package in packages:
+            assert package['embedding_dimension'] == EXPECTED_EMBEDDING_DIMENSION, (
+                f"Package {package['package_id']} should have {EXPECTED_EMBEDDING_DIMENSION} dimensions"
             )
     
     @settings(max_examples=100)
@@ -365,20 +358,19 @@ class TestEmbeddingDimensionMock:
     )
     def test_property_invalid_dimension_detected(self, invalid_dim: int):
         """
-        # Feature: meridian-enhancement, Property 1: Embedding Dimension Consistency
+        # Feature: meridian, Property 1: Embedding Dimension Consistency
         
         Property test: Any dimension other than 1024 should be detected as invalid.
         
         **Validates: Requirements 2.8**
         """
-        mock_product = {
-            'product_id': 'TEST-001',
-            'name': 'Test Product',
+        mock_package = {
+            'package_id': 'CTY-001',
+            'name': 'Test Package',
             'embedding_dimension': invalid_dim
         }
-        
-        # This should fail the dimension check
-        assert mock_product['embedding_dimension'] != EXPECTED_EMBEDDING_DIMENSION, (
+
+        assert mock_package['embedding_dimension'] != EXPECTED_EMBEDDING_DIMENSION, (
             f"Dimension {invalid_dim} should not equal {EXPECTED_EMBEDDING_DIMENSION}"
         )
 

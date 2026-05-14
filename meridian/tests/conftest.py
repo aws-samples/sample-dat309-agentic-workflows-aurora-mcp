@@ -106,37 +106,43 @@ def execute_sql(client, config, sql, params=None):
 
 
 @pytest.fixture
-def products_with_embeddings(rds_data_client, db_config):
+def packages_with_embeddings(rds_data_client, db_config):
     """
-    Fixture providing all products with non-null embeddings.
-    
+    Fixture providing all trip packages with non-null embeddings.
+
     Returns:
-        List of product dictionaries with embedding dimensions
+        List of package dictionaries with embedding dimensions
     """
     results = execute_sql(
         rds_data_client,
         db_config,
         """
-        SELECT 
-            product_id,
+        SELECT
+            package_id,
             name,
-            category,
+            trip_type,
             vector_dims(embedding) as embedding_dimension
-        FROM products
+        FROM trip_packages
         WHERE embedding IS NOT NULL
         """
     )
     return results
 
 
+# Back-compat alias for older test imports
+@pytest.fixture
+def products_with_embeddings(packages_with_embeddings):
+    return packages_with_embeddings
+
+
 # Expected constants for tests
 EXPECTED_EMBEDDING_DIMENSION = 1024  # Cohere Embed v4 uses 1024 dims
-EXPECTED_PRODUCT_COUNT = 30
-PRODUCT_CATEGORIES = [
-    "Running Shoes",
-    "Training Shoes", 
-    "Fitness Equipment",
-    "Apparel",
-    "Accessories",
-    "Recovery"
+EXPECTED_PACKAGE_COUNT = 30
+TRIP_TYPES = [
+    "City Breaks",
+    "Beach & Resort",
+    "Adventure & Outdoors",
+    "Wellness & Luxury",
+    "Family Trips",
+    "Business Travel",
 ]

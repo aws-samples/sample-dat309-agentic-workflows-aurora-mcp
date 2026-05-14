@@ -124,6 +124,3 @@ class ConciergeOrchestrator:
 def create_concierge(activity_callback=None) -> ConciergeOrchestrator:
     return ConciergeOrchestrator(activity_callback=activity_callback)
 
-
-create_partner_runtime = create_concierge
-PartnerRuntime = ConciergeOrchestrator

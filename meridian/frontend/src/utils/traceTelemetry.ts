@@ -27,7 +27,7 @@ function shortTermItems(msgs: Message[], query: string): string[] {
     `current_turn: "${query.slice(0, 100)}"`,
     `turn_count: ${msgs.length + 1}`,
     ...recent,
-    'tool_buffer: [search_results_v2, cart_state]',
+    'tool_buffer: [search_results_v2, traveler_prefs]',
     'session_vars: { locale: en-US, channel: web_demo }',
   ];
 }
@@ -62,7 +62,7 @@ function buildPhase4Preamble(
       activity_type: 'reasoning',
       title: 'Load short-term memory (session)',
       agent_name: 'memory_agent',
-      agent_file: 'agents/memory_agent.py',
+      agent_file: 'agents/phase4/memory_agent.py',
       execution_time_ms: 12,
       telemetry: {
         category: 'memory_short',
@@ -85,7 +85,7 @@ function buildPhase4Preamble(
       activity_type: 'database',
       title: 'Recall long-term memory (Aurora)',
       agent_name: 'memory_agent',
-      agent_file: 'agents/memory_agent.py',
+      agent_file: 'agents/phase4/memory_agent.py',
       execution_time_ms: 34,
       sql_query:
         "SELECT fact_key, fact_value, source, confidence FROM memory.facts WHERE user_id = $1 ORDER BY embedding <=> embed($2) LIMIT 8",
@@ -274,14 +274,14 @@ function enrichActivity(a: ActivityEntry, phase: 1 | 2 | 3 | 4, query: string): 
         { label: 'details', value: a.details ?? '—' },
       ],
     };
-  } else if (type === 'inventory') {
+  } else if (type === 'inventory' || type === 'availability') {
     base.telemetry = {
       category: 'tool',
-      component: 'InventoryAgent',
+      component: 'AvailabilityAgent',
       status: 'ok',
       fields: [
-        { label: 'check', value: 'real-time stock via Aurora' },
-        { label: 'sizes', value: 'available_sizes JSON' },
+        { label: 'check', value: 'departure slots via Aurora' },
+        { label: 'durations', value: 'availability JSON on trip_packages' },
       ],
     };
   } else if (type === 'result') {

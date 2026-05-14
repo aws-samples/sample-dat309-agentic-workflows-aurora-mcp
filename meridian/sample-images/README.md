@@ -1,25 +1,11 @@
-# Sample Images for Visual Search
+# Sample destination images (optional)
 
-This directory contains sample images for testing the Phase 3 visual search feature.
+Static reference images for workshop slides or future visual-search experiments.
 
-## Usage
+The live Meridian demo does **not** expose image upload in the chat UI. Trip hero images are loaded from Unsplash URLs in `scripts/travel_catalog.py`.
 
-Upload any of these images in the Phase 3 chat interface to test visual product search.
-
-## Recommended Test Images
-
-For best results, use images of:
-
-- Running shoes
-- Training shoes
-- Fitness equipment (dumbbells, resistance bands, yoga mats)
-- Athletic apparel
-- Sports accessories
-
-## Supported Formats
+## Supported formats (if you add upload later)
 
 - JPEG (.jpg, .jpeg)
 - PNG (.png)
 - WebP (.webp)
-
-Maximum file size: 5MB

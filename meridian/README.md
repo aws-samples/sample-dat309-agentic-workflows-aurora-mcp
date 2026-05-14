@@ -77,7 +77,7 @@ Seed data: `scripts/travel_catalog.py` → `scripts/seed_data.py` (30 packages +
 | `POST` | `/api/chat/order` | Demo booking |
 | `GET` | `/health` | Health check |
 
-WebSocket activity streaming is available at `/ws/activity` (optional; the live UI uses HTTP chat responses with embedded activity traces).
+Activity traces are returned inline on each `POST /api/chat` response (no separate WebSocket stream).
 
 ## Tech stack
 
@@ -99,7 +99,7 @@ Orchestration in the live `/api/chat` path is **Strands + procedural routing** i
 meridian/
 ├── backend/
 │   ├── main.py
-│   ├── routers/          # chat, packages, memory, websocket
+│   ├── routers/          # chat, packages, memory
 │   ├── agents/
 │   │   ├── phase1/       # Direct RDS filters
 │   │   ├── phase2/       # MCP agent
@@ -128,4 +128,4 @@ Key environment variables (see `.env.example`):
 
 ## Demo script
 
-See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for a 60-minute workshop walkthrough with queries, talking points, and troubleshooting.
+See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for a 60-minute workshop walkthrough. See [STRUCTURE.md](STRUCTURE.md) for what code is live vs reference-only.
