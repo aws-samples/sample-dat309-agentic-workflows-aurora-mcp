@@ -3,6 +3,7 @@
  */
 import { FadeIn } from '../components/FadeIn';
 import { TravelerPersona } from '../components/TravelerPersona';
+import { useAgentBridge } from '../context/AgentBridge';
 
 const pillars = [
   {
@@ -57,23 +58,17 @@ const runtimeStack = [
 ];
 
 export function Vision2026Section() {
+  const { openConcierge } = useAgentBridge();
+
   return (
-    <section
-      id="vision2026"
-      style={{
-        padding: '64px 28px',
-        maxWidth: 1180,
-        margin: '0 auto',
-        borderTop: '1px solid var(--dl-line)',
-      }}
-    >
+    <section id="vision2026" className="mp-section">
       <FadeIn>
-        <div style={{ marginBottom: 40 }}>
-          <span className="section-label">Deep dive</span>
-          <h2 className="section-headline">
+        <div className="mp-section-h" style={{ marginBottom: 40 }}>
+          <div className="mp-label-row">Deep dive</div>
+          <h2>
             Memory, runtime, and <em className="serif">orchestration</em>.
           </h2>
-          <p className="section-subtitle" style={{ maxWidth: 680 }}>
+          <p style={{ maxWidth: 680 }}>
             Build agentic workflows with Aurora and MCP — contextual memory, multi-turn queries,
             and multi-agent orchestration on Amazon Bedrock AgentCore and Strands Agents.
           </p>
@@ -100,7 +95,17 @@ export function Vision2026Section() {
               trip. Agents recall their party size, dates, and dietary needs from Aurora before routing.
             </p>
           </div>
-          <TravelerPersona variant="card" />
+          <TravelerPersona
+            variant="card"
+            active={false}
+            onActivate={() =>
+              openConcierge({
+                phase: 4,
+                prompt: 'Tokyo trip for two in October — use everything you know about us.',
+                send: true,
+              })
+            }
+          />
         </div>
       </FadeIn>
 
@@ -114,7 +119,28 @@ export function Vision2026Section() {
       >
         {pillars.map((p, i) => (
           <FadeIn key={p.num} delay={0.12 + i * 0.04}>
-            <article className="vision-pillar">
+            <article
+              className="vision-pillar"
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                if (p.num === '02') {
+                  document.getElementById('system')?.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  openConcierge({ phase: 4, focus: true });
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  if (p.num === '02') {
+                    document.getElementById('system')?.scrollIntoView({ behavior: 'smooth' });
+                  } else {
+                    openConcierge({ phase: 4, focus: true });
+                  }
+                }
+              }}
+            >
               <span className="vision-pillar-num">Pillar {p.num}</span>
               <h3 className="vision-pillar-title">
                 {p.title} <em className="serif">{p.serif}</em>

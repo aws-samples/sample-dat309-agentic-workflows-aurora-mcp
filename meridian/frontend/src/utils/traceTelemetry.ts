@@ -274,7 +274,7 @@ function enrichActivity(a: ActivityEntry, phase: 1 | 2 | 3 | 4, query: string): 
         { label: 'details', value: a.details ?? '—' },
       ],
     };
-  } else if (type === 'inventory' || type === 'availability') {
+  } else if (type === 'inventory') {
     base.telemetry = {
       category: 'tool',
       component: 'AvailabilityAgent',

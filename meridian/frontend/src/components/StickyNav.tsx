@@ -1,51 +1,106 @@
 /**
- * StickyNav — Daylight Studio top bar with brand mark
+ * StickyNav — Meridian Pro top bar with brand mark, segmented nav, status dot
  */
+import { useEffect, useState } from 'react';
+
 interface StickyNavProps {
   scrollY: number;
 }
 
 const navLinks = [
+  { label: 'Concierge', target: 'agent' },
   { label: 'Trips', target: 'products' },
   { label: 'How it works', target: 'howitworks' },
-  { label: 'Deep dive', target: 'vision2026' },
-  { label: 'Agent', target: 'agent' },
+  { label: 'Memory', target: 'memory' },
+  { label: 'System', target: 'system' },
 ];
 
-export function StickyNav({ scrollY }: StickyNavProps) {
-  const solid = scrollY > 40;
+type Health = 'healthy' | 'checking' | 'down';
+
+export function StickyNav({ scrollY: _scrollY }: StickyNavProps) {
+  const [active, setActive] = useState<string>('agent');
+  const [health, setHealth] = useState<Health>('checking');
+
+  // Backend health ping
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    const ping = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/health');
+        setHealth(res.ok ? 'healthy' : 'down');
+      } catch {
+        setHealth('down');
+      }
+    };
+
+    ping();
+    timer = setInterval(ping, 30000);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, []);
+
+  // Active section observer
+  useEffect(() => {
+    const ids = navLinks.map((n) => n.target);
+    const sections = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => Boolean(el));
+
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActive(visible.target.id);
+      },
+      { rootMargin: '-30% 0px -60% 0px', threshold: [0.1, 0.4, 0.7] },
+    );
+
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollTo = (id: string) =>
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+
+  const statusLabel =
+    health === 'healthy' ? 'Aurora · pgvector OK' : health === 'checking' ? 'Checking…' : 'Backend offline';
+  const statusClass = health === 'healthy' ? '' : health === 'checking' ? 'warn' : 'err';
 
   return (
-    <nav className={`dl-nav${solid ? ' solid' : ''}`}>
-      <div className="dl-brand">
-        <svg className="dl-brand-mark" viewBox="0 0 24 24" aria-hidden="true">
-          <rect width="24" height="24" rx="6" fill="currentColor" />
-          <path
-            fill="#ff5b1f"
-            d="M4.5 12.2c-.2-.6.3-1.2.9-1.3l6.8-2 1.5-3.2c.2-.6.9-.8 1.4-.3l1.8 1.5 6.2 1.8c.8.2 1.2 1.1.9 1.8s-1.1 1.2-1.9.9l-6.2-1.8-1.8 1.5c-.5.4-1.2.2-1.4-.3l-1.5-3.2-6.8 2c-.6.1-1.1.7-.9 1.3.2.5.7.8 1.2.8.1 0 .3 0 .4-.1l2.4-.7c.4-.1.9.1 1 .5s-.1.9-.5 1l-2.4.7c-.7.2-1.5 0-2-.6-.7-.9-.4-2.3.6-2.9z"
-          />
-        </svg>
-        Meridian
-      </div>
+    <nav className="mp-topnav">
+      <div className="mp-topnav-inner">
+        <div className="mp-brand">
+          <span className="mp-brand-glyph" />
+          Meridian
+          <span className="mp-brand-build">Pro · 2026.1</span>
+        </div>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 22 }}>
+        <div className="mp-nav-center">
           {navLinks.map((n) => (
             <button
               key={n.target}
-              onClick={() => document.getElementById(n.target)?.scrollIntoView({ behavior: 'smooth' })}
-              className="nav-link"
+              type="button"
+              className={`mp-nav-link${active === n.target ? ' active' : ''}`}
+              onClick={() => scrollTo(n.target)}
             >
               {n.label}
             </button>
           ))}
         </div>
-        <button
-          className="nav-cta"
-          onClick={() => document.getElementById('agent')?.scrollIntoView({ behavior: 'smooth' })}
-        >
-          Try the agent →
-        </button>
+
+        <div className="mp-nav-right">
+          <div className="mp-nav-meta" title={statusLabel}>
+            <span className={`mp-nav-status-dot ${statusClass}`.trim()} /> {statusLabel}
+          </div>
+          <button className="mp-cta" onClick={() => scrollTo('agent')}>
+            Talk to concierge →
+          </button>
+        </div>
       </div>
     </nav>
   );

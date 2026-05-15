@@ -1,69 +1,71 @@
 /**
- * AgentSection - Live demo with chat and activity panel
- * Features phase selector, chat interface, and real-time activity feed
+ * AgentSection — Meridian Pro 3-pane workspace
+ *
+ * Left rail: traveler card · run config · starters
+ * Center: chat with inline reasoning + recommendation grid + composer
+ * Right: Gantt-style trace timeline with tabs (spans / memory / sql / cost)
  */
-import { useState, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FadeIn } from '../components/FadeIn';
-import { TravelerPersona, DEMO_TRAVELER_ID, DEMO_PERSONA_INITIALS } from '../components/TravelerPersona';
-import { TraceSpan } from '../components/TraceSpan';
+import { GanttSpan } from '../components/GanttSpan';
+import { DEMO_TRAVELER_ID, DEMO_PERSONA_FALLBACK } from '../components/TravelerPersona';
 import { ProductThumb } from '../components/ProductThumb';
+import { useAgentBridge } from '../context/AgentBridge';
 import { enrichTraceActivities } from '../utils/traceTelemetry';
-import { sendChatMessage, processOrder } from '../api/client';
-import type { Product, ActivityEntry, Message, Phase, LongTermMemoryFact } from '../types';
+import { fetchMemoryProfile, sendChatMessage, processOrder } from '../api/client';
+import type { ActivityEntry, LongTermMemoryFact, Message, Phase, Product } from '../types';
 
-const phaseColors = ['#3b82f6', '#a855f7', '#10b981', '#ff5b1f'];
-const phaseLabels = [
-  'Phase 1 · Filters',
-  'Phase 2 · MCP',
-  'Phase 3 · Intent',
-  'Phase 4 · Personal',
-];
+const PHASE_LABELS: Record<Phase, string> = {
+  1: 'Filters',
+  2: 'MCP',
+  3: 'Intent',
+  4: 'Personal',
+};
 
-// Phase information for educational display
-const phaseInfo: Record<Phase, {
-  name: string;
+const PHASE_INFO: Record<Phase, {
   beat: string;
-  description: string;
   capabilities: string[];
-  limitations: string[];
-  tech: string;
+  starters: string[];
+  highlight?: string;
 }> = {
   1: {
-    name: 'Direct filters',
-    beat: 'SQL filters on trip_packages — destination, operator, price.',
-    description: 'RDS Data API → Aurora',
+    beat: 'Plain SQL filters on trip_packages via the RDS Data API.',
     capabilities: ['Trip type filter', 'Operator filter', 'Price filter'],
-    limitations: ['No natural language', 'Exact filter match only'],
-    tech: 'trip_packages · RDS Data API',
+    starters: ['City breaks', 'Beach & Resort', 'Business travel under $1500'],
+    highlight: 'Romantic week in Europe',
   },
   2: {
-    name: 'MCP tools',
-    beat: 'Same catalog queries through postgres-mcp-server.',
-    description: 'Model Context Protocol',
+    beat: 'Same catalog queries — but tools are exposed via MCP.',
     capabilities: ['Trip type filter', 'Operator filter', 'MCP run_query'],
-    limitations: ['Still filter-based', 'No vector search'],
-    tech: 'MCP → trip_packages',
+    starters: ['Adventure & Outdoors', 'Wellness & Luxury', 'Tokyo culture trip'],
+    highlight: 'Beach vacation with snorkeling',
   },
   3: {
-    name: 'Intent search',
-    beat: 'Hybrid pgvector + full-text — vague requests map to packages.',
-    description: 'Semantic retrieval',
-    capabilities: ['Natural language', 'Hybrid ranking', 'Cohere embeddings'],
-    limitations: ['No traveler memory', 'Stateless across sessions'],
-    tech: 'semantic_trip_search · tsvector',
+    beat: 'Hybrid pgvector + tsvector — vague requests resolve to packages.',
+    capabilities: ['Natural language', 'Hybrid ranking', 'Cohere v4'],
+    starters: [
+      'Weekend in Paris under $2k',
+      'Is the Maldives package available?',
+      'Family-friendly beach resort',
+    ],
   },
   4: {
-    name: 'Personal concierge',
-    beat: 'Loads traveler_profiles + traveler_preferences before every search.',
-    description: 'Strands @tool + Aurora memory',
-    capabilities: [
-      'Traveler profile & preferences',
-      'Session + trip_interactions',
-      'Strands @tool recall/persist',
+    beat: 'ConciergeOrchestrator + Strands @tool memory — grounded in Aurora.',
+    capabilities: ['Traveler profile', 'Session + interactions', 'Strands @tool recall/persist'],
+    starters: [
+      'Tokyo trip for two in October',
+      'Beach escape under $2500 — remember our food allergies',
+      'What did we discuss last time about Iceland?',
     ],
-    limitations: [],
-    tech: 'travelers · traveler_preferences · Strands Agents',
   },
+};
+
+// Phase color for the composer chip + accent dots in pill row
+const PHASE_COLOR: Record<Phase, string> = {
+  1: 'var(--mp-p1)',
+  2: 'var(--mp-p2)',
+  3: 'var(--mp-p3)',
+  4: 'var(--mp-p4)',
 };
 
 interface CartItem {
@@ -72,8 +74,11 @@ interface CartItem {
   size?: string;
 }
 
+const TRAVELER_TAGS_FALLBACK = ['Slow travel', 'Wine country', 'No red-eyes', 'Veg-friendly', 'Boutique'];
+
 export function AgentSection() {
-  const [phase, setPhase] = useState<Phase>(1);
+  const { register } = useAgentBridge();
+  const [phase, setPhase] = useState<Phase>(4);
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [acts, setActs] = useState<ActivityEntry[]>([]);
   const [pendingActs, setPendingActs] = useState<ActivityEntry[]>([]);
@@ -81,18 +86,20 @@ export function AgentSection() {
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [followUps, setFollowUps] = useState<string[]>([]);
-  const [phaseTransition, setPhaseTransition] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
   const [traceId, setTraceId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [memoryFacts, setMemoryFacts] = useState<LongTermMemoryFact[]>([]);
-  // Cart state - setCart is used but cart value not read directly (used in callback)
   const [, setCart] = useState<CartItem[]>([]);
+  const [activeTraceTab, setActiveTraceTab] = useState<'spans' | 'memory' | 'sql' | 'cost'>('spans');
+
   const chatEnd = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLInputElement>(null);
   const activityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pc = phaseColors[phase - 1];
-  const personaActive = phase === 4;
-  const chatAvatar = personaActive ? DEMO_PERSONA_INITIALS : 'M';
+  const lastUserTextRef = useRef<string | null>(null);
+  const [travelerTags, setTravelerTags] = useState<string[]>(TRAVELER_TAGS_FALLBACK);
+
+  const currentPhase = PHASE_INFO[phase];
 
   const ensureTraceId = (): string => {
     if (traceId) return traceId;
@@ -101,59 +108,64 @@ export function AgentSection() {
     return id;
   };
 
-  // Check backend connection on mount
   useEffect(() => {
-    const checkConnection = async () => {
+    fetchMemoryProfile(DEMO_TRAVELER_ID)
+      .then((res) => {
+        if (res.facts?.length) {
+          setMemoryFacts(res.facts);
+          const tags = res.facts
+            .slice(0, 5)
+            .map((f) => (f.value.length > 28 ? `${f.value.slice(0, 26)}…` : f.value));
+          if (tags.length) setTravelerTags(tags);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Backend health
+  useEffect(() => {
+    const check = async () => {
       try {
-        const response = await fetch('http://localhost:8000/health');
-        setConnectionStatus(response.ok ? 'connected' : 'disconnected');
+        const res = await fetch('http://localhost:8000/health');
+        setConnectionStatus(res.ok ? 'connected' : 'disconnected');
       } catch {
         setConnectionStatus('disconnected');
       }
     };
-    checkConnection();
-    // Re-check every 30 seconds
-    const interval = setInterval(checkConnection, 30000);
-    return () => clearInterval(interval);
+    check();
+    const t = setInterval(check, 30000);
+    return () => clearInterval(t);
   }, []);
 
-  // Phase-specific delays (ms) - Phase 1 slower to show process, Phase 3 faster
+  // Phase delays
   const phaseDelays: Record<Phase, number> = { 1: 600, 2: 450, 3: 350, 4: 300 };
 
-  // Track previous message count to only scroll on new messages
+  // Auto-scroll on message changes
   const prevMsgCount = useRef(0);
   const wasTyping = useRef(false);
-
   useEffect(() => {
-    // Scroll when messages are added (not on initial load)
     if (msgs.length > prevMsgCount.current) {
       chatEnd.current?.scrollIntoView({ behavior: 'smooth' });
     }
     prevMsgCount.current = msgs.length;
   }, [msgs]);
-
   useEffect(() => {
-    // Scroll when typing starts (user just sent a message)
     if (typing && !wasTyping.current && msgs.length > 0) {
       chatEnd.current?.scrollIntoView({ behavior: 'smooth' });
     }
     wasTyping.current = typing;
   }, [typing, msgs.length]);
 
-  // Progressive activity reveal - shows activities one by one
   const revealActivitiesProgressively = (
     activities: ActivityEntry[],
-    onComplete: () => void
+    onComplete: () => void,
   ) => {
     if (activities.length === 0) {
       onComplete();
       return;
     }
-
     const delay = phaseDelays[phase];
     let index = 0;
-
-    // Show first activity immediately
     setActs([activities[0]]);
     setCurrentStep(0);
     setPendingActs(activities.slice(1));
@@ -161,21 +173,19 @@ export function AgentSection() {
 
     const showNext = () => {
       if (index < activities.length) {
-        const nextActivity = activities[index];
-        setActs((prev) => [...prev, nextActivity]);
+        const next = activities[index];
+        setActs((prev) => [...prev, next]);
         setCurrentStep(index);
         setPendingActs(activities.slice(index + 1));
         index++;
         activityTimerRef.current = setTimeout(showNext, delay);
       } else {
-        // All activities revealed
         setCurrentStep(-1);
         setPendingActs([]);
         onComplete();
       }
     };
 
-    // Start revealing subsequent activities
     if (activities.length > 1) {
       activityTimerRef.current = setTimeout(showNext, delay);
     } else {
@@ -184,9 +194,10 @@ export function AgentSection() {
     }
   };
 
-  const send = async () => {
-    if (!input.trim() || typing) return;
-    const text = input.trim();
+  const send = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
+    if (!text || typing) return;
+    lastUserTextRef.current = text;
     setInput('');
     const userMsg: Message = { role: 'user', text };
     const history = [...msgs, userMsg];
@@ -199,7 +210,6 @@ export function AgentSection() {
 
     const tid = ensureTraceId();
 
-    // Clear any pending activity timers
     if (activityTimerRef.current) {
       clearTimeout(activityTimerRef.current);
       activityTimerRef.current = null;
@@ -217,60 +227,52 @@ export function AgentSection() {
           : {}),
       });
 
-      if (response.conversation_id) {
-        setConversationId(response.conversation_id);
-      }
+      if (response.conversation_id) setConversationId(response.conversation_id);
       if (response.memory_facts?.length) {
         setMemoryFacts(response.memory_facts);
+        window.dispatchEvent(
+          new CustomEvent('meridian-memory-update', { detail: response.memory_facts }),
+        );
       }
 
-      // Store the response for use after activities are revealed
       const botResponse = response;
 
-      // Progressively reveal activities, then show the response
       revealActivitiesProgressively(
         enrichTraceActivities(phase, text, response.activities, tid, history, {
           productCount: botResponse.products?.length,
         }),
         () => {
-        // Update follow-up suggestions
-        if (botResponse.follow_ups) {
-          setFollowUps(botResponse.follow_ups);
-        }
+          if (botResponse.follow_ups) setFollowUps(botResponse.follow_ups);
 
-        // Add bot response after activities are shown
-        if (botResponse.products && botResponse.products.length > 0) {
-          setMsgs((p) => [
-            ...p,
-            {
-              role: 'bot',
-              type: 'products',
-              text: botResponse.message,
-              products: botResponse.products,
-            },
-          ]);
-        } else if (botResponse.order) {
-          setMsgs((p) => [
-            ...p,
-            {
-              role: 'bot',
-              type: 'order',
-              text: botResponse.message,
-              order: botResponse.order,
-            },
-          ]);
-        } else {
-          setMsgs((p) => [
-            ...p,
-            {
-              role: 'bot',
-              type: 'text',
-              text: botResponse.message,
-            },
-          ]);
-        }
-        setTyping(false);
-      });
+          if (botResponse.products && botResponse.products.length > 0) {
+            setMsgs((p) => [
+              ...p,
+              {
+                role: 'bot',
+                type: 'products',
+                text: botResponse.message,
+                products: botResponse.products,
+              },
+            ]);
+          } else if (botResponse.order) {
+            setMsgs((p) => [
+              ...p,
+              {
+                role: 'bot',
+                type: 'order',
+                text: botResponse.message,
+                order: botResponse.order,
+              },
+            ]);
+          } else {
+            setMsgs((p) => [
+              ...p,
+              { role: 'bot', type: 'text', text: botResponse.message },
+            ]);
+          }
+          setTyping(false);
+        },
+      );
     } catch (error) {
       console.error('Chat error:', error);
       setConnectionStatus('disconnected');
@@ -279,34 +281,30 @@ export function AgentSection() {
         {
           role: 'bot',
           type: 'text',
-          text: 'Unable to connect to the backend. Please ensure the server is running on localhost:8000.',
+          text: 'Unable to reach the backend. Make sure FastAPI is running on localhost:8000.',
         },
       ]);
       setTyping(false);
     }
   };
 
-  const switchPhase = (i: number) => {
-    // Clear any pending activity timers
+  const applyPhase = useCallback((next: Phase) => {
     if (activityTimerRef.current) {
       clearTimeout(activityTimerRef.current);
       activityTimerRef.current = null;
     }
-    // Trigger phase transition animation
-    setPhaseTransition(true);
-    setTimeout(() => setPhaseTransition(false), 600);
-    
-    setPhase((i + 1) as Phase);
+    setPhase(next);
     setMsgs([]);
     setActs([]);
     setPendingActs([]);
     setCurrentStep(-1);
     setFollowUps([]);
     setTyping(false);
-  };
+  }, []);
 
-  // Clear chat helper function
-  const clearChat = () => {
+  const switchPhase = (i: number) => applyPhase((i + 1) as Phase);
+
+  const clearChat = useCallback(() => {
     setMsgs([]);
     setActs([]);
     setPendingActs([]);
@@ -316,37 +314,54 @@ export function AgentSection() {
       clearTimeout(activityTimerRef.current);
       activityTimerRef.current = null;
     }
-  };
+  }, []);
 
-  // Keyboard shortcuts - Escape to clear chat
+  const sendRef = useRef(send);
+  sendRef.current = send;
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && msgs.length > 0) {
-        clearChat();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [msgs.length]);
+    register({
+      phase,
+      setPhase: applyPhase,
+      setInput,
+      focusComposer: () => composerRef.current?.focus(),
+      sendMessage: (text) => {
+        void sendRef.current(text);
+      },
+      clearChat,
+      replayLast: () => {
+        if (lastUserTextRef.current) void sendRef.current(lastUserTextRef.current);
+      },
+    });
+    return () => register(null);
+  }, [phase, applyPhase, clearChat, register]);
 
-  // Cleanup timer on unmount
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        composerRef.current?.focus();
+        document.getElementById('agent')?.scrollIntoView({ behavior: 'smooth' });
+      }
+      if (e.key === 'Escape' && msgs.length > 0) clearChat();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [msgs.length, clearChat]);
+
   useEffect(() => {
     return () => {
-      if (activityTimerRef.current) {
-        clearTimeout(activityTimerRef.current);
-      }
+      if (activityTimerRef.current) clearTimeout(activityTimerRef.current);
     };
   }, []);
 
-  // Handle ordering a product
   const handleOrder = async (product: Product) => {
     if (typing) return;
+    const orderQuery = `Order: ${product.name}`;
+    const newUser: Message = { role: 'user', text: orderQuery };
+    const orderHistory: Message[] = [...msgs, newUser];
 
-    // Add user message indicating order intent
-    setMsgs((p) => [
-      ...p,
-      { role: 'user', text: `Order: ${product.name}` },
-    ]);
+    setMsgs((p) => [...p, newUser]);
     setTyping(true);
     setActs([]);
     setCurrentStep(-1);
@@ -354,10 +369,7 @@ export function AgentSection() {
     setFollowUps([]);
 
     const tid = ensureTraceId();
-    const orderQuery = `Order: ${product.name}`;
-    const orderHistory: Message[] = [...msgs, { role: 'user', text: orderQuery }];
 
-    // Clear any pending activity timers
     if (activityTimerRef.current) {
       clearTimeout(activityTimerRef.current);
       activityTimerRef.current = null;
@@ -371,35 +383,27 @@ export function AgentSection() {
         phase,
       });
 
-      // Progressively reveal activities, then show the response
       revealActivitiesProgressively(
         enrichTraceActivities(phase, orderQuery, response.activities, tid, orderHistory, {
           productCount: 0,
         }),
         () => {
-        // Add bot response with order details
-        if (response.order) {
-          setMsgs((p) => [
-            ...p,
-            {
-              role: 'bot',
-              type: 'order',
-              text: response.message,
-              order: response.order,
-            },
-          ]);
-        } else {
-          setMsgs((p) => [
-            ...p,
-            {
-              role: 'bot',
-              type: 'text',
-              text: response.message,
-            },
-          ]);
-        }
-        setTyping(false);
-      });
+          if (response.order) {
+            setMsgs((p) => [
+              ...p,
+              {
+                role: 'bot',
+                type: 'order',
+                text: response.message,
+                order: response.order,
+              },
+            ]);
+          } else {
+            setMsgs((p) => [...p, { role: 'bot', type: 'text', text: response.message }]);
+          }
+          setTyping(false);
+        },
+      );
     } catch (error) {
       console.error('Order error:', error);
       setMsgs((p) => [
@@ -407,14 +411,13 @@ export function AgentSection() {
         {
           role: 'bot',
           type: 'text',
-          text: 'Sorry, I encountered an error processing your order. Please try again.',
+          text: 'Sorry, I could not process the booking. Try again in a moment.',
         },
       ]);
       setTyping(false);
     }
   };
 
-  // Handle adding to cart
   const handleAddToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.product.product_id === product.product_id);
@@ -422,545 +425,598 @@ export function AgentSection() {
         return prev.map((item) =>
           item.product.product_id === product.product_id
             ? { ...item, quantity: item.quantity + 1 }
-            : item
+            : item,
         );
       }
       return [...prev, { product, quantity: 1, size: product.available_sizes?.[0] }];
     });
-
-    // Show confirmation in chat
     setMsgs((p) => [
       ...p,
       {
         role: 'bot',
         type: 'text',
-        text: `Added **${product.name}** to your itinerary! Keep exploring or book when you're ready.`,
+        text: `Added **${product.name}** to your itinerary. Keep exploring or book when you're ready.`,
       },
     ]);
   };
 
-  // Phase-specific suggestions to demonstrate capabilities and limitations
-  const phaseSuggestions: Record<Phase, { works: string[]; breaks: string[]; hint: string }> = {
-    1: {
-      works: ['City breaks', 'Beach & Resort', 'Business travel under $1500'],
-      breaks: ['Romantic week in Europe', 'Family trip with kids who love theme parks'],
-      hint: 'Phase 1: SQL filters only. Try "romantic week in Europe" in Phase 3 to feel the jump →',
-    },
-    2: {
-      works: ['Adventure & Outdoors', 'Wellness & Luxury', 'Tokyo culture trip'],
-      breaks: ['Beach vacation with snorkeling', 'Quick conference stopover in Singapore'],
-      hint: 'Phase 2: MCP tools — still filters underneath. Try natural language in Phase 3 →',
-    },
-    3: {
-      works: ['Weekend in Paris under $2k', 'Is the Maldives package available?', 'Family-friendly beach resort'],
-      breaks: [],
-      hint: 'Phase 3: multi-agent hybrid search. Watch the trace for supervisor + retrieval spans.',
-    },
-    4: {
-      works: [
-        'Tokyo trip for two in October',
-        'Beach escape under $2500 — remember my food allergies',
-        'What did we discuss last time about Iceland?',
-      ],
-      breaks: [],
-      hint: 'You are Alex & Jordan Chen — a returning couple from SFO. The concierge loads your Aurora profile before every reply.',
-    },
-  };
+  // Derived totals for the trace stats
+  const totalMs = useMemo(
+    () => acts.reduce((sum, a) => sum + (a.execution_time_ms ?? 0), 0),
+    [acts],
+  );
 
-  const currentPhaseSuggestions = phaseSuggestions[phase];
+  const totalSpans = acts.length + pendingActs.length;
+  const traceLive = currentStep >= 0;
+
+  // SQL spans, memory facts (for tabs)
+  const sqlSpans = acts.filter((a) => Boolean(a.sql_query));
+  const memorySpans = acts.filter((a) =>
+    ['memory_short', 'memory_long'].includes(a.telemetry?.category ?? ''),
+  );
 
   return (
-    <section
-      id="agent"
-      style={{
-        position: 'relative',
-        padding: '64px 28px 80px',
-        maxWidth: 1280,
-        margin: '0 auto',
-        borderTop: '1px solid var(--dl-line)',
-      }}
-    >
-
-        <FadeIn>
-          <div style={{ marginBottom: 32 }}>
-            <span className="section-label">Live demo</span>
-            <h2 className="section-headline">
-              Talk to the <em className="serif">agent</em>.
+    <section id="agent" className="mp-section">
+      <FadeIn>
+        <div className="mp-section-h-row">
+          <div className="mp-section-h">
+            <div className="mp-label-row">Concierge workspace</div>
+            <h2>
+              The room where the <em className="serif">concierge</em> works.
             </h2>
-            <p className="section-subtitle">
-              Climb the ladder: filters → MCP → semantic search → memory. Phase 4 loads the
-              traveler profile below before every reply.
+            <p>
+              Three panes: traveler context on the left, dialogue in the middle, a real trace on
+              the right. The trace is permalinked and OpenTelemetry-compatible — devs and travelers
+              see different views of the same source of truth.
             </p>
           </div>
-          <TravelerPersona
-            variant="featured"
-            facts={memoryFacts}
-            active={phase === 4}
-            onActivate={() => switchPhase(3)}
-          />
-        </FadeIn>
-
-        <div
-          className="agent-stage"
-          style={{ padding: 20, '--phase-color': pc } as React.CSSProperties}
-        >
-
-        {/* Phase pills */}
-        <FadeIn delay={0.1}>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            {phaseLabels.map((label, i) => (
-              <button
-                key={i}
-                onClick={() => switchPhase(i)}
-                className={`phase-pill${phase === i + 1 ? ' active' : ''}`}
-                style={{
-                  '--phase-color': phaseColors[i],
-                  transform: phase === i + 1 && phaseTransition ? 'scale(1.05)' : 'scale(1)',
-                  boxShadow: phase === i + 1 && phaseTransition ? `0 0 20px ${phaseColors[i]}30` : 'none',
-                } as React.CSSProperties}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Phase info panel */}
-          <div className="phase-info-bar">
-            <div style={{ textAlign: 'center' }}>
-              <div className="label">This phase</div>
-              <div className="value">{phaseInfo[phase].beat}</div>
-            </div>
-            <div className="divider" />
-            <div>
-              <div className="label">Stack</div>
-              <div className="value">{phaseInfo[phase].tech}</div>
-            </div>
-            <div className="divider" />
-            <div>
-              <div className="label" style={{ color: 'var(--dl-leaf)' }}>✓ Supports</div>
-              <div className="value muted">{phaseInfo[phase].capabilities.join(' · ')}</div>
-            </div>
-            {phaseInfo[phase].limitations.length > 0 && (
-              <>
-                <div className="divider" />
-                <div>
-                  <div className="label" style={{ color: 'var(--dl-accent-2)' }}>✗ Limitations</div>
-                  <div className="value muted">{phaseInfo[phase].limitations.join(' · ')}</div>
-                </div>
-              </>
-            )}
-          </div>
-        
-        </FadeIn>
-
-        {/* Chat + Activity */}
-        <FadeIn delay={0.2}>
-          <div className="agent-grid">
-            {/* Chat Panel */}
-            <div
-              className={`chat-panel${phaseTransition ? ' phase-transition' : ''}`}
-              style={{ '--phase-color': pc } as React.CSSProperties}
+          <div className="actions">
+            <button
+              type="button"
+              className="mp-btn ghost sm"
+              onClick={() => traceId && navigator.clipboard?.writeText(traceId)}
+              disabled={!traceId}
             >
-              <div className="chat-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <div
-                    className="status-dot"
-                    title={connectionStatus === 'connected' ? 'Backend connected' : connectionStatus === 'checking' ? 'Checking connection...' : 'Backend disconnected'}
-                    style={{ 
-                      background: connectionStatus === 'connected' ? pc : connectionStatus === 'checking' ? '#f59e0b' : '#ef4444', 
-                      boxShadow: `0 0 8px ${connectionStatus === 'connected' ? pc : connectionStatus === 'checking' ? '#f59e0b' : '#ef4444'}` 
-                    }}
-                  />
-                  <span className="chat-title">Travel Concierge</span>
-                  {phase === 4 && (
-                    <span className="traveler-persona-badge" style={{ marginLeft: 4 }}>
-                      Alex & Jordan
-                    </span>
-                  )}
-                  {connectionStatus === 'disconnected' && (
-                    <span className="offline-badge">Offline</span>
-                  )}
-                </div>
-                {msgs.length > 0 && (
+              {traceId ? 'Copy trace id' : 'Share trace'}
+            </button>
+            <button
+              type="button"
+              className="mp-btn ghost sm"
+              onClick={() => lastUserTextRef.current && send(lastUserTextRef.current)}
+              disabled={!lastUserTextRef.current || typing}
+              title="Resend last query"
+            >
+              Replay
+            </button>
+            <button type="button" className="mp-btn ghost sm" onClick={clearChat}>
+              Clear ⎋
+            </button>
+          </div>
+        </div>
+      </FadeIn>
+
+      <FadeIn delay={0.1}>
+        <div className="mp-workspace">
+          {/* Top bar */}
+          <div className="mp-ws-bar">
+            <div className="mp-ws-crumbs">
+              <b>Alex &amp; Jordan Chen</b>
+              <span className="sep">/</span>
+              conversation <b>{conversationId ?? 'new'}</b>
+              <span className="sep">/</span>
+              trace <b>{traceId ?? '—'}</b>
+            </div>
+            <div className="right">
+              <div className="mp-pill-row">
+                {([1, 2, 3, 4] as Phase[]).map((p) => (
                   <button
-                    onClick={clearChat}
-                    title="Press Escape to clear"
-                    className="chat-clear-btn"
+                    key={p}
+                    type="button"
+                    className={`mp-ppill${phase === p ? ' active' : ''}`}
+                    data-p={String(p)}
+                    onClick={() => switchPhase(p - 1)}
                   >
-                    Clear ⎋
+                    <span className="pdot" /> {PHASE_LABELS[p]}
+                  </button>
+                ))}
+              </div>
+              <div className="mp-ws-key" title={
+                connectionStatus === 'connected'
+                  ? 'Backend connected'
+                  : connectionStatus === 'checking'
+                    ? 'Checking…'
+                    : 'Backend offline'
+              }>
+                <kbd>⌘</kbd>
+                <kbd>K</kbd>
+                <span style={{ marginLeft: 4 }}>·</span>
+                <kbd>esc</kbd> clear
+              </div>
+            </div>
+          </div>
+
+          {/* 3-pane grid */}
+          <div className="mp-ws-grid">
+            {/* LEFT RAIL */}
+            <aside className="mp-ws-side">
+              <div className="mp-side-h">Traveler</div>
+              <div className="mp-traveler-card">
+                <div className="mp-tv-head">
+                  <div className="mp-tv-avatar">A·J</div>
+                  <div className="mp-tv-meta">
+                    <div className="name">{DEMO_PERSONA_FALLBACK.full_name ?? 'Alex & Jordan Chen'}</div>
+                    <div className="sub">{DEMO_TRAVELER_ID}</div>
+                  </div>
+                </div>
+                <div className="mp-tv-tags">
+                  {travelerTags.map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                </div>
+                <div className="mp-tv-foot">
+                  {memoryFacts.length || 8} long-term facts ·{' '}
+                  <button
+                    type="button"
+                    className="mp-link-btn"
+                    onClick={() =>
+                      document.getElementById('memory')?.scrollIntoView({ behavior: 'smooth' })
+                    }
+                  >
+                    inspect →
+                  </button>
+                </div>
+              </div>
+
+              <div className="mp-side-h">Run config</div>
+              <div className="mp-side-card">
+                <div className="row"><span>Mode</span><b>{PHASE_LABELS[phase]}</b></div>
+                <div className="row"><span>Model</span><b>claude-sonnet</b></div>
+                <div className="row"><span>Tools</span><b>{phase >= 2 ? '6 · MCP' : '3 · direct'}</b></div>
+                <div className="row"><span>Budget</span><b>$0.06 / turn</b></div>
+                <div className="row"><span>Cap</span><b>$3,200 trip</b></div>
+              </div>
+
+              <div className="mp-side-h">Try asking</div>
+              <div className="mp-starter">
+                {currentPhase.starters.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => {
+                      setInput(s);
+                      composerRef.current?.focus();
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+                {currentPhase.highlight && (
+                  <button type="button" className="warn" onClick={() => setInput(currentPhase.highlight!)}>
+                    {currentPhase.highlight}
                   </button>
                 )}
               </div>
 
-              <div className="chat-messages">
+              <div className="mp-side-h">This phase</div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: 'var(--mp-muted)',
+                  lineHeight: 1.5,
+                  padding: '0 4px',
+                }}
+              >
+                {currentPhase.beat}
+              </div>
+            </aside>
+
+            {/* CHAT */}
+            <main className="mp-ws-chat">
+              <div className="mp-chat-feed">
                 {msgs.length === 0 && !typing && (
-                  <div className="chat-empty">
-                    <div style={{ fontSize: 44, opacity: 0.35 }}>✈️</div>
-                    <p>{currentPhaseSuggestions.hint}</p>
-
-                    <div className="chat-starter-section">
-                      <div className="chat-starter-label ok">✓ Works in Phase {phase}</div>
-                      <div className="chat-starter-grid">
-                        {currentPhaseSuggestions.works.map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => setInput(s)}
-                            className="chat-starter-card"
-                            style={{ '--phase-color': pc } as React.CSSProperties}
-                          >
-                            {s}
-                          </button>
-                        ))}
-                      </div>
+                  <div className="mp-turn bot">
+                    <div className="av">M</div>
+                    <div className="mp-bubble">
+                      <p style={{ margin: 0 }}>
+                        Hi — pick a starter on the left, or describe the trip you have in mind. In
+                        Phase 4 I'll ground every reply in your stored traveler memory.
+                      </p>
                     </div>
-
-                    {currentPhaseSuggestions.breaks.length > 0 && (
-                      <div className="chat-starter-section">
-                        <div className="chat-starter-label warn">⚠ Try these to see limitations</div>
-                        <div className="chat-starter-grid">
-                          {currentPhaseSuggestions.breaks.map((s) => (
-                            <button
-                              key={s}
-                              type="button"
-                              onClick={() => setInput(s)}
-                              className="chat-starter-card warn"
-                            >
-                              {s}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
 
                 {msgs.map((m, i) => (
-                  <div
-                    key={i}
-                    className={`message-row ${m.role}`}
-                  >
-                    {m.role === 'bot' && (
-                      <div className="message-avatar" style={{ '--phase-color': pc } as React.CSSProperties}>
-                        {chatAvatar}
-                      </div>
-                    )}
-                    <div className={`message ${m.role}`}>
-                    {m.role === 'user' ? (
-                      m.text
-                    ) : m.type === 'products' && m.products ? (
-                      <div className="products-response">
-                        <p className="products-intro">{m.text}</p>
-                        {m.products.map((pr: Product, j: number) => (
-                          <div key={j} className="product-result" style={{ position: 'relative' }}>
-                            <ProductThumb
-                              imageUrl={pr.image_url}
-                              category={pr.category}
-                              alt={pr.name}
-                              style={{
-                                width: 64,
-                                height: 64,
-                                borderRadius: 10,
-                                flexShrink: 0,
-                              }}
-                              emojiSize={28}
-                            />
-                            <div style={{ flex: 1 }}>
-                              <div className="product-result-name">{pr.name}</div>
-                              <div className="product-result-meta">
-                                <span>${pr.price.toFixed(2)} · {pr.brand}</span>
-                                <span className="stock-badge">✓ Available</span>
+                  <div key={i} className={`mp-turn ${m.role}`}>
+                    {m.role === 'bot' ? <div className="av">M</div> : <div className="av">A·J</div>}
+                    <div className="mp-bubble">
+                      {m.role === 'user' ? (
+                        m.text
+                      ) : m.type === 'products' && m.products ? (
+                        <>
+                          <p style={{ margin: 0 }}>{m.text}</p>
+                          <div className="mp-rec-grid">
+                            {m.products.map((pr) => (
+                              <div key={pr.product_id} className="mp-rec-card">
+                                <div className="mp-rec-thumb">
+                                  <ProductThumb
+                                    imageUrl={pr.image_url}
+                                    category={pr.category}
+                                    alt={pr.name}
+                                    style={{ width: '100%', height: '100%', borderRadius: 10 }}
+                                    emojiSize={22}
+                                  />
+                                </div>
+                                <div className="mp-rec-meta">
+                                  <div className="mp-rec-name">{pr.name}</div>
+                                  <div className="mp-rec-sub">
+                                    {pr.brand} · {pr.category}
+                                  </div>
+                                </div>
+                                <div className="mp-rec-side">
+                                  {pr.similarity != null && (
+                                    <div className="mp-rec-match">
+                                      {(pr.similarity * 100).toFixed(0)}% match
+                                    </div>
+                                  )}
+                                  <div className="mp-rec-price">${pr.price.toFixed(0)}</div>
+                                  <div className="mp-rec-actions">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddToCart(pr)}
+                                      disabled={typing}
+                                    >
+                                      Hold
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="primary"
+                                      onClick={() => handleOrder(pr)}
+                                      disabled={typing}
+                                    >
+                                      Plan trip
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                            {pr.similarity && (
-                              <span
-                                className="similarity-badge"
-                                style={{ color: pc, background: `${pc}15`, marginRight: 8 }}
-                              >
-                                {(pr.similarity * 100).toFixed(0)}%
-                              </span>
-                            )}
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button
-                                onClick={() => handleAddToCart(pr)}
-                                disabled={typing}
-                                className="product-action-btn secondary"
-                                style={{
-                                  border: `1px solid ${pc}50`,
-                                  color: pc,
-                                }}
-                              >
-                                + Itinerary
-                              </button>
-                              <button
-                                onClick={() => handleOrder(pr)}
-                                disabled={typing}
-                                className="product-action-btn primary"
-                                style={{ background: pc }}
-                              >
-                                Book now
-                              </button>
-                            </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    ) : m.type === 'order' && m.order ? (
-                      <div className="order-response">
-                        <div style={{
-                          background: `${pc}10`,
-                          border: `1px solid ${pc}30`,
-                          borderRadius: 12,
-                          padding: 16,
-                          marginBottom: 8,
-                        }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            marginBottom: 12,
-                          }}>
-                            <span style={{ fontSize: 20 }}>✅</span>
-                            <span style={{ fontWeight: 600, color: pc }}>Booking Confirmed</span>
+                        </>
+                      ) : m.type === 'order' && m.order ? (
+                        <div className="mp-booking">
+                          <div className="mp-booking-head">
+                            <span>✅</span> Booking confirmed · {m.order.order_id}
                           </div>
-                          <div style={{ fontSize: 12, color: 'var(--dl-muted)', marginBottom: 8 }}>
-                            Order #{m.order.order_id}
-                          </div>
-                          {m.order.items.map((item, idx) => (
-                            <div key={idx} style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              fontSize: 13,
-                              marginBottom: 4,
-                            }}>
-                              <span>{item.name} {item.size && `(${item.size})`}</span>
-                              <span>${item.unit_price.toFixed(2)}</span>
+                          {m.order.items.map((it, idx) => (
+                            <div key={idx} className="mp-booking-row">
+                              <span>{it.name}{it.size ? ` (${it.size})` : ''}</span>
+                              <span>${it.unit_price.toFixed(2)}</span>
                             </div>
                           ))}
-                          <div style={{
-                            borderTop: '1px solid var(--dl-line)',
-                            marginTop: 8,
-                            paddingTop: 8,
-                            fontSize: 12,
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                              <span style={{ color: '#64748b' }}>Subtotal</span>
-                              <span>${m.order.subtotal.toFixed(2)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                              <span style={{ color: '#64748b' }}>Tax</span>
-                              <span>${m.order.tax.toFixed(2)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                              <span style={{ color: '#64748b' }}>Shipping</span>
-                              <span>{m.order.shipping === 0 ? 'FREE' : `$${m.order.shipping.toFixed(2)}`}</span>
-                            </div>
-                            <div style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              fontWeight: 600,
-                              fontSize: 14,
-                              color: pc,
-                            }}>
-                              <span>Total</span>
-                              <span>${m.order.total.toFixed(2)}</span>
-                            </div>
+                          <div className="mp-booking-divider" />
+                          <div className="mp-booking-row">
+                            <span style={{ color: 'var(--mp-muted)' }}>Subtotal</span>
+                            <span>${m.order.subtotal.toFixed(2)}</span>
+                          </div>
+                          <div className="mp-booking-row">
+                            <span style={{ color: 'var(--mp-muted)' }}>Tax</span>
+                            <span>${m.order.tax.toFixed(2)}</span>
+                          </div>
+                          <div className="mp-booking-row">
+                            <span style={{ color: 'var(--mp-muted)' }}>Shipping</span>
+                            <span>{m.order.shipping === 0 ? 'FREE' : `$${m.order.shipping.toFixed(2)}`}</span>
+                          </div>
+                          <div className="mp-booking-divider" />
+                          <div className="mp-booking-total">
+                            <span>Total</span>
+                            <span>${m.order.total.toFixed(2)}</span>
                           </div>
                           {m.order.estimated_delivery && (
-                            <div style={{
-                              marginTop: 12,
-                              padding: '8px 12px',
-                              background: 'var(--dl-bg)',
-                              border: '1px solid var(--dl-line)',
-                              borderRadius: 8,
-                              fontSize: 12,
-                            }}>
-                              <span style={{ color: '#64748b' }}>📦 Estimated delivery: </span>
-                              <span style={{ fontWeight: 500 }}>{m.order.estimated_delivery}</span>
+                            <div className="mp-booking-eta">
+                              📦 Estimated delivery: <b>{m.order.estimated_delivery}</b>
                             </div>
                           )}
                         </div>
-                      </div>
-                    ) : (
-                      m.text
-                    )}
+                      ) : (
+                        m.text
+                      )}
+
+                      {/* inline reasoning trace on bot replies */}
+                      {m.role === 'bot' &&
+                        i === msgs.length - 1 &&
+                        !typing &&
+                        acts.length > 0 && (
+                          <div className="reasoning">
+                            <span className="tag">▸ supervisor</span> →{' '}
+                            {acts
+                              .slice(0, 4)
+                              .map((a) => a.title.replace(/\s+/g, ' '))
+                              .join(' → ')}
+                            {acts.length > 4 ? ' → …' : ''}
+                          </div>
+                        )}
                     </div>
                   </div>
                 ))}
 
                 {typing && (
-                  <div className="message-row bot">
-                    <div className="message-avatar" style={{ '--phase-color': pc } as React.CSSProperties}>
-                      {chatAvatar}
-                    </div>
-                    <div className="typing-indicator">
-                    {[0, 1, 2].map((k) => (
-                      <div
-                        key={k}
-                        className="typing-dot"
-                        style={{
-                          background: pc,
-                          animationDelay: `${k * 0.15}s`,
-                        }}
-                      />
-                    ))}
+                  <div className="mp-turn bot">
+                    <div className="av">M</div>
+                    <div className="mp-bubble">
+                      <span style={{ display: 'inline-flex', gap: 6 }}>
+                        {[0, 1, 2].map((k) => (
+                          <span
+                            key={k}
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: 3,
+                              background: 'var(--mp-soft)',
+                              animation: 'mp-pulse 1.2s ease-in-out infinite',
+                              animationDelay: `${k * 0.15}s`,
+                              display: 'inline-block',
+                            }}
+                          />
+                        ))}
+                      </span>
                     </div>
                   </div>
                 )}
-                
-                {/* Follow-up suggestions */}
+
                 {!typing && followUps.length > 0 && (
-                  <div className="follow-ups" style={{ marginTop: 12, marginBottom: 8, marginLeft: 48 }}>
-                    <div className="follow-ups-label">Try asking:</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {followUps.map((fu, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setInput(fu)}
-                          className="follow-up-btn"
-                          style={{
-                            background: `${pc}10`,
-                            border: `1px solid ${pc}30`,
-                            color: pc,
-                          }}
-                        >
-                          {fu}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="mp-followups">
+                    {followUps.map((fu) => (
+                      <button key={fu} type="button" onClick={() => void send(fu)} disabled={typing}>
+                        {fu}
+                      </button>
+                    ))}
                   </div>
                 )}
-                
+
+                {connectionStatus === 'disconnected' && msgs.length === 0 && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: 'var(--mp-accent-2)',
+                      background: 'rgba(255,91,31,0.06)',
+                      border: '1px solid rgba(255,91,31,0.25)',
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                    }}
+                  >
+                    Backend offline — start <code>uvicorn backend.main:app</code> on
+                    localhost:8000 to wire up the trace.
+                  </div>
+                )}
+
                 <div ref={chatEnd} />
               </div>
 
-              <div className="chat-input-bar">
-                <input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && send()}
-                  placeholder="Ask about destinations, dates, or trip style…"
-                  className="chat-input"
-                  style={
-                    {
-                      '--phase-color': pc,
-                    } as React.CSSProperties
-                  }
-                />
+              {/* Composer */}
+              <div className="mp-composer">
+                <div className="mp-composer-input">
+                  <span className="mp-composer-chip" data-p={String(phase)} style={{ color: PHASE_COLOR[phase] }}>
+                    {PHASE_LABELS[phase]}
+                  </span>
+                  <input
+                    ref={composerRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && void send()}
+                    placeholder={
+                      phase === 4
+                        ? 'Ask the concierge — anything about your trip…'
+                        : 'Ask about destinations, dates, or trip style…'
+                    }
+                  />
+                  <div className="mp-composer-tools">
+                    <button type="button" title="Attach (coming soon)">⊕</button>
+                    <button type="button" title="Voice (coming soon)">🎙</button>
+                    <button type="button" title="Clear" onClick={clearChat}>⌫</button>
+                  </div>
+                </div>
                 <button
-                  onClick={send}
-                  className="send-btn send-btn-labeled"
-                  style={{ background: 'var(--dl-ink)' }}
-                  aria-label="Send message"
+                  type="button"
+                  className="mp-composer-send"
+                  onClick={() => void send()}
+                  disabled={typing || !input.trim()}
+                  aria-label="Send"
                 >
-                  Send
+                  ↑
                 </button>
               </div>
-            </div>
+            </main>
 
-            {/* Activity Panel */}
-            <div className="activity-panel">
-              <div className="activity-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div
-                    className="status-dot"
-                    style={{
-                      background: currentStep >= 0 ? pc : acts.length > 0 ? '#10b981' : '#334155',
-                      boxShadow: currentStep >= 0 ? `0 0 12px ${pc}` : acts.length > 0 ? '0 0 8px #10b981' : 'none',
-                      animation: currentStep >= 0 ? 'pulseGlow 1.5s ease-in-out infinite' : 'none',
-                    }}
-                  />
-                  <span className="activity-title">Agent trace</span>
+            {/* TRACE */}
+            <aside className="mp-ws-trace">
+              <div className="mp-trace-head">
+                <div className="ttl">
+                  Trace
+                  <small>
+                    {traceId ?? '—'} · {totalSpans} spans · {totalMs}ms
+                  </small>
                 </div>
-                <span className="activity-count" style={{ color: currentStep >= 0 ? pc : undefined, display: 'flex', gap: 6, alignItems: 'center' }}>
-                  {traceId && (
-                    <button
-                      type="button"
-                      className="trace-id-pill"
-                      title="Permalink preview — full persistence in Wave 02"
-                      onClick={() => navigator.clipboard?.writeText(traceId)}
-                    >
-                      {traceId}
-                    </button>
-                  )}
-                  {currentStep >= 0
-                    ? `step ${currentStep + 1}/${acts.length + pendingActs.length}`
-                    : acts.length > 0
-                      ? `${acts.length} ops`
-                      : 'idle'}
+                <span className={`mp-trace-live${traceLive ? '' : ' idle'}`}>
+                  {traceLive ? 'live' : 'idle'}
                 </span>
               </div>
 
-              <div className="activity-feed">
-                {acts.length === 0 && currentStep < 0 && (
-                  <div className="activity-empty">
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: 6, 
-                      marginBottom: 12,
-                    }}>
-                      {[0, 1, 2].map((i) => (
-                        <div
-                          key={i}
-                          style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            background: pc,
-                            opacity: 0.4,
-                            animation: `pulse 1.5s ease-in-out ${i * 0.2}s infinite`,
-                          }}
+              <div className="mp-trace-tabs">
+                <button
+                  type="button"
+                  className={`mp-trace-tab${activeTraceTab === 'spans' ? ' active' : ''}`}
+                  onClick={() => setActiveTraceTab('spans')}
+                >
+                  Spans <span className="count">{totalSpans}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`mp-trace-tab${activeTraceTab === 'memory' ? ' active' : ''}`}
+                  onClick={() => setActiveTraceTab('memory')}
+                >
+                  Memory <span className="count">{memoryFacts.length || memorySpans.length}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`mp-trace-tab${activeTraceTab === 'sql' ? ' active' : ''}`}
+                  onClick={() => setActiveTraceTab('sql')}
+                >
+                  SQL <span className="count">{sqlSpans.length}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`mp-trace-tab${activeTraceTab === 'cost' ? ' active' : ''}`}
+                  onClick={() => setActiveTraceTab('cost')}
+                >
+                  Cost
+                </button>
+              </div>
+
+              <div className="mp-trace-list">
+                {activeTraceTab === 'spans' &&
+                  (totalSpans === 0 ? (
+                    <div className="mp-trace-empty">
+                      <div className="pulser">
+                        <span /> <span /> <span />
+                      </div>
+                      <div>Waiting for activity</div>
+                      <div className="hint">Send a query to see the full agent trace</div>
+                    </div>
+                  ) : (
+                    <div className="mp-gantt">
+                      {acts.map((a, i) => (
+                        <GanttSpan
+                          key={a.id ?? `done-${i}`}
+                          entry={a}
+                          index={i}
+                          totalSpans={totalSpans}
+                          state={i === currentStep ? 'live' : 'done'}
+                        />
+                      ))}
+                      {pendingActs.map((a, i) => (
+                        <GanttSpan
+                          key={a.id ?? `pending-${i}`}
+                          entry={a}
+                          index={acts.length + i}
+                          totalSpans={totalSpans}
+                          state="pending"
                         />
                       ))}
                     </div>
-                    <div style={{ color: '#64748b' }}>Waiting for activity</div>
-                    <div style={{ 
-                      fontSize: 10, 
-                      color: '#475569', 
-                      marginTop: 4,
-                      fontFamily: 'SF Mono, monospace',
-                    }}>
-                      Send a query to see the full agent trace
+                  ))}
+
+                {activeTraceTab === 'memory' &&
+                  (memoryFacts.length === 0 ? (
+                    <div className="mp-trace-empty">
+                      <div>No long-term memory recalled yet</div>
+                      <div className="hint">Switch to Phase 4 and send a query</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {memoryFacts.map((f, i) => (
+                        <div
+                          key={`${f.key}-${i}`}
+                          style={{
+                            padding: '10px 12px',
+                            background: 'var(--mp-paper-2)',
+                            border: '1px solid var(--mp-line)',
+                            borderRadius: 10,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: 11,
+                              fontFamily: 'ui-monospace, "SF Mono", monospace',
+                              color: 'var(--mp-dim)',
+                            }}
+                          >
+                            {f.key}
+                          </div>
+                          <div style={{ fontSize: 13, color: 'var(--mp-ink)', marginTop: 2 }}>
+                            {f.value}
+                          </div>
+                          {(f.confidence != null || f.source) && (
+                            <div
+                              style={{
+                                fontSize: 10.5,
+                                color: 'var(--mp-dim)',
+                                marginTop: 4,
+                                fontFamily: 'ui-monospace, "SF Mono", monospace',
+                              }}
+                            >
+                              {f.confidence != null ? `conf ${f.confidence.toFixed(2)}` : ''}
+                              {f.confidence != null && f.source ? ' · ' : ''}
+                              {f.source ?? ''}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+
+                {activeTraceTab === 'sql' &&
+                  (sqlSpans.length === 0 ? (
+                    <div className="mp-trace-empty">
+                      <div>No SQL emitted on this turn</div>
+                      <div className="hint">Phase 1 / 2 will show direct queries</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {sqlSpans.map((s, i) => (
+                        <div key={s.id ?? `sql-${i}`}>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: 'var(--mp-dim)',
+                              marginBottom: 4,
+                              fontFamily: 'ui-monospace, "SF Mono", monospace',
+                            }}
+                          >
+                            {s.title}
+                          </div>
+                          <pre className="mp-gspan-sql">{s.sql_query}</pre>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+
+                {activeTraceTab === 'cost' && (
+                  <div
+                    style={{
+                      padding: '8px 4px',
+                      fontSize: 13,
+                      color: 'var(--mp-muted)',
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    <div>
+                      <b style={{ color: 'var(--mp-ink)' }}>${(totalMs * 0.00003).toFixed(4)}</b>{' '}
+                      estimated for this turn
+                    </div>
+                    <div>
+                      <b style={{ color: 'var(--mp-ink)' }}>{totalSpans}</b> spans ·{' '}
+                      <b style={{ color: 'var(--mp-ink)' }}>{totalMs}ms</b> total
+                    </div>
+                    <div>
+                      Bedrock <code>claude-sonnet</code> · pgvector HNSW · pricing approximate
                     </div>
                   </div>
                 )}
-
-                {/* Revealed trace spans */}
-                {acts.map((a, i) => (
-                  <TraceSpan
-                    key={a.id || i}
-                    entry={a}
-                    index={i}
-                    isCurrentStep={i === currentStep}
-                    phaseColor={pc}
-                  />
-                ))}
-
-                {/* Pending spans */}
-                {pendingActs.map((a, i) => (
-                  <TraceSpan
-                    key={`pending-${a.id || i}`}
-                    entry={a}
-                    index={acts.length + i}
-                    isCurrentStep={false}
-                    isPending
-                    phaseColor={pc}
-                  />
-                ))}
-
               </div>
 
-              <div className="activity-stats">
-                <span>
-                  <span style={{ color: pc }}>●</span> Phase {phase}
-                </span>
-                <span>{acts.length > 0 ? `${acts.reduce((sum, a) => sum + (a.execution_time_ms || 0), 0)}ms` : '—'}</span>
-                <span>{acts.length + pendingActs.length} steps</span>
-                <span>1024d vectors</span>
+              <div className="mp-trace-stats">
+                <div className="cell">Total<b>{totalMs}ms</b></div>
+                <div className="cell">Spans<b>{totalSpans}</b></div>
+                <div className="cell">
+                  Mode<b>{PHASE_LABELS[phase]}</b>
+                </div>
+                <div className="cell">
+                  Vectors<b>1024d</b>
+                </div>
               </div>
-            </div>
+            </aside>
           </div>
-        </FadeIn>
         </div>
+      </FadeIn>
     </section>
   );
 }
