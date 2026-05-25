@@ -65,10 +65,8 @@ export function MemorySection() {
       <FadeIn>
         <div className="mp-section-h-row">
           <div className="mp-section-h">
-            <div className="mp-label-row">Traveler memory · grounded in Aurora</div>
-            <h2>
-              Every fact, with a <em className="serif">source</em>.
-            </h2>
+            <div className="mp-label-row">Phase 4 · traveler memory</div>
+            <h2>Every fact, with a source.</h2>
             <p>
               Memory isn&apos;t a black box. Each fact has the conversation that taught it, when it
               was learned, a confidence score, and a way to forget. Stored as rows in{' '}
@@ -127,7 +125,7 @@ export function MemorySection() {
             </div>
 
             <div className="biglabel">Provenance</div>
-            <div style={{ fontSize: 12, color: 'var(--mp-muted)', lineHeight: 1.55 }}>
+            <div style={{ fontSize: 13, color: 'var(--mp-muted)', lineHeight: 1.55 }}>
               All facts are written by the <code>memory_agent</code> tool — never by the
               supervisor. Edits and deletions are append-only and audit-logged.
             </div>
@@ -136,7 +134,7 @@ export function MemorySection() {
               <div
                 style={{
                   marginTop: 16,
-                  fontSize: 12,
+                  fontSize: 13,
                   color: 'var(--mp-accent-2)',
                   padding: '10px 12px',
                   background: 'rgba(255,91,31,0.06)',

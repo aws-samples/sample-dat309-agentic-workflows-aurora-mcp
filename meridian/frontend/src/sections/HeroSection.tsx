@@ -90,9 +90,17 @@ export function HeroSection({ scrollY: _scrollY }: HeroSectionProps) {
             Browse trips
           </button>
         </div>
+        <div className="mp-hero-scale">
+          <span className="mp-hero-scale-eyebrow">Same two founders. Same vibe.</span>
+          <span className="mp-hero-scale-arc">
+            <b>50</b> <span className="arrow">→</span> <b>500,000</b>
+            <em>trips/day</em>
+          </span>
+          <span className="mp-hero-scale-tail">10,000× the scale · five phases, one Aurora</span>
+        </div>
         <div className="mp-hero-stats">
           <div className="mp-stat"><b>30</b>curated packages</div>
-          <div className="mp-stat"><b>4</b>orchestration modes</div>
+          <div className="mp-stat"><b>5</b>phases live</div>
           <div className="mp-stat"><b>1024d</b>Cohere v4</div>
           <div className="mp-stat"><b>~340ms</b>p50 latency</div>
           <div className="mp-stat"><b>OTel</b>trace export</div>

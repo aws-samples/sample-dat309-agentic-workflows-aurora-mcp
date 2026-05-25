@@ -71,10 +71,8 @@ export function ProductsSection() {
       <FadeIn>
         <div className="mp-section-h-row">
           <div className="mp-section-h">
-            <div className="mp-label-row">Trip catalog · live from Aurora</div>
-            <h2>
-              Curated trips, <em className="serif">embedded</em>.
-            </h2>
+            <div className="mp-label-row">Phase 3 · semantic retrieval</div>
+            <h2>Curated trips, embedded.</h2>
             <p>
               30 hand-curated packages indexed with Cohere Embed v4 (1024d) and a tsvector for
               lexical fallback. The concierge searches across both — and writes a <em>match because</em>{' '}
@@ -117,7 +115,7 @@ export function ProductsSection() {
             border: '1px solid rgba(255,91,31,0.25)',
             borderRadius: 12,
             color: 'var(--mp-accent-2)',
-            fontSize: 13,
+            fontSize: 14,
           }}
         >
           {error}

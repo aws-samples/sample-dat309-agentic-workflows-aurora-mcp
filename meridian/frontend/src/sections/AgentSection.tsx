@@ -63,9 +63,9 @@ const PHASE_INFO: Record<Phase, {
     beat: 'LangGraph StateGraph — classify → search/availability/recall → synthesize, with checkpoints.',
     capabilities: ['Explicit edges', 'Checkpointed state', 'PostgresSaver / MemorySaver'],
     starters: [
-      'Tokyo culture trip for two',
-      'Is the Maldives package available?',
-      'Remember what we discussed about Iceland',
+      'Watch our Tokyo dates and rebook the hotel if we slip a week',
+      'Plan and hold our anniversary Tuscany trip end-to-end',
+      'Resume the Iceland workflow we paused last month',
     ],
   },
 };
@@ -77,6 +77,184 @@ const PHASE_COLOR: Record<Phase, string> = {
   3: 'var(--mp-p3)',
   4: 'var(--mp-p4)',
   5: 'var(--mp-p5, #6d28d9)',
+};
+
+interface SkillSpec {
+  name: string;
+  agent: string;
+  signature: string;
+  args: { name: string; type: string; note?: string }[];
+  returns: string;
+  beat: string;
+  file: string;
+  example: string;
+}
+
+const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
+  1: [
+    {
+      name: 'sql_filter',
+      agent: 'Phase1Agent',
+      signature: 'run_sql(category, max_price)',
+      args: [
+        { name: 'category', type: 'str', note: 'e.g. "Beach & Resort"' },
+        { name: 'max_price', type: 'float', note: 'optional ceiling' },
+      ],
+      returns: 'list[trip_package]',
+      beat: 'Plain SQL WHERE clause on trip_packages via the RDS Data API.',
+      file: 'agents/phase1/agent.py',
+      example: 'SELECT * FROM trip_packages WHERE category = $1 AND price <= $2',
+    },
+  ],
+  2: [
+    {
+      name: 'run_query',
+      agent: 'postgres-mcp-server',
+      signature: 'run_query(sql, params, dry_run=false)',
+      args: [
+        { name: 'sql', type: 'str', note: 'allow-listed SELECT' },
+        { name: 'params', type: 'list', note: 'positional bind values' },
+        { name: 'dry_run', type: 'bool', note: 'returns plan only' },
+      ],
+      returns: 'rows[]',
+      beat: 'Same catalog queries — but exposed as a typed MCP tool with IAM auth.',
+      file: 'mcp/postgres/server.py',
+      example: 'POST /tools/run_query → Aurora via RDS Data API',
+    },
+  ],
+  3: [
+    {
+      name: 'search',
+      agent: 'SearchAgent',
+      signature: '_semantic_search_tool(query, limit=5)',
+      args: [
+        { name: 'query', type: 'str', note: 'natural language' },
+        { name: 'limit', type: 'int', note: 'default 5' },
+      ],
+      returns: 'list[trip_package + similarity]',
+      beat: 'Hybrid pgvector + tsvector ranking on Cohere Embed v4 (1024d).',
+      file: 'agents/phase3/search_agent.py',
+      example: '"romantic week in Europe" → Tuscany, Provence, Lake Como',
+    },
+    {
+      name: 'availability',
+      agent: 'ProductAgent',
+      signature: '_check_inventory_tool(package_id, duration?)',
+      args: [
+        { name: 'package_id', type: 'str', note: 'e.g. "CTY-002"' },
+        { name: 'duration', type: 'str?', note: 'e.g. "7 days"' },
+      ],
+      returns: 'departure_slots[]',
+      beat: 'Departure slot lookup against package_inventory.',
+      file: 'agents/phase3/product_agent.py',
+      example: 'CTY-002 · 7 days → 4 dates remaining in May',
+    },
+    {
+      name: 'booking',
+      agent: 'OrderAgent',
+      signature: '_process_order_tool(customer_id, items)',
+      args: [
+        { name: 'customer_id', type: 'str' },
+        { name: 'items', type: 'list[dict]', note: 'product_id, quantity, size' },
+      ],
+      returns: 'order { id, total, eta }',
+      beat: 'Calculate, hold, and persist a booking against trip_orders.',
+      file: 'agents/phase3/order_agent.py',
+      example: 'Hold CTY-002 · 7 days · 2 travelers → ord_4f2c',
+    },
+  ],
+  4: [
+    {
+      name: 'recall_session',
+      agent: 'MemoryAgent',
+      signature: 'recall_session_context(conversation_id, limit=6)',
+      args: [
+        { name: 'conversation_id', type: 'str' },
+        { name: 'limit', type: 'int', note: 'recent turns' },
+      ],
+      returns: 'messages[]',
+      beat: 'Short-term turn context from conversation_messages.',
+      file: 'agents/phase4/memory_agent.py',
+      example: 'Last 6 turns of conv_8a91 → "Tokyo · October · two"',
+    },
+    {
+      name: 'recall_facts',
+      agent: 'MemoryAgent',
+      signature: 'recall_traveler_preferences(traveler_id, limit=8)',
+      args: [
+        { name: 'traveler_id', type: 'str' },
+        { name: 'limit', type: 'int' },
+      ],
+      returns: 'facts[] { key, value, confidence }',
+      beat: 'Long-term traveler facts from traveler_preferences.',
+      file: 'agents/phase4/memory_agent.py',
+      example: 'aj_chen → party=2, allergies=[shellfish], budget≤$3.2k',
+    },
+    {
+      name: 'similar_trips',
+      agent: 'MemoryAgent',
+      signature: 'recall_similar_interactions(traveler_id, query, limit=3)',
+      args: [
+        { name: 'traveler_id', type: 'str' },
+        { name: 'query', type: 'str' },
+        { name: 'limit', type: 'int' },
+      ],
+      returns: 'interactions[] + similarity',
+      beat: 'pgvector recall over interaction_embeddings.',
+      file: 'agents/phase4/memory_agent.py',
+      example: '"slow + warm" → past Sicily + Sardinia conversations',
+    },
+    {
+      name: 'persist_turn',
+      agent: 'MemoryAgent',
+      signature: 'persist_turn(conversation_id, role, text, embedding)',
+      args: [
+        { name: 'conversation_id', type: 'str' },
+        { name: 'role', type: 'str', note: 'user | assistant' },
+        { name: 'text', type: 'str' },
+        { name: 'embedding', type: 'vector(1024)' },
+      ],
+      returns: 'message_id',
+      beat: 'Write turn + embedding so the next session knows this one happened.',
+      file: 'agents/phase4/memory_agent.py',
+      example: 'Insert into conversation_messages + interaction_embeddings',
+    },
+  ],
+  5: [
+    {
+      name: 'classify',
+      agent: 'LangGraph node',
+      signature: 'classify_intent(state)',
+      args: [{ name: 'state', type: 'WorkflowState', note: 'last user msg' }],
+      returns: 'intent ∈ {search, availability, recall, plan}',
+      beat: 'Branches the StateGraph to the right specialist edge.',
+      file: 'agents/phase5/workflow.py',
+      example: '"watch our dates" → plan (long-running)',
+    },
+    {
+      name: 'checkpoint',
+      agent: 'PostgresSaver',
+      signature: 'save_checkpoint(thread_id, state)',
+      args: [
+        { name: 'thread_id', type: 'str', note: 'durable workflow id' },
+        { name: 'state', type: 'WorkflowState' },
+      ],
+      returns: 'checkpoint_id',
+      beat: 'Aurora-backed checkpoints — resume weeks later.',
+      file: 'agents/phase5/workflow.py',
+      example: 'thread th_2614 paused at "watch dates" → resumed in October',
+    },
+    {
+      name: 'synthesize',
+      agent: 'LangGraph node',
+      signature: 'synthesize_reply(state)',
+      args: [{ name: 'state', type: 'WorkflowState' }],
+      returns: 'message + follow_ups',
+      beat: 'Compose final reply from accumulated tool outputs.',
+      file: 'agents/phase5/workflow.py',
+      example: 'search + availability + recall → "Hold CTY-002, 4 dates left"',
+    },
+  ],
 };
 
 interface ItineraryItem {
@@ -103,6 +281,7 @@ export function AgentSection() {
   const [memoryFacts, setMemoryFacts] = useState<LongTermMemoryFact[]>([]);
   const [, setItinerary] = useState<ItineraryItem[]>([]);
   const [activeTraceTab, setActiveTraceTab] = useState<'spans' | 'memory' | 'sql' | 'cost'>('spans');
+  const [activeSkill, setActiveSkill] = useState<string | null>(null);
 
   const chatEnd = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLInputElement>(null);
@@ -311,6 +490,7 @@ export function AgentSection() {
     setCurrentStep(-1);
     setFollowUps([]);
     setTyping(false);
+    setActiveSkill(null);
   }, []);
 
   const switchPhase = (i: number) => applyPhase((i + 1) as Phase);
@@ -466,15 +646,16 @@ export function AgentSection() {
     ['memory_short', 'memory_long'].includes(a.telemetry?.category ?? ''),
   );
 
+  const skills = PHASE_SKILLS[phase];
+  const activeSkillSpec = skills.find((s) => s.name === activeSkill) ?? null;
+
   return (
     <section id="agent" className="mp-section">
       <FadeIn>
         <div className="mp-section-h-row">
           <div className="mp-section-h">
-            <div className="mp-label-row">Concierge workspace</div>
-            <h2>
-              The room where the <em className="serif">concierge</em> works.
-            </h2>
+            <div className="mp-label-row">Phases 1–5 · live workspace</div>
+            <h2>The room where the concierge works.</h2>
             <p>
               Three panes: traveler context on the left, dialogue in the middle, a real trace on
               the right. The trace is permalinked and OpenTelemetry-compatible — devs and travelers
@@ -546,6 +727,83 @@ export function AgentSection() {
             </div>
           </div>
 
+          {/* Skills strip — what the supervisor can call in this phase */}
+          <div className="mp-skills" data-p={String(phase)}>
+            <div className="mp-skills-label">
+              Skills
+              <span className="mp-skills-sub">
+                Phase {phase} · {skills.length} {skills.length === 1 ? 'tool' : 'tools'}
+              </span>
+            </div>
+            <div className="mp-skills-row">
+              {skills.map((s) => (
+                <button
+                  key={s.name}
+                  type="button"
+                  className={`mp-skill-pill${activeSkill === s.name ? ' active' : ''}`}
+                  onClick={() =>
+                    setActiveSkill((cur) => (cur === s.name ? null : s.name))
+                  }
+                  title={s.beat}
+                >
+                  <span className="dot" />
+                  <span className="nm">{s.name}</span>
+                  <span className="ag">{s.agent}</span>
+                </button>
+              ))}
+            </div>
+            {activeSkillSpec && (
+              <div className="mp-skill-pop">
+                <div className="mp-skill-pop-h">
+                  <div>
+                    <div className="ttl">
+                      <code>{activeSkillSpec.name}</code>
+                      <span className="agent">{activeSkillSpec.agent}</span>
+                    </div>
+                    <div className="beat">{activeSkillSpec.beat}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="close"
+                    onClick={() => setActiveSkill(null)}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="mp-skill-pop-grid">
+                  <div className="cell">
+                    <div className="k">Signature</div>
+                    <pre>{activeSkillSpec.signature}</pre>
+                  </div>
+                  <div className="cell">
+                    <div className="k">Args</div>
+                    <ul>
+                      {activeSkillSpec.args.map((a) => (
+                        <li key={a.name}>
+                          <code>{a.name}</code>
+                          <span className="ty">: {a.type}</span>
+                          {a.note && <span className="nt"> — {a.note}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="cell">
+                    <div className="k">Returns</div>
+                    <pre>{activeSkillSpec.returns}</pre>
+                  </div>
+                  <div className="cell wide">
+                    <div className="k">Example</div>
+                    <pre>{activeSkillSpec.example}</pre>
+                  </div>
+                </div>
+                <div className="mp-skill-pop-foot">
+                  <code>{activeSkillSpec.file}</code>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* 3-pane grid */}
           <div className="mp-ws-grid">
             {/* LEFT RAIL */}
@@ -611,7 +869,7 @@ export function AgentSection() {
               <div className="mp-side-h">This phase</div>
               <div
                 style={{
-                  fontSize: 12,
+                  fontSize: 13,
                   color: 'var(--mp-muted)',
                   lineHeight: 1.5,
                   padding: '0 4px',
@@ -786,7 +1044,7 @@ export function AgentSection() {
                 {connectionStatus === 'disconnected' && msgs.length === 0 && (
                   <div
                     style={{
-                      fontSize: 12,
+                      fontSize: 13,
                       color: 'var(--mp-accent-2)',
                       background: 'rgba(255,91,31,0.06)',
                       border: '1px solid rgba(255,91,31,0.25)',
@@ -820,8 +1078,16 @@ export function AgentSection() {
                     }
                   />
                   <div className="mp-composer-tools">
-                    <button type="button" title="Attach (coming soon)">⊕</button>
-                    <button type="button" title="Voice (coming soon)">🎙</button>
+                    <button
+                      type="button"
+                      title="Replay last query"
+                      onClick={() =>
+                        lastUserTextRef.current && void send(lastUserTextRef.current)
+                      }
+                      disabled={!lastUserTextRef.current || typing}
+                    >
+                      ↺
+                    </button>
                     <button type="button" title="Clear" onClick={clearChat}>⌫</button>
                   </div>
                 </div>
@@ -935,20 +1201,20 @@ export function AgentSection() {
                         >
                           <div
                             style={{
-                              fontSize: 11,
+                              fontSize: 12,
                               fontFamily: 'ui-monospace, "SF Mono", monospace',
                               color: 'var(--mp-dim)',
                             }}
                           >
                             {f.key}
                           </div>
-                          <div style={{ fontSize: 13, color: 'var(--mp-ink)', marginTop: 2 }}>
+                          <div style={{ fontSize: 14, color: 'var(--mp-ink)', marginTop: 2 }}>
                             {f.value}
                           </div>
                           {(f.confidence != null || f.source) && (
                             <div
                               style={{
-                                fontSize: 10.5,
+                                fontSize: 11.5,
                                 color: 'var(--mp-dim)',
                                 marginTop: 4,
                                 fontFamily: 'ui-monospace, "SF Mono", monospace',
@@ -976,7 +1242,7 @@ export function AgentSection() {
                         <div key={s.id ?? `sql-${i}`}>
                           <div
                             style={{
-                              fontSize: 11,
+                              fontSize: 12,
                               color: 'var(--mp-dim)',
                               marginBottom: 4,
                               fontFamily: 'ui-monospace, "SF Mono", monospace',
@@ -994,7 +1260,7 @@ export function AgentSection() {
                   <div
                     style={{
                       padding: '8px 4px',
-                      fontSize: 13,
+                      fontSize: 14,
                       color: 'var(--mp-muted)',
                       lineHeight: 1.7,
                     }}

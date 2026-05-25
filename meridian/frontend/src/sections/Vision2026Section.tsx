@@ -64,10 +64,8 @@ export function Vision2026Section() {
     <section id="vision2026" className="mp-section">
       <FadeIn>
         <div className="mp-section-h" style={{ marginBottom: 40 }}>
-          <div className="mp-label-row">Deep dive</div>
-          <h2>
-            Memory, runtime, and <em className="serif">orchestration</em>.
-          </h2>
+          <div className="mp-label-row">Beyond Phase 5 · what's next</div>
+          <h2>Memory, runtime, and orchestration.</h2>
           <p style={{ maxWidth: 680 }}>
             Build agentic workflows with Aurora and MCP — contextual memory, multi-turn queries,
             and multi-agent orchestration on Amazon Bedrock AgentCore and Strands Agents.
@@ -160,8 +158,9 @@ export function Vision2026Section() {
 
       <FadeIn delay={0.35}>
         <p className="vision-footnote">
-          Today&apos;s demo climbs Phases 1–4 on the Meridian concierge. Phase 4 adds memory and AgentCore
-          on top of Phase 3&apos;s semantic search — the ladder, not a separate product.
+          From 50 trips/day to 500,000 — same Aurora, same agent, five rungs higher. Each rung
+          composes onto the last; nothing is rewritten. 10,000× the throughput, two founders, no
+          new database. The ladder, not a separate product.
         </p>
       </FadeIn>
     </section>

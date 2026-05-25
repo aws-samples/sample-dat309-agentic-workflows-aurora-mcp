@@ -8,17 +8,17 @@ interface StickyNavProps {
 }
 
 const navLinks = [
-  { label: 'Concierge', target: 'agent' },
-  { label: 'Trips', target: 'products' },
   { label: 'How it works', target: 'howitworks' },
+  { label: 'Concierge', target: 'agent' },
   { label: 'Memory', target: 'memory' },
+  { label: 'Trips', target: 'products' },
   { label: 'System', target: 'system' },
 ];
 
 type Health = 'healthy' | 'checking' | 'down';
 
 export function StickyNav({ scrollY: _scrollY }: StickyNavProps) {
-  const [active, setActive] = useState<string>('agent');
+  const [active, setActive] = useState<string>('howitworks');
   const [health, setHealth] = useState<Health>('checking');
 
   // Backend health ping

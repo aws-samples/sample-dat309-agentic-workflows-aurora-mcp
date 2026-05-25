@@ -150,10 +150,8 @@ export function SystemSection() {
       <FadeIn>
         <div className="mp-section-h-row">
           <div className="mp-section-h">
-            <div className="mp-label-row">System · Aurora + MCP</div>
-            <h2>
-              The <em className="serif">substrate</em>, made legible.
-            </h2>
+            <div className="mp-label-row">Substrate · Aurora + MCP</div>
+            <h2>The substrate, made legible.</h2>
             <p>
               Two views every reviewer wants: the Aurora schema that powers retrieval and memory,
               and the MCP tool catalog the agents can call. Both shipped as first-class surfaces —
@@ -167,9 +165,15 @@ export function SystemSection() {
             <button
               type="button"
               className="mp-btn ghost sm"
-              onClick={() => document.getElementById('system')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() =>
+                openConcierge({
+                  phase: 2,
+                  prompt: 'Show me a dry-run of postgres.run_query for City Breaks under $3000',
+                  send: true,
+                })
+              }
             >
-              Tool registry
+              Try a tool
             </button>
           </div>
         </div>
