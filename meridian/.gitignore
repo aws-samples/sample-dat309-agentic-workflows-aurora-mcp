@@ -65,3 +65,9 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 logs/
+
+# Decks & temporary Office lock files (keep generators, not artifacts)
+*.pptx
+*.pdf
+~$*
+!docs/.gitkeep
