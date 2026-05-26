@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meridian — Vision (chapter-by-chapter)</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --paper: #ffffff;
+    --paper-2: #f9fafb;
+    --rail: #f1f3f5;
+    --line: rgba(13, 17, 23, 0.07);
+    --line-2: rgba(13, 17, 23, 0.12);
+    --line-strong: rgba(13, 17, 23, 0.20);
+    --ink: #0d1117;
+    --ink-2: #1a1f2a;
+    --muted: #475569;
+    --dim: #64748b;
+    --soft: #94a3b8;
+    --accent: #ff5b1f;
+    --leaf: #2f6b3d;
+    --plum: #5b3a7a;
+    --sky: #2563eb;
+    --gold: #b88800;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'SF Pro Display', 'Inter', -apple-system, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+    font-size: 15px;
+  }
+  em.serif {
+    font-family: 'Times New Roman', Georgia, serif;
+    font-style: italic;
+    font-weight: 500;
+  }
+  code {
+    font-family: ui-monospace, 'SF Mono', monospace;
+    font-size: 0.9em;
+    background: rgba(13, 17, 23, 0.05);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* ============================================================
+     One frame for the whole document — narrow, magazine column
+     ============================================================ */
+  .doc {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  /* ============================================================
+     Cover
+     ============================================================ */
+  .cover {
+    padding: 96px 0 64px;
+    border-bottom: 1px solid var(--line);
+  }
+  .cover .meta {
+    display: flex;
+    gap: 18px;
+    font-size: 11.5px;
+    color: var(--dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .cover h1 {
+    font-size: clamp(40px, 5.5vw, 64px);
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    font-weight: 700;
+    margin: 0 0 22px;
+    max-width: 18ch;
+  }
+  .cover h1 em.serif {
+    color: var(--ink-2);
+    font-weight: 500;
+  }
+  .cover .lede {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 56ch;
+  }
+  .cover .toc {
+    margin-top: 56px;
+    border-top: 1px solid var(--line);
+    padding-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 28px;
+  }
+  .cover .toc a {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--line);
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 14px;
+  }
+  .cover .toc a span {
+    color: var(--dim);
+    letter-spacing: 0.06em;
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+  .cover .toc a:hover {
+    background: var(--rail);
+  }
+
+  /* ============================================================
+     Chapter
+     ============================================================ */
+  .chapter {
+    padding: 72px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .chapter:last-of-type { border-bottom: 0; }
+  .chapter-eyebrow {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 600;
+    margin-bottom: 22px;
+  }
+  .chapter-eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 1px;
+    background: var(--line-strong);
+  }
+  .chapter h2 {
+    font-size: clamp(30px, 3.6vw, 40px);
+    letter-spacing: -0.025em;
+    margin: 0 0 14px;
+    line-height: 1.1;
+    font-weight: 700;
+    max-width: 22ch;
+  }
+  .chapter h2 em.serif {
+    color: var(--ink-2);
+    font-weight: 500;
+  }
+  .chapter > .chap-lede {
+    font-size: 16px;
+    color: var(--muted);
+    margin: 0 0 36px;
+    max-width: 60ch;
+  }
+  .chapter h3 {
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    margin: 28px 0 8px;
+    font-weight: 700;
+  }
+  .chapter p {
+    margin: 0 0 14px;
+    font-size: 15px;
+    color: var(--ink-2);
+    max-width: 64ch;
+  }
+  .chapter p.muted {
+    color: var(--muted);
+  }
+  .chapter blockquote {
+    margin: 22px 0;
+    padding: 16px 20px;
+    background: var(--paper);
+    border-left: 2px solid var(--ink);
+    border-radius: 4px;
+    font-size: 15px;
+    color: var(--ink-2);
+  }
+  .chapter blockquote em {
+    font-style: italic;
+    color: var(--muted);
+    display: block;
+    margin-top: 8px;
+    font-size: 12.5px;
+  }
+
+  /* Inline figure (mockup-style block) */
+  .fig {
+    margin: 28px 0 22px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .fig-cap {
+    padding: 8px 14px;
+    border-top: 1px solid var(--line);
+    background: var(--paper-2);
+    font-size: 11.5px;
+    color: var(--dim);
+    letter-spacing: 0.04em;
+  }
+  .fig-cap b { color: var(--ink); font-weight: 600; }
+  .fig-body { padding: 18px; }
+
+  /* Two-up split inside a chapter — used sparingly */
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    margin: 24px 0;
+  }
+  @media (max-width: 720px) {
+    .split { grid-template-columns: 1fr; }
+  }
+  .split .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .split .card .h {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .split .card h4 {
+    font-size: 16px;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    font-weight: 700;
+  }
+  .split .card p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+
+  /* Side-margin marker for chapter number */
+  .chap-marker {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  .chap-marker .num {
+    font-family: 'Times New Roman', Georgia, serif;
+    font-style: italic;
+    font-size: 36px;
+    color: var(--soft);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .chap-marker .of {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  /* Compact data tables */
+  .data {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 18px 0;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .data th, .data td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .data tr:last-child td { border-bottom: 0; }
+  .data th {
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 700;
+    background: var(--paper-2);
+  }
+  .data td.mono { font-family: ui-monospace, 'SF Mono', monospace; color: var(--muted); }
+
+  /* Pull-out callout */
+  .pullout {
+    margin: 28px 0;
+    padding: 24px 28px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    font-family: 'Times New Roman', Georgia, serif;
+    font-style: italic;
+    font-size: clamp(18px, 2.2vw, 22px);
+    line-height: 1.4;
+    color: var(--ink-2);
+    letter-spacing: -0.005em;
+  }
+  .pullout cite {
+    display: block;
+    margin-top: 14px;
+    font-family: 'SF Pro Display', system-ui, sans-serif;
+    font-style: normal;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  /* Step list — chapter-internal, not a full diagram */
+  .steps {
+    margin: 18px 0 8px;
+    padding: 0;
+    list-style: none;
+    border-left: 1px solid var(--line-strong);
+    padding-left: 18px;
+  }
+  .steps li {
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: var(--ink-2);
+    position: relative;
+  }
+  .steps li::before {
+    content: "";
+    position: absolute;
+    left: -23px;
+    top: 7px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 2px solid var(--line-strong);
+  }
+  .steps li b {
+    font-weight: 600;
+    color: var(--ink);
+    margin-right: 6px;
+  }
+
+  /* Footer */
+  .colophon {
+    padding: 56px 0 80px;
+    color: var(--dim);
+    font-size: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .colophon b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <!-- COVER -->
+  <section class="cover">
+    <div class="meta">
+      <span>Meridian</span>
+      <span>Vision · 2026.1</span>
+      <span>Chapter-by-chapter</span>
+    </div>
+    <h1>A travel concierge that remembers <em class="serif">you</em>.</h1>
+    <p class="lede">
+      Meridian is an agentic travel concierge built on Aurora PostgreSQL, MCP, and Cohere
+      embeddings. This document tells the story in eight short chapters — one idea per chapter —
+      so a reader can scan it on a phone or sit with it for ten minutes and walk away with the
+      whole arc.
+    </p>
+
+    <nav class="toc">
+      <a href="#ch1"><span>Ch&nbsp;01</span><span>What we&rsquo;re building</span></a>
+      <a href="#ch2"><span>Ch&nbsp;02</span><span>The four phases</span></a>
+      <a href="#ch3"><span>Ch&nbsp;03</span><span>Memory of the traveler</span></a>
+      <a href="#ch4"><span>Ch&nbsp;04</span><span>Trace as a product</span></a>
+      <a href="#ch5"><span>Ch&nbsp;05</span><span>The substrate (Aurora&nbsp;+&nbsp;MCP)</span></a>
+      <a href="#ch6"><span>Ch&nbsp;06</span><span>Governed action</span></a>
+      <a href="#ch7"><span>Ch&nbsp;07</span><span>Long-running trips</span></a>
+      <a href="#ch8"><span>Ch&nbsp;08</span><span>What ships first</span></a>
+    </nav>
+  </section>
+
+  <!-- CHAPTER 01 -->
+  <section class="chapter" id="ch1">
+    <div class="chap-eyebrow chapter-eyebrow">Chapter</div>
+    <div class="chap-marker"><span class="num">I</span><span class="of">— What we&rsquo;re building</span></div>
+    <h2>One sentence, then the rest.</h2>
+    <p class="chap-lede">
+      A traveler describes a trip in their own words; Meridian plans, books, and watches it.
+    </p>
+
+    <p>
+      That&rsquo;s the whole product, in one sentence. The rest of this document is just unpacking
+      what each verb means, and what infrastructure makes them possible.
+    </p>
+
+    <div class="pullout">
+      &ldquo;A slow week somewhere we can drink good wine.&rdquo;
+      <cite>The kind of input Meridian is built for</cite>
+    </div>
+
+    <p>
+      The current code already proves the bones: Aurora PostgreSQL for retrieval and memory; the
+      Strands Agents SDK for orchestration; MCP for tool access; Cohere Embed v4 for semantic
+      search. The chapters that follow show how the experience climbs on top of that.
+    </p>
+  </section>
+
+  <!-- CHAPTER 02 -->
+  <section class="chapter" id="ch2">
+    <div class="chapter-eyebrow">Chapter</div>
+    <div class="chap-marker"><span class="num">II</span><span class="of">— The four phases</span></div>
+    <h2>A teaching ladder, not a toggle.</h2>
+    <p class="chap-lede">
+      Each phase adds exactly one capability — so the same query can be re-played up the ladder,
+      and the audience can see where each piece earns its keep.
+    </p>
+
+    <ol class="steps">
+      <li><b>Phase 1 · Filters.</b> Plain SQL on <code>trip_packages</code> via the RDS Data API. The fastest possible answer for an exact match.</li>
+      <li><b>Phase 2 · MCP.</b> Same queries reframed as MCP tool calls. Tools become the contract.</li>
+      <li><b>Phase 3 · Intent.</b> Hybrid pgvector + tsvector. &ldquo;Romantic week in Italy&rdquo; resolves to packages.</li>
+      <li><b>Phase 4 · Personal.</b> The supervisor grounds every turn in <code>traveler_preferences</code> recalled by a Strands <code>@tool</code> memory agent.</li>
+    </ol>
+
+    <p class="muted">
+      In the workshop, the audience scrubs through 1 → 4 on the same query and watches the answer
+      improve. The scaling story (50 → 50K trips/day) sits underneath each rung.
+    </p>
+  </section>
+
+  <!-- CHAPTER 03 -->
+  <section class="chapter" id="ch3">
+    <div class="chapter-eyebrow">Chapter</div>
+    <div class="chap-marker"><span class="num">III</span><span class="of">— Memory of the traveler</span></div>
+    <h2>Every fact, with a <em class="serif">source</em>.</h2>
+    <p class="chap-lede">
+      Memory is the difference between a chatbot and a concierge. Meridian stores it in Aurora,
+      auditable, editable, and forgettable.
+    </p>
+
+    <p>
+      A dedicated <em>memory agent</em> writes facts; the supervisor only reads. Each row carries
+      a confidence score, the conversation that taught it, and the timestamp. Recall is semantic
+      via pgvector and exact via b-tree on <code>(traveler_id, key)</code>.
+    </p>
+
+    <div class="fig">
+      <div class="fig-body">
+        <table class="data">
+          <thead><tr><th>Key</th><th>Value</th><th>Source</th><th>Conf.</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">no_red_eye</td><td>true · &ldquo;Jordan can&rsquo;t do red-eyes&rdquo;</td><td class="mono">conv_8a91c4</td><td class="mono">0.99</td></tr>
+            <tr><td class="mono">style</td><td>boutique &gt; chain</td><td class="mono">conv_18ab2</td><td class="mono">0.92</td></tr>
+            <tr><td class="mono">budget_cap</td><td>$3,200 (per trip, two travelers)</td><td class="mono">conv_8a91c4</td><td class="mono">0.84</td></tr>
+            <tr><td class="mono">avoid_connections</td><td>LHR, JFK</td><td class="mono">conv_18ab2</td><td class="mono">0.78</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="fig-cap"><b>Fig.&nbsp;01</b> — Four rows from <code>traveler_preferences</code>. The full table sits behind the Memory inspector in the live app.</div>
+    </div>
+  </section>
+
+  <!-- CHAPTER 04 -->
+  <section class="chapter" id="ch4">
+    <div class="chapter-eyebrow">Chapter</div>
+    <div class="chap-marker"><span class="num">IV</span><span class="of">— Trace as a product</span></div>
+    <h2>The thing devs want to copy.</h2>
+    <p class="chap-lede">
+      The chat is the user surface. The trace is the developer surface. Both come from the same
+      source of truth — a row in <code>agent_traces</code> with a JSONB span tree.
+    </p>
+
+    <p>
+      Every turn produces a Gantt-style timeline: orchestration → memory → tools → model →
+      synthesis, with retries and confirmation gates inline. Spans are OpenTelemetry-compatible;
+      replay re-runs against cached tool responses.
+    </p>
+
+    <div class="split">
+      <div class="card">
+        <div class="h">For the traveler</div>
+        <h4>The itinerary view</h4>
+        <p>Days, events, statuses (held / confirmed / disrupted). Same trace, friendly skin.</p>
+      </div>
+      <div class="card">
+        <div class="h">For the developer</div>
+        <h4>The Gantt view</h4>
+        <p>Spans, latencies, SQL, token spend, cache hits. Permalink-able and replay-able.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHAPTER 05 -->
+  <section class="chapter" id="ch5">
+    <div class="chapter-eyebrow">Chapter</div>
+    <div class="chap-marker"><span class="num">V</span><span class="of">— The substrate</span></div>
+    <h2>Aurora plus MCP, made <em class="serif">legible</em>.</h2>
+    <p class="chap-lede">
+      Two surfaces every reviewer asks for: the schema and the tool catalog. Both are
+      first-class pages in the app, not docs-folder afterthoughts.
+    </p>
+
+    <h3>Schema, in one paragraph</h3>
+    <p class="muted">
+      <code>trip_packages</code> holds the catalog with a <code>vector(1024)</code> embedding and a
+      generated <code>tsvector</code>. <code>travelers</code>, <code>traveler_preferences</code>,
+      and <code>trip_interactions</code> hold identity and memory. <code>conversations</code> /
+      <code>conversation_messages</code> hold session state. <code>bookings</code> /
+      <code>booking_lines</code> hold reservations. <code>agent_traces</code> holds JSONB span
+      trees per turn. Nine tables; everything else derives.
+    </p>
+
+    <h3>MCP, in two sentences</h3>
+    <p class="muted">
+      Every external system &mdash; Aurora reads, traveler memory, weather, payments, the GDS &mdash;
+      sits behind an MCP server with a versioned schema. The Tool Catalog lists each one with its
+      version, p50 latency, owner, and a dry-run.
+    </p>
+  </section>
+
+  <!-- CHAPTER 06 -->
+  <section class="chapter" id="ch6">
+    <div class="chapter-eyebrow">Chapter</div>
+    <div class="chap-marker"><span class="num">VI</span><span class="of">— Governed action</span></div>
+    <h2>Plan, confirm, commit.</h2>
+    <p class="chap-lede">
+      Before any irreversible step &mdash; charging the card, locking a non-refundable rate &mdash;
+      the agent presents the plan with a diff. The user confirms once. The receipt links back to
+      the trace.
+    </p>
+
+    <ol class="steps">
+      <li><b>Plan.</b> Supervisor proposes the smallest set of actions that satisfies the request inside the user&rsquo;s budget.</li>
+      <li><b>Confirm.</b> The diff shows what changes — totals, refundable rates, scope.</li>
+      <li><b>Commit.</b> One click; the receipt links to the trace and the audit row in <code>bookings</code>.</li>
+    </ol>
+
+    <p class="muted">
+      Per-agent budgets, scope rules, and refund caps are enforced in the booking agent — not in
+      the prompt. The leash is visible, and verifiable.
+    </p>
+  </section>
+
+  <!-- CHAPTER 07 -->
+  <section class="chapter" id="ch7">
+    <div class="chapter-eyebrow">Chapter</div>
+    <div class="chap-marker"><span class="num">VII</span><span class="of">— Long-running trips</span></div>
+    <h2>Wakes the agent on disruptions.</h2>
+    <p class="chap-lede">
+      A trip lives for weeks. Aurora persists every step as a state machine; a worker wakes the
+      supervisor on triggers (gate change, weather flag, price drop), and the user is told only
+      the things that need attention.
+    </p>
+
+    <blockquote>
+      The agent acts silently within scope, and asks only when it can&rsquo;t.
+      <em>The default mode for any trip Meridian is watching.</em>
+    </blockquote>
+
+    <p>
+      Disruption budgets and re-book scopes are first-class fields in <code>bookings</code>.
+      Logical replication streams change events to the UI over SSE so the itinerary view updates
+      live without polling.
+    </p>
+  </section>
+
+  <!-- CHAPTER 08 -->
+  <section class="chapter" id="ch8">
+    <div class="chapter-eyebrow">Chapter</div>
+    <div class="chap-marker"><span class="num">VIII</span><span class="of">— What ships first</span></div>
+    <h2>The smallest bet that already tells the story.</h2>
+    <p class="chap-lede">
+      Two waves. Each wave is small enough to scope to a single sprint, and large enough to
+      change what the demo feels like.
+    </p>
+
+    <table class="data">
+      <thead>
+        <tr><th>Wave</th><th>What ships</th><th>Why now</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">01</td>
+          <td>Trace permalinks &middot; Memory inspector</td>
+          <td>Highest narrative payoff for least new infra.</td>
+        </tr>
+        <tr>
+          <td class="mono">02</td>
+          <td>Supervisor + 4 specialists &middot; MCP catalog</td>
+          <td>Turns &ldquo;Phase 4&rdquo; into something teams can own.</td>
+        </tr>
+        <tr>
+          <td class="mono">03</td>
+          <td>Plan/confirm/commit &middot; long-running ops</td>
+          <td>Production-shape governance and durability.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="muted">
+      Beyond Wave 03, the open questions are operational: replay sandbox, live ops dashboard,
+      multi-traveler memory. They&rsquo;re scoped but they&rsquo;re not load-bearing for the
+      story.
+    </p>
+  </section>
+
+  <footer class="colophon">
+    <div><b>Meridian</b> — Vision document, chapter-by-chapter. May 2026.</div>
+    <div>Aurora PostgreSQL · pgvector · MCP · Strands · Cohere Embed v4</div>
+  </footer>
+
+</div>
+</body>
+</html>

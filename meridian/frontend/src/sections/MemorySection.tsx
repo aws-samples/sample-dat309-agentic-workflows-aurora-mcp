@@ -65,13 +65,14 @@ export function MemorySection() {
       <FadeIn>
         <div className="mp-section-h-row">
           <div className="mp-section-h">
-            <div className="mp-label-row">Phase 4 · traveler memory</div>
-            <h2>Every fact, with a source.</h2>
+            <div className="mp-label-row">Phase 4 · production memory</div>
+            <h2>The concierge knows you. Aurora makes it safe.</h2>
             <p>
-              Memory isn&apos;t a black box. Each fact has the conversation that taught it, when it
-              was learned, a confidence score, and a way to forget. Stored as rows in{' '}
-              <code>traveler_preferences</code>, indexed by <code>pgvector</code> for semantic
-              recall.
+              Alex &amp; Jordan, Tokyo Oct 12–19, the shellfish allergy — none of that&apos;s in
+              the prompt. It&apos;s in <code>traveler_preferences</code>. RLS pins per-traveler
+              scope inside an RDS Data API transaction; every turn writes one row to the audit
+              log; AgentCore Memory mirrors session events. That&apos;s the concrete answer to
+              &ldquo;securely connect LLM agents to Aurora.&rdquo;
             </p>
           </div>
           <div className="actions">

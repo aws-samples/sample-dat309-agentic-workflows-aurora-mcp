@@ -2361,3 +2361,965 @@ body {
     display: none;
   }
 }
+
+/* ============================================================
+   Meridian Pro — POLISH layer (v2)
+   Tightens visual rhythm: cooler neutrals, restrained accent,
+   smaller radii, neutral-first cards, refined controls.
+   Loaded last so it overrides earlier rules.
+   ============================================================ */
+:root {
+  /* Cooler, more neutral surfaces (less "warm latte") */
+  --mp-bg: #f4f5f7;
+  --mp-paper: #ffffff;
+  --mp-paper-2: #f9fafb;
+  --mp-rail: #f1f3f5;
+
+  /* Lines a touch crisper */
+  --mp-line: rgba(13, 17, 23, 0.07);
+  --mp-line-2: rgba(13, 17, 23, 0.12);
+  --mp-line-strong: rgba(13, 17, 23, 0.20);
+
+  /* Ink unchanged but with a more restrained mid-tone */
+  --mp-muted: #475569;
+  --mp-dim: #64748b;
+  --mp-soft: #94a3b8;
+
+  /* Tighter radii */
+  --mp-radius: 10px;
+  --mp-radius-lg: 14px;
+  --mp-radius-xl: 18px;
+
+  /* Softer shadows */
+  --mp-shadow-sm: 0 1px 1px rgba(13, 17, 23, 0.04);
+  --mp-shadow-md: 0 4px 14px -8px rgba(13, 17, 23, 0.14);
+  --mp-shadow-lg: 0 16px 40px -28px rgba(13, 17, 23, 0.18);
+}
+
+/* Display + section type — restrained, single-axis tracking */
+.mp-hero h1 {
+  font-size: clamp(44px, 6vw, 72px);
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  margin: 14px 0 20px;
+}
+.mp-hero h1 em.serif {
+  /* Keep one italic accent only on the middle word */
+  color: var(--mp-ink);
+  font-style: italic;
+}
+.mp-hero .lede { font-size: 17px; max-width: 54ch; }
+
+/* Section labels — neutral, not orange-on-orange */
+.mp-label-row {
+  color: var(--mp-dim);
+  font-weight: 600;
+}
+.mp-label-row::before {
+  background: var(--mp-line-strong);
+  width: 22px;
+}
+
+/* Section titles — italic only on the keyword, ink color */
+.mp-section-h h2 {
+  font-size: clamp(30px, 3.6vw, 40px);
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+.mp-section-h h2 em.serif {
+  color: var(--mp-ink-2);
+  font-weight: 500;
+}
+.mp-section-h p { font-size: 15.5px; max-width: 64ch; }
+
+/* Buttons — cleaner, no scaling on hover */
+.mp-btn {
+  font-size: 13px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--mp-line-2);
+  background: var(--mp-paper);
+  color: var(--mp-ink);
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+.mp-btn:hover {
+  transform: none;
+  background: var(--mp-rail);
+  border-color: var(--mp-line-strong);
+}
+.mp-btn.primary {
+  background: var(--mp-ink);
+  color: white;
+  border-color: var(--mp-ink);
+}
+.mp-btn.primary:hover {
+  background: #1a1f2a;
+  border-color: #1a1f2a;
+}
+.mp-btn.ghost {
+  background: transparent;
+  border-color: var(--mp-line-2);
+}
+.mp-btn.ghost:hover {
+  background: var(--mp-rail);
+}
+.mp-btn.sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Top nav — square corners, ink hover */
+.mp-topnav {
+  background: rgba(244, 245, 247, 0.88);
+  border-bottom-color: var(--mp-line);
+}
+.mp-nav-center {
+  border-radius: 8px;
+  padding: 3px;
+  border-color: var(--mp-line);
+  background: var(--mp-rail);
+}
+.mp-nav-link {
+  border-radius: 6px;
+  font-weight: 500;
+}
+.mp-nav-link.active {
+  background: var(--mp-paper);
+  box-shadow: 0 1px 2px rgba(13, 17, 23, 0.05);
+}
+.mp-cta {
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-weight: 600;
+}
+.mp-brand-build {
+  background: transparent;
+  border: 1px solid var(--mp-line);
+  color: var(--mp-dim);
+}
+.mp-brand-glyph {
+  border-radius: 6px;
+}
+.mp-brand-glyph::after {
+  background: var(--mp-ink);
+  /* Neutral mark — orange only as a meridian sliver */
+}
+.mp-brand-glyph::before {
+  background: var(--mp-accent);
+}
+
+/* HERO feature card — flatter, more product-like */
+.mp-feature {
+  border-radius: var(--mp-radius-lg);
+  box-shadow: var(--mp-shadow-md);
+  border-color: var(--mp-line);
+}
+.mp-feature-top { padding: 14px 18px; }
+.mp-feature-top .badge {
+  border-radius: 6px;
+  padding: 2px 8px;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+.mp-feature-scene { aspect-ratio: 5 / 3; }
+.mp-feature-meta { padding: 14px 18px; }
+.mp-feature-meta .cell b { font-size: 14px; }
+.mp-feature-why {
+  padding: 14px 18px;
+  background: var(--mp-paper-2);
+  border-top: 1px solid var(--mp-line);
+}
+.mp-feature-why .quote { font-size: 12.5px; }
+
+/* Hero stats — runtime tone */
+.mp-hero-stats { gap: 28px; }
+.mp-stat b { font-size: 18px; }
+
+/* Journey rail — neutralize the orange ring on live */
+.mp-journey {
+  border-radius: var(--mp-radius-lg);
+  border-color: var(--mp-line);
+  box-shadow: none;
+}
+.mp-journey-step .ph {
+  color: var(--mp-dim);
+  letter-spacing: 0.12em;
+  font-size: 10.5px;
+}
+.mp-journey-step .ttl {
+  font-size: 17px;
+  letter-spacing: -0.015em;
+}
+.mp-journey-step .ttl em.serif {
+  color: var(--mp-ink-2);
+}
+.mp-journey-step .desc {
+  font-size: 12.5px;
+}
+.mp-journey-step.live .node {
+  background: var(--mp-paper);
+  border-color: var(--mp-ink);
+  box-shadow: 0 0 0 3px rgba(13, 17, 23, 0.06);
+  color: var(--mp-ink);
+}
+.mp-journey-step.done .node {
+  background: var(--mp-ink);
+  border-color: var(--mp-ink);
+}
+.mp-journey-step.live .chip {
+  background: rgba(13, 17, 23, 0.05);
+  color: var(--mp-ink-2);
+}
+.mp-journey-step.done .chip {
+  background: rgba(13, 17, 23, 0.05);
+  color: var(--mp-muted);
+}
+
+/* Workspace — quieter chrome */
+.mp-workspace {
+  border-radius: var(--mp-radius-lg);
+  box-shadow: var(--mp-shadow-md);
+}
+.mp-ws-bar {
+  padding: 10px 16px;
+  background: var(--mp-paper-2);
+}
+.mp-pill-row {
+  background: var(--mp-rail);
+  padding: 2px;
+  border-radius: 8px;
+}
+.mp-ppill {
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+.mp-ppill.active {
+  border-radius: 6px;
+  border: 1px solid var(--mp-line);
+}
+.mp-ppill.active[data-p="1"] .pdot { background: var(--mp-p1); }
+.mp-ppill.active[data-p="2"] .pdot { background: var(--mp-p2); }
+.mp-ppill.active[data-p="3"] .pdot { background: var(--mp-p3); }
+.mp-ppill.active[data-p="4"] .pdot { background: var(--mp-ink); }
+
+/* Side rail — flat, no mismatched warm color */
+.mp-ws-side {
+  background: var(--mp-rail);
+}
+.mp-side-card {
+  border-radius: 10px;
+}
+.mp-traveler-card {
+  border-radius: 10px;
+}
+.mp-tv-avatar {
+  background: var(--mp-ink);
+  color: white;
+  font-family: 'SF Pro Display', -apple-system, sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 13px;
+  border: 0;
+}
+.mp-tv-tags span {
+  background: var(--mp-paper);
+  color: var(--mp-muted);
+  border-color: var(--mp-line);
+  font-weight: 500;
+}
+
+/* Chat — cleaner bubbles */
+.mp-bubble { font-size: 14px; line-height: 1.55; }
+.mp-turn.bot .mp-bubble {
+  border-radius: 10px;
+  border-bottom-left-radius: 4px;
+}
+.mp-turn.user .mp-bubble {
+  border-radius: 10px;
+  border-bottom-right-radius: 4px;
+}
+.mp-turn .av {
+  border-radius: 8px;
+  background: var(--mp-paper);
+  border: 1px solid var(--mp-line);
+  font-weight: 600;
+}
+.mp-turn.user .av {
+  background: var(--mp-ink);
+  color: white;
+  border-color: var(--mp-ink);
+}
+.mp-bubble .reasoning {
+  font-family: ui-monospace, 'SF Mono', monospace;
+  font-size: 11px;
+  background: var(--mp-rail);
+  border-color: var(--mp-line);
+}
+.mp-bubble .reasoning .tag { color: var(--mp-muted); }
+
+/* Recommendation cards — quieter */
+.mp-rec-card {
+  border-radius: 10px;
+  background: var(--mp-paper);
+}
+.mp-rec-thumb {
+  border-radius: 8px;
+}
+.mp-rec-match {
+  background: rgba(4, 120, 87, 0.10);
+  color: var(--mp-p3);
+  font-family: ui-monospace, 'SF Mono', monospace;
+  letter-spacing: 0;
+  border-radius: 4px;
+}
+.mp-rec-actions button {
+  border-radius: 6px;
+  padding: 5px 10px;
+}
+
+/* Composer — more like a command bar */
+.mp-composer { padding: 12px 16px; }
+.mp-composer-input {
+  border-radius: 10px;
+  background: var(--mp-paper-2);
+  border-color: var(--mp-line);
+}
+.mp-composer-input:focus-within {
+  border-color: var(--mp-ink);
+  background: var(--mp-paper);
+  box-shadow: 0 0 0 3px rgba(13, 17, 23, 0.05);
+}
+.mp-composer-chip {
+  border-radius: 5px;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+  background: rgba(13, 17, 23, 0.06);
+  color: var(--mp-muted);
+}
+.mp-composer-chip[data-p="1"],
+.mp-composer-chip[data-p="2"],
+.mp-composer-chip[data-p="3"],
+.mp-composer-chip[data-p="4"] {
+  background: rgba(13, 17, 23, 0.06);
+  color: var(--mp-muted);
+}
+.mp-composer-send {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+/* Trace — category-colored bars (single source of truth) */
+.mp-trace-head { padding: 12px 16px; }
+.mp-trace-tabs { padding: 0 16px; background: var(--mp-paper); }
+.mp-trace-tab { padding: 9px 0; font-size: 11.5px; }
+.mp-trace-tab .count {
+  font-family: ui-monospace, 'SF Mono', monospace;
+}
+.mp-gantt {
+  border-left-color: var(--mp-line-2);
+}
+.mp-gspan-bar > span { background: var(--mp-soft); }
+.mp-gspan.done .mp-gspan-bar > span { background: var(--mp-muted); }
+
+/* Per-category bar fills mirror the chip color */
+.mp-gspan:has(.mp-tag-orchestration) .mp-gspan-bar > span { background: var(--mp-plum); }
+.mp-gspan:has(.mp-tag-memory_short)  .mp-gspan-bar > span { background: var(--mp-sky); }
+.mp-gspan:has(.mp-tag-memory_long)   .mp-gspan-bar > span { background: var(--mp-leaf); }
+.mp-gspan:has(.mp-tag-tool)          .mp-gspan-bar > span { background: var(--mp-accent); }
+.mp-gspan:has(.mp-tag-data)          .mp-gspan-bar > span { background: var(--mp-ink-2); }
+.mp-gspan:has(.mp-tag-model)         .mp-gspan-bar > span { background: var(--mp-p2); }
+.mp-gspan:has(.mp-tag-synthesis)     .mp-gspan-bar > span { background: var(--mp-p3); }
+
+.mp-gspan.live::before {
+  background: var(--mp-ink);
+  border-color: var(--mp-ink);
+  box-shadow: 0 0 0 3px rgba(13, 17, 23, 0.10);
+  animation: none;
+}
+.mp-gspan-tag {
+  border-radius: 4px;
+  font-size: 9px;
+}
+
+.mp-gspan-sql {
+  background: #0b1020;
+  color: #d6dde7;
+  border-radius: 6px;
+}
+
+.mp-trace-empty {
+  padding: 28px 16px;
+  text-align: left;
+  color: var(--mp-muted);
+  font-size: 13px;
+}
+.mp-trace-empty .pulser { display: none; }
+.mp-trace-empty::before {
+  content: "";
+  display: block;
+  width: 24px;
+  height: 1px;
+  background: var(--mp-line-strong);
+  margin-bottom: 10px;
+}
+
+.mp-trace-stats {
+  background: var(--mp-paper);
+}
+.mp-trace-stats .cell b { font-size: 14px; }
+
+/* Memory inspector — neutral side panel */
+.mp-memory {
+  border-radius: var(--mp-radius-lg);
+  box-shadow: var(--mp-shadow-md);
+}
+.mp-memory-side {
+  background: var(--mp-rail);
+  border-right-color: var(--mp-line);
+}
+.mp-memory-table .row {
+  padding: 10px 18px;
+  font-size: 12.5px;
+}
+.mp-memory-table .row.head {
+  background: var(--mp-paper-2);
+}
+.mp-memory-table .conf {
+  background: rgba(13, 17, 23, 0.05);
+  color: var(--mp-ink-2);
+}
+.mp-memory-table .conf.med {
+  background: rgba(184, 136, 0, 0.10);
+  color: var(--mp-gold);
+}
+.mp-meter-bar > span { background: var(--mp-ink); }
+
+/* Packages — enterprise card system */
+.mp-pkg {
+  border-radius: var(--mp-radius);
+  border-color: var(--mp-line);
+  cursor: default;
+}
+.mp-pkg:hover {
+  transform: none;
+  box-shadow: var(--mp-shadow-md);
+  border-color: var(--mp-line-2);
+}
+.mp-pkg-hero { aspect-ratio: 4 / 3; }
+.mp-pkg-cat {
+  background: rgba(13, 17, 23, 0.7);
+  color: white;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
+  backdrop-filter: blur(6px);
+}
+.mp-pkg-save {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--mp-line);
+  width: 28px;
+  height: 28px;
+  font-size: 0;
+  position: relative;
+}
+.mp-pkg-save::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%230d1117" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>') center / 14px no-repeat;
+}
+.mp-pkg-save.saved::before {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="%230d1117" stroke="%230d1117" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>') center / 14px no-repeat;
+}
+.mp-pkg-name { font-size: 14px; }
+.mp-pkg-where { font-size: 11.5px; }
+.mp-pkg-tags span {
+  background: var(--mp-rail);
+  color: var(--mp-muted);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.mp-pkg-foot { padding-top: 10px; }
+.mp-pkg-price { font-size: 15px; }
+.mp-pkg-price small { color: var(--mp-soft); }
+.mp-pkg-add {
+  border-radius: 8px;
+  border: 1px solid var(--mp-line-2);
+  background: var(--mp-paper);
+  color: var(--mp-ink);
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  line-height: 1;
+}
+.mp-pkg-add:hover {
+  background: var(--mp-rail);
+}
+
+/* System panel — flat, schema first */
+.mp-panel {
+  border-radius: var(--mp-radius-lg);
+  border-color: var(--mp-line);
+  box-shadow: none;
+}
+.mp-panel-h {
+  padding: 14px 18px;
+  background: var(--mp-paper-2);
+}
+.mp-panel-body { padding: 16px 18px; }
+.mp-schema-table {
+  border-radius: 8px;
+  background: var(--mp-paper);
+  border-color: var(--mp-line);
+}
+.mp-schema-table h6 { font-weight: 600; }
+.mp-schema-table h6 .pk {
+  background: rgba(13, 17, 23, 0.06);
+  color: var(--mp-ink-2);
+  font-weight: 700;
+}
+.mp-mcp-row {
+  padding: 10px 0;
+  font-size: 12.5px;
+}
+.mp-mcp-row.head { color: var(--mp-dim); }
+.mp-mcp-row .health {
+  background: rgba(4, 120, 87, 0.10);
+  color: var(--mp-p3);
+  font-family: ui-monospace, 'SF Mono', monospace;
+  letter-spacing: 0;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.mp-mcp-row .health.warn {
+  background: rgba(184, 136, 0, 0.10);
+  color: var(--mp-gold);
+}
+.mp-mcp-row .dry {
+  border-radius: 6px;
+  border: 1px solid var(--mp-line-2);
+  background: var(--mp-paper);
+}
+
+/* Pull quote — quieter accent */
+.mp-pull {
+  padding: 64px 28px;
+}
+.mp-pull blockquote {
+  font-size: clamp(24px, 3.4vw, 36px);
+  letter-spacing: -0.015em;
+  color: var(--mp-ink);
+}
+.mp-pull blockquote span {
+  color: var(--mp-ink);
+  border-bottom: 1px solid var(--mp-line-strong);
+  padding-bottom: 1px;
+}
+
+/* Footer — tighter */
+.mp-foot { padding: 24px 28px 48px; font-size: 12px; }
+
+/* Section separator — single hairline, not a heavy band */
+.mp-section { padding: 72px 28px; border-top: 1px solid var(--mp-line); }
+
+/* Eyebrow color — neutral by default; sections opt in to accent if needed */
+.mp-section-h .mp-label-row { color: var(--mp-dim); }
+.mp-section-h .mp-label-row::before { background: var(--mp-line-strong); }
+
+/* Hero label keeps the orange moment — only one per page */
+.mp-hero .mp-label-row { color: var(--mp-accent); }
+.mp-hero .mp-label-row::before { background: var(--mp-accent); }
+
+
+/* ============================================================
+   Meridian Pro — POLISH layer (v3 · Ink × Orange)
+   Restores the brand duotone for the chalk-talk demo surface.
+   Loaded after v2; overrides selectively.
+   ============================================================ */
+:root {
+  --mp-orange: #ff5b1f;
+  --mp-orange-2: #b54214;
+  --mp-orange-soft: rgba(255, 91, 31, 0.10);
+  --mp-orange-soft-2: rgba(255, 91, 31, 0.18);
+  --mp-orange-line: rgba(255, 91, 31, 0.28);
+
+  /* Phase 4 takes the orange seat (it's our hero phase) */
+  --mp-p4: var(--mp-orange);
+}
+
+/* ----- Type: italic accent comes back to orange on key headings ----- */
+.mp-hero h1 em.serif { color: var(--mp-orange); }
+.mp-section-h h2 em.serif { color: var(--mp-orange); }
+.mp-pull blockquote span {
+  color: var(--mp-orange);
+  border-bottom-color: rgba(255, 91, 31, 0.35);
+}
+
+/* ----- Eyebrow accents ----- */
+.mp-label-row { color: var(--mp-orange); }
+.mp-label-row::before { background: var(--mp-orange); }
+.mp-section-h .mp-label-row { color: var(--mp-orange); }
+.mp-section-h .mp-label-row::before { background: var(--mp-orange); }
+
+/* ----- Brand glyph: keep ink square + orange dot + orange sliver ----- */
+.mp-brand-glyph::after {
+  background: var(--mp-orange);
+  box-shadow: none;
+}
+.mp-brand-glyph::before {
+  background: var(--mp-orange);
+}
+
+/* ----- Top nav: faint warm wash so the bar reads "branded" ----- */
+.mp-topnav {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 91, 31, 0.04) 0%,
+    rgba(247, 246, 242, 0.92) 60%
+  );
+  backdrop-filter: blur(16px);
+  border-bottom-color: var(--mp-line);
+}
+
+/* ----- Buttons: primary stays ink, but add an orange ghost variant ----- */
+.mp-btn.primary {
+  background: var(--mp-ink);
+  color: white;
+  border-color: var(--mp-ink);
+  box-shadow: 0 1px 2px rgba(13, 17, 23, 0.10),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.mp-btn.primary:hover {
+  background: #1a1f2a;
+}
+.mp-btn.accent {
+  background: var(--mp-orange);
+  color: white;
+  border-color: var(--mp-orange);
+}
+.mp-btn.accent:hover {
+  background: var(--mp-orange-2);
+  border-color: var(--mp-orange-2);
+}
+
+/* ----- HERO feature card: thin orange rule + accent details ----- */
+.mp-feature {
+  border-color: var(--mp-line);
+  position: relative;
+}
+.mp-feature::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--mp-ink) 0%, var(--mp-orange) 60%, var(--mp-orange) 100%);
+}
+.mp-feature-top {
+  background: var(--mp-paper);
+}
+.mp-feature-top .id b { color: var(--mp-ink); }
+.mp-feature-top .badge {
+  background: var(--mp-orange-soft);
+  color: var(--mp-orange-2);
+  border: 1px solid var(--mp-orange-line);
+}
+.mp-feature-why {
+  background: var(--mp-paper-2);
+  border-top-color: var(--mp-line);
+}
+.mp-feature-why .quote em {
+  color: var(--mp-orange);
+}
+
+/* ----- JOURNEY: orange ring on the live step + orange chip ----- */
+.mp-journey-step.live .node {
+  background: var(--mp-paper);
+  border-color: var(--mp-orange);
+  box-shadow: 0 0 0 4px rgba(255, 91, 31, 0.16);
+  color: var(--mp-orange);
+}
+.mp-journey-step.live .ph { color: var(--mp-orange); }
+.mp-journey-step.live .ttl em.serif { color: var(--mp-orange); }
+.mp-journey-step.live .chip {
+  background: var(--mp-orange-soft);
+  color: var(--mp-orange-2);
+}
+.mp-journey-step.done .node {
+  background: var(--mp-ink);
+  border-color: var(--mp-ink);
+  color: white;
+}
+.mp-journey-step.done .chip {
+  background: rgba(13, 17, 23, 0.05);
+  color: var(--mp-muted);
+}
+
+/* ----- WORKSPACE: ink/orange duotone top bar ----- */
+.mp-workspace {
+  border-color: var(--mp-line);
+  position: relative;
+}
+.mp-workspace::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--mp-ink) 0%, var(--mp-orange) 100%);
+  z-index: 1;
+}
+.mp-ws-bar {
+  background: var(--mp-paper-2);
+  border-bottom-color: var(--mp-line);
+}
+.mp-ws-crumbs b { color: var(--mp-ink); }
+
+/* Phase pill row — active pill picks up orange */
+.mp-pill-row {
+  background: rgba(13, 17, 23, 0.05);
+  border: 1px solid var(--mp-line);
+}
+.mp-ppill {
+  color: var(--mp-muted);
+}
+.mp-ppill.active {
+  background: var(--mp-paper);
+  border: 1px solid var(--mp-line);
+  color: var(--mp-ink);
+  box-shadow: 0 1px 2px rgba(13, 17, 23, 0.06);
+}
+/* Each phase keeps its own dot — but Phase 4 (Personal) also tints the pill */
+.mp-ppill.active[data-p="1"] .pdot { background: var(--mp-p1); }
+.mp-ppill.active[data-p="2"] .pdot { background: var(--mp-p2); }
+.mp-ppill.active[data-p="3"] .pdot { background: var(--mp-p3); }
+.mp-ppill.active[data-p="4"] {
+  color: var(--mp-orange-2);
+  border-color: var(--mp-orange-line);
+  background: var(--mp-orange-soft);
+}
+.mp-ppill.active[data-p="4"] .pdot { background: var(--mp-orange); }
+
+/* ----- SIDE RAIL: keep ink avatar; tags get a faint orange option for memory ----- */
+.mp-tv-avatar {
+  background: var(--mp-ink);
+  color: white;
+  border: 0;
+}
+.mp-tv-tags span {
+  background: var(--mp-paper);
+  color: var(--mp-muted);
+  border-color: var(--mp-line);
+}
+/* "Try asking" the highlighted (warn) starter prompt — orange */
+.mp-starter button.warn {
+  color: var(--mp-orange-2);
+}
+.mp-starter button.warn:hover {
+  background: var(--mp-orange-soft);
+  border-color: var(--mp-orange-line);
+  color: var(--mp-orange-2);
+}
+
+/* ----- CHAT: user bubbles ink, recommendation accents in orange ----- */
+.mp-turn.user .mp-bubble {
+  background: var(--mp-ink);
+  color: white;
+}
+.mp-turn.user .av {
+  background: var(--mp-ink);
+  color: white;
+  border-color: var(--mp-ink);
+}
+.mp-turn.bot .av {
+  background: var(--mp-paper);
+  border: 1px solid var(--mp-line);
+  color: var(--mp-orange);
+  font-weight: 700;
+}
+.mp-bubble .reasoning {
+  background: var(--mp-paper-2);
+  border-color: var(--mp-orange-line);
+  border-style: dashed;
+}
+.mp-bubble .reasoning .tag { color: var(--mp-orange); font-weight: 700; }
+
+/* Recommendation: action button "Plan trip" goes orange */
+.mp-rec-actions button.primary {
+  background: var(--mp-ink);
+  border-color: var(--mp-ink);
+  color: white;
+}
+.mp-rec-actions button.primary:hover {
+  background: var(--mp-orange);
+  border-color: var(--mp-orange);
+}
+
+/* ----- COMPOSER: ink frame, orange focus glow, orange Phase 4 chip ----- */
+.mp-composer-input {
+  background: var(--mp-paper-2);
+  border-color: var(--mp-line);
+}
+.mp-composer-input:focus-within {
+  border-color: var(--mp-orange);
+  background: var(--mp-paper);
+  box-shadow: 0 0 0 3px rgba(255, 91, 31, 0.18);
+}
+.mp-composer-chip {
+  background: rgba(13, 17, 23, 0.06);
+  color: var(--mp-muted);
+  font-weight: 700;
+}
+.mp-composer-chip[data-p="1"] {
+  background: rgba(37, 99, 235, 0.10);
+  color: var(--mp-p1);
+}
+.mp-composer-chip[data-p="2"] {
+  background: rgba(124, 58, 237, 0.10);
+  color: var(--mp-p2);
+}
+.mp-composer-chip[data-p="3"] {
+  background: rgba(4, 120, 87, 0.10);
+  color: var(--mp-p3);
+}
+.mp-composer-chip[data-p="4"] {
+  background: var(--mp-orange-soft);
+  color: var(--mp-orange-2);
+}
+.mp-composer-send {
+  background: var(--mp-ink);
+  color: white;
+  border: 0;
+  box-shadow: 0 1px 2px rgba(13, 17, 23, 0.10);
+}
+.mp-composer-send:hover {
+  background: var(--mp-orange);
+}
+.mp-composer-send:disabled {
+  background: var(--mp-line-strong);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ----- TRACE: orange "live" pill, orange live span node, monochrome bars stay ----- */
+.mp-trace-head .ttl small { color: var(--mp-dim); }
+.mp-trace-live {
+  background: var(--mp-orange-soft);
+  color: var(--mp-orange-2);
+  border-color: var(--mp-orange-line);
+}
+.mp-trace-live::before {
+  background: var(--mp-orange);
+  box-shadow: 0 0 0 3px rgba(255, 91, 31, 0.20);
+}
+.mp-trace-live.idle {
+  background: rgba(13, 17, 23, 0.05);
+  color: var(--mp-dim);
+  border-color: var(--mp-line-2);
+}
+.mp-trace-live.idle::before { background: var(--mp-soft); box-shadow: none; }
+
+.mp-trace-tab.active {
+  color: var(--mp-ink);
+  border-bottom-color: var(--mp-orange);
+}
+
+.mp-gspan.live::before {
+  background: var(--mp-orange);
+  border-color: var(--mp-orange);
+  box-shadow: 0 0 0 4px rgba(255, 91, 31, 0.20);
+  animation: mp-pulse 1.4s ease-in-out infinite;
+}
+.mp-gspan.done::before {
+  background: var(--mp-ink);
+  border-color: var(--mp-ink);
+}
+
+/* Trace stats: numbers gain a thin ink underline — feels like a console */
+.mp-trace-stats .cell b {
+  color: var(--mp-ink);
+  font-family: ui-monospace, 'SF Mono', monospace;
+  letter-spacing: -0.01em;
+}
+
+/* ----- MEMORY: meters use ink + a single orange row ----- */
+.mp-memory-side {
+  background: var(--mp-rail);
+  position: relative;
+}
+.mp-memory-side::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--mp-ink), var(--mp-orange));
+}
+.mp-meter:first-of-type .mp-meter-bar > span { background: var(--mp-orange); }
+.mp-memory-table .row.head { background: var(--mp-paper-2); }
+.mp-memory-table .row:hover { background: var(--mp-rail); }
+
+/* ----- PACKAGES: tags + "+ ask" can carry orange on hover ----- */
+.mp-pkg {
+  border-color: var(--mp-line);
+}
+.mp-pkg:hover {
+  border-color: var(--mp-orange-line);
+  box-shadow: 0 8px 24px -16px rgba(255, 91, 31, 0.20);
+}
+.mp-pkg-cat {
+  background: rgba(13, 17, 23, 0.78);
+  color: white;
+}
+.mp-pkg-add {
+  background: var(--mp-paper);
+  border: 1px solid var(--mp-line-2);
+  color: var(--mp-ink);
+}
+.mp-pkg-add:hover {
+  background: var(--mp-orange);
+  border-color: var(--mp-orange);
+  color: white;
+}
+
+/* ----- SYSTEM: orange accent on schema legend retrieval dot, on tool name on hover ----- */
+.mp-panel { border-color: var(--mp-line); }
+.mp-mcp-row .dry:hover {
+  background: var(--mp-orange-soft);
+  border-color: var(--mp-orange-line);
+  color: var(--mp-orange-2);
+}
+
+/* ----- HERO STATS: first stat picks up the brand pulse ----- */
+.mp-hero-stats .mp-stat:first-child b {
+  color: var(--mp-orange-2);
+}
+
+/* ----- Hover affordance on cards: subtle orange tint ----- */
+.mp-side-card:hover,
+.mp-traveler-card:hover {
+  border-color: var(--mp-orange-line);
+}
+
+/* ----- Footer: thin orange rule above the dark zone ----- */
+.mp-foot {
+  border-top: 1px solid var(--mp-line);
+  position: relative;
+  margin-top: 0;
+}
+.mp-foot::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 96px;
+  height: 2px;
+  background: var(--mp-orange);
+}
+
+/* ----- Status dot in nav: orange when checking, leaf when ok ----- */
+.mp-nav-status-dot.warn {
+  background: var(--mp-orange);
+  box-shadow: 0 0 0 3px rgba(255, 91, 31, 0.20);
+}
+

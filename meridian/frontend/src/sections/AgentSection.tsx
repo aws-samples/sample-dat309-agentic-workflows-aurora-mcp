@@ -30,29 +30,29 @@ const PHASE_INFO: Record<Phase, {
   highlight?: string;
 }> = {
   1: {
-    beat: 'Plain SQL filters on trip_packages via the RDS Data API.',
-    capabilities: ['Trip type filter', 'Operator filter', 'Price filter'],
+    beat: 'The lab. Direct RDS Data API. Breaks on "romantic week in Europe."',
+    capabilities: ['SQL WHERE filters', 'Trip type · operator · price', 'RDS Data API'],
     starters: ['City breaks', 'Beach & Resort', 'Business travel under $1500'],
     highlight: 'Romantic week in Europe',
   },
   2: {
-    beat: 'Same catalog queries — but tools are exposed via MCP.',
-    capabilities: ['Trip type filter', 'Operator filter', 'MCP run_query'],
+    beat: 'MCP changes the interface, not the intelligence. Same gap as SQL.',
+    capabilities: ['MCP run_query', 'Typed schema · IAM auth', 'Still keyword-only'],
     starters: ['Adventure & Outdoors', 'Wellness & Luxury', 'Tokyo culture trip'],
     highlight: 'Beach vacation with snorkeling',
   },
   3: {
-    beat: 'Hybrid pgvector + tsvector — vague requests resolve to packages.',
-    capabilities: ['Natural language', 'Hybrid ranking', 'Cohere v4'],
+    beat: 'Where natural language works. Cohere Embed v4 + hybrid pgvector + tsvector.',
+    capabilities: ['Strands supervisor', 'Hybrid retrieval (1024d)', 'Specialist agents'],
     starters: [
+      'Romantic week in Europe',
       'Weekend in Paris under $2k',
-      'Is the Maldives package available?',
       'Family-friendly beach resort',
     ],
   },
   4: {
-    beat: 'ConciergeOrchestrator + Strands @tool memory — grounded in Aurora.',
-    capabilities: ['Traveler profile', 'Session + interactions', 'Strands @tool recall/persist'],
+    beat: 'Production. Knows Alex & Jordan, Tokyo Oct 12–19, the shellfish allergy. Grounded in Aurora.',
+    capabilities: ['traveler_preferences', 'RLS in RDS Data API tx', 'AgentCore Memory mirror'],
     starters: [
       'Tokyo trip for two in October',
       'Beach escape under $2500 — remember our food allergies',
@@ -60,8 +60,8 @@ const PHASE_INFO: Record<Phase, {
     ],
   },
   5: {
-    beat: 'LangGraph StateGraph — classify → search/availability/recall → synthesize, with checkpoints.',
-    capabilities: ['Explicit edges', 'Checkpointed state', 'PostgresSaver / MemorySaver'],
+    beat: 'LangGraph StateGraph: explicit, branchable, resumable. PostgresSaver checkpoints in Aurora.',
+    capabilities: ['Conditional edges', 'PostgresSaver checkpoints', 'AgentCore + LangGraph + Strands'],
     starters: [
       'Watch our Tokyo dates and rebook the hotel if we slip a week',
       'Plan and hold our anniversary Tuscany trip end-to-end',
@@ -283,7 +283,7 @@ export function AgentSection() {
   const [activeTraceTab, setActiveTraceTab] = useState<'spans' | 'memory' | 'sql' | 'cost'>('spans');
   const [activeSkill, setActiveSkill] = useState<string | null>(null);
 
-  const chatEnd = useRef<HTMLDivElement>(null);
+  const chatFeedRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLInputElement>(null);
   const activityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastUserTextRef = useRef<string | null>(null);
@@ -330,18 +330,24 @@ export function AgentSection() {
   // Phase delays
   const phaseDelays: Record<Phase, number> = { 1: 600, 2: 450, 3: 350, 4: 300, 5: 300 };
 
-  // Auto-scroll on message changes
+  // Auto-scroll the chat feed only — never the page. scrollIntoView would
+  // walk every scroll ancestor and yank the whole window up, hiding the chat.
+  const scrollChatToBottom = () => {
+    const feed = chatFeedRef.current;
+    if (!feed) return;
+    feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' });
+  };
   const prevMsgCount = useRef(0);
   const wasTyping = useRef(false);
   useEffect(() => {
     if (msgs.length > prevMsgCount.current) {
-      chatEnd.current?.scrollIntoView({ behavior: 'smooth' });
+      scrollChatToBottom();
     }
     prevMsgCount.current = msgs.length;
   }, [msgs]);
   useEffect(() => {
     if (typing && !wasTyping.current && msgs.length > 0) {
-      chatEnd.current?.scrollIntoView({ behavior: 'smooth' });
+      scrollChatToBottom();
     }
     wasTyping.current = typing;
   }, [typing, msgs.length]);
@@ -840,9 +846,29 @@ export function AgentSection() {
               <div className="mp-side-card">
                 <div className="row"><span>Mode</span><b>{PHASE_LABELS[phase]}</b></div>
                 <div className="row"><span>Model</span><b>claude-sonnet</b></div>
-                <div className="row"><span>Tools</span><b>{phase >= 2 ? '6 · MCP' : '3 · direct'}</b></div>
-                <div className="row"><span>Budget</span><b>$0.06 / turn</b></div>
-                <div className="row"><span>Cap</span><b>$3,200 trip</b></div>
+                <div className="row">
+                  <span>Stack</span>
+                  <b>
+                    {phase === 1 ? 'RDS Data API'
+                      : phase === 2 ? 'MCP · run_query'
+                      : phase === 3 ? 'Strands · supervisor'
+                      : phase === 4 ? 'Strands · @tool memory'
+                      : 'LangGraph · StateGraph'}
+                  </b>
+                </div>
+                <div className="row">
+                  <span>Aurora</span>
+                  <b>
+                    {phase <= 2 ? 'WHERE filters'
+                      : phase === 3 ? 'pgvector + tsvector'
+                      : phase === 4 ? 'RLS · audit row'
+                      : 'PostgresSaver checkpoint'}
+                  </b>
+                </div>
+                <div className="row">
+                  <span>State</span>
+                  <b>{phase >= 5 ? 'durable + resumable' : phase === 4 ? 'session + memory' : 'stateless'}</b>
+                </div>
               </div>
 
               <div className="mp-side-h">Try asking</div>
@@ -881,7 +907,7 @@ export function AgentSection() {
 
             {/* CHAT */}
             <main className="mp-ws-chat">
-              <div className="mp-chat-feed">
+              <div className="mp-chat-feed" ref={chatFeedRef}>
                 {msgs.length === 0 && !typing && (
                   <div className="mp-turn bot">
                     <div className="av">M</div>
@@ -1057,7 +1083,6 @@ export function AgentSection() {
                   </div>
                 )}
 
-                <div ref={chatEnd} />
               </div>
 
               {/* Composer */}

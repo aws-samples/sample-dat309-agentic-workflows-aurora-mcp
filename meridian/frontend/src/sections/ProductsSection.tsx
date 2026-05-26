@@ -162,7 +162,9 @@ export function ProductsSection() {
                           })
                         }
                       >
-                        {saved.has(p.product_id) ? '♥' : '♡'}
+                        <span style={{ position: 'absolute', left: -9999 }}>
+                          {saved.has(p.product_id) ? 'Saved' : 'Save'}
+                        </span>
                       </button>
                     </div>
                     <div className="mp-pkg-body">
@@ -178,7 +180,7 @@ export function ProductsSection() {
                       </div>
                       <div className="mp-pkg-foot">
                         <div className="mp-pkg-price">
-                          {moneyFormat(p.price)} <small>/ pair</small>
+                          <small style={{ marginRight: 4 }}>from</small>{moneyFormat(p.price)}
                         </div>
                         <button
                           type="button"

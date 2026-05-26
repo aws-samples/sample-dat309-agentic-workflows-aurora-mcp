@@ -43,7 +43,8 @@
       "Bash(curl -s -X POST http://localhost:8000/api/chat/order -H 'Content-Type: application/json' -d '{\"product_id\":\"BCH-003\",\"quantity\":1,\"phase\":3}')",
       "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --hide-scrollbars --no-sandbox --window-size=1440,1100 --virtual-time-budget=4500 --screenshot=/tmp/meridian-shots/agent-final.png http://localhost:5173/#agent)",
       "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --hide-scrollbars --no-sandbox --window-size=1440,1100 --virtual-time-budget=4500 --screenshot=/tmp/meridian-shots/system-final.png http://localhost:5173/#system)",
-      "Bash(md5 agent-final.png system-final.png)"
+      "Bash(md5 agent-final.png system-final.png)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

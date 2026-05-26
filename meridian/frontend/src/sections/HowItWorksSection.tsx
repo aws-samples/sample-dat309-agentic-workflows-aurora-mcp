@@ -27,61 +27,61 @@ const steps: JourneyStep[] = [
   {
     num: '01',
     state: 'live',
-    ph: 'Phase 01',
+    ph: 'Phase 01 · Retrieval stack',
     title: 'SQL',
     serif: '',
-    desc: 'Plain SQL filters on trip_packages via the RDS Data API. The fastest possible answer for an exact match.',
+    desc: 'The lab. Direct RDS Data API. Fast for exact matches — and it breaks on "romantic week in Europe."',
     chips: ['RDS Data API', 'SQL · WHERE'],
     scale: '~50 trips/day · two founders, one ops console',
-    persona: 'Alex types “Beach & Resort under $1500” — a SQL WHERE clause returns 3 packages.',
+    persona: 'Alex types "Beach & Resort under $1500" — a SQL WHERE clause returns 3 packages.',
     skills: ['sql_filter'],
   },
   {
     num: '02',
     state: 'live',
-    ph: 'Phase 02',
+    ph: 'Phase 02 · Retrieval stack',
     title: 'MCP',
     serif: '',
-    desc: 'Same queries reframed as MCP tool calls — postgres-mcp-server exposes run_query with a typed schema and dry-run.',
+    desc: 'MCP changes the interface, not the intelligence. Typed tool, IAM auth — same gap on natural language.',
     chips: ['postgres-mcp-server', 'tool registry'],
     scale: '~500 trips/day · booking, pricing, and support agents share one catalog',
-    persona: 'Three agents, one Aurora. None of them re-implement the SQL.',
+    persona: 'Three agents, one Aurora. None of them re-implement the SQL — but "romantic" still misses.',
     skills: ['run_query'],
   },
   {
     num: '03',
     state: 'live',
-    ph: 'Phase 03',
+    ph: 'Phase 03 · Retrieval stack',
     title: 'Retrieval',
     serif: '',
-    desc: 'Hybrid pgvector + tsvector. Vague requests resolve to the right packages. A Strands supervisor delegates to specialists.',
-    chips: ['pgvector HNSW', 'tsvector', 'Cohere v4'],
+    desc: 'Where natural language works. Cohere Embed v4 + hybrid pgvector + tsvector. Strands supervisor delegates to specialists.',
+    chips: ['pgvector HNSW', 'tsvector', 'Cohere v4', 'Strands supervisor'],
     scale: '~5,000 trips/day · customer-facing natural language',
-    persona: 'Alex: “romantic week in Europe.” Keywords would miss; embeddings find Tuscany.',
+    persona: 'Alex: "romantic week in Europe." Keywords would miss; embeddings find Tuscany.',
     skills: ['search', 'availability', 'booking'],
   },
   {
     num: '04',
     state: 'live',
-    ph: 'Phase 04',
+    ph: 'Phase 04 · Production',
     title: 'Memory',
     serif: '',
-    desc: 'A ConciergeOrchestrator grounds every turn in traveler_profiles and a Strands @tool memory agent. Memory in, recommendations out.',
-    chips: ['Strands @tool', 'trip_interactions', 'Aurora memory'],
+    desc: 'The concierge knows Alex & Jordan, their Tokyo trip Oct 12–19, the shellfish allergy. None of that\'s in the prompt — it\'s in Aurora. RLS pins per-traveler scope inside an RDS Data API transaction; every turn writes one audit row; AgentCore Memory mirrors session events.',
+    chips: ['traveler_preferences', 'RLS · Data API tx', 'audit log', 'AgentCore Memory'],
     scale: '~50,000 trips/day · returning travelers expect to be known',
-    persona: 'Alex returns: “Tokyo for two in October.” Party size, allergy, budget — already known.',
+    persona: 'Alex returns: "Tokyo for two in October." Party size, allergy, budget — already known.',
     skills: ['recall_session', 'recall_facts', 'similar_trips', 'persist_turn'],
   },
   {
     num: '05',
     state: 'live',
-    ph: 'Phase 05',
+    ph: 'Phase 05 · Orchestration',
     title: 'Orchestration',
     serif: '',
-    desc: 'A LangGraph StateGraph owns control flow — classify, branch, synthesize — with checkpointed state in Aurora.',
-    chips: ['LangGraph', 'StateGraph', 'PostgresSaver'],
+    desc: 'LangGraph owns control flow when we want it inspectable, branchable, resumable. Explicit StateGraph + conditional edges + PostgresSaver checkpoints in Aurora. Strands routes tools when the agent picks the call. Together: AgentCore + LangGraph + Strands.',
+    chips: ['LangGraph', 'StateGraph', 'PostgresSaver', 'AgentCore'],
     scale: '~500,000 trips/day · multi-step workflows that span weeks',
-    persona: 'Alex: “Watch our Tokyo dates and rebook the hotel if we slip a week.” Checkpointed in Aurora.',
+    persona: 'Alex: "Watch our Tokyo dates and rebook the hotel if we slip a week." Checkpointed in Aurora.',
     skills: ['classify', 'checkpoint', 'synthesize'],
   },
 ];
@@ -102,12 +102,14 @@ export function HowItWorksSection() {
       <FadeIn>
         <div className="mp-section-h-row">
           <div className="mp-section-h">
-            <div className="mp-label-row">Phases 1–5 · the ladder</div>
-            <h2>From SQL to orchestration.</h2>
+            <div className="mp-label-row">Three acts · five phases</div>
+            <h2>The retrieval stack, then production, then orchestration.</h2>
             <p>
-              Each phase climbs a rung: plain SQL, then MCP, then hybrid retrieval, then traveler
-              memory, finally an explicit LangGraph StateGraph that owns control flow. The console
-              below lets you scrub through all five on the same query.
+              Phases 1–3 are the <em>retrieval stack</em>: SQL is the lab, MCP changes the interface,
+              retrieval is where natural language actually works. Phase 4 is the <em>production
+              story</em> — the concierge knows the traveler because Aurora does. Phase 5 is{' '}
+              <em>orchestration</em> — LangGraph for inspectable control flow, Strands for tool
+              routing, AgentCore for the runtime.
             </p>
           </div>
           <div className="actions">
