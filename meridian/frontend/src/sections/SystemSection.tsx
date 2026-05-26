@@ -1,12 +1,15 @@
 /**
  * SystemSection — Meridian Pro substrate panel
  *
- * Two side-by-side surfaces: Aurora schema map + MCP tool catalog.
- * Reads tool latency from the chat-trace history when available, otherwise shows
- * sensible defaults so the section never looks empty.
+ * Two side-by-side surfaces: Aurora schema map + MCP tool catalog. Each tool
+ * row has a `dry-run` action that opens a local drawer with sample input /
+ * output (no backend round-trip), plus an "ask concierge" link that sends a
+ * scripted prompt into the live workspace.
  */
+import { useEffect, useState } from 'react';
 import { FadeIn } from '../components/FadeIn';
 import { useAgentBridge } from '../context/AgentBridge';
+import { MCP_TOOL_CATALOG, type McpToolEntry } from '../lib/proDemoData';
 
 interface SchemaTable {
   name: string;
@@ -119,15 +122,7 @@ const tables: SchemaTable[] = [
   },
 ];
 
-const tools = [
-  { name: 'postgres.run_query', sub: 'aurora data api', ver: 'v3.1', ms: '96ms', health: 'healthy' as const },
-  { name: 'trips.hybrid_search', sub: 'pgvector + tsvector', ver: 'v1.4', ms: '186ms', health: 'healthy' as const },
-  { name: 'memory.recall', sub: 'strands @tool', ver: 'v1.2', ms: '42ms', health: 'healthy' as const },
-  { name: 'memory.write_fact', sub: 'strands @tool', ver: 'v1.0', ms: '22ms', health: 'healthy' as const },
-  { name: 'availability.lookup', sub: 'aurora · live', ver: 'v0.9', ms: '62ms', health: 'warn' as const },
-  { name: 'bookings.hold', sub: 'aurora + provider', ver: 'v1.1', ms: '240ms', health: 'healthy' as const },
-  { name: 'claude.compose', sub: 'bedrock', ver: 'sonnet-4.5', ms: '132ms', health: 'healthy' as const },
-];
+const tools = MCP_TOOL_CATALOG;
 
 const SCHEMA_URL =
   'https://github.com/aws-samples/sample-dat309-agentic-workflows-aurora-mcp/blob/main/meridian/backend/db/schema.sql';
@@ -142,8 +137,93 @@ const DRY_RUN_PROMPTS: Record<string, string> = {
   'claude.compose': 'Dry-run compose a short trip summary for Alex & Jordan',
 };
 
+function DryRunDrawer({
+  tool,
+  onClose,
+  onSendToConcierge,
+}: {
+  tool: McpToolEntry;
+  onClose: () => void;
+  onSendToConcierge: (tool: McpToolEntry) => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div className="mp-dry-backdrop" role="presentation" onClick={onClose}>
+      <aside
+        className="mp-dry-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Dry-run ${tool.name}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="mp-dry-head">
+          <div>
+            <div className="mp-dry-eyebrow">Dry-run · no backend call</div>
+            <div className="mp-dry-title">{tool.name}</div>
+            <div className="mp-dry-sub">
+              {tool.sub} · {tool.ver} · p50 {tool.p50}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="mp-dry-close"
+            onClick={onClose}
+            aria-label="Close dry-run drawer"
+          >
+            ×
+          </button>
+        </header>
+        <div className="mp-dry-body">
+          <div className="mp-dry-section">
+            <h4>Sample input</h4>
+            <pre className="mp-dry-code">{tool.sampleInput}</pre>
+          </div>
+          <div className="mp-dry-section">
+            <h4>Sample output</h4>
+            <pre className="mp-dry-code">{tool.sampleOutput}</pre>
+          </div>
+          <div className="mp-dry-footer">
+            <button
+              type="button"
+              className="mp-btn primary sm"
+              onClick={() => onSendToConcierge(tool)}
+            >
+              Run live in concierge →
+            </button>
+            <span className="mp-dry-hint">
+              Dry-runs are UI-only. Live runs hit the real MCP tool through the workspace.
+            </span>
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 export function SystemSection() {
   const { openConcierge } = useAgentBridge();
+  const [dryRunTool, setDryRunTool] = useState<McpToolEntry | null>(null);
+
+  const runLive = (t: McpToolEntry) => {
+    setDryRunTool(null);
+    openConcierge({
+      phase: t.name.startsWith('memory') ? 4 : t.name.includes('hybrid') ? 3 : 2,
+      prompt: DRY_RUN_PROMPTS[t.name] ?? `Dry-run ${t.name}`,
+      send: true,
+    });
+  };
 
   return (
     <section id="system" className="mp-section">
@@ -232,7 +312,7 @@ export function SystemSection() {
                     <small>{t.sub}</small>
                   </div>
                   <div className="ver">{t.ver}</div>
-                  <div className="ms">{t.ms}</div>
+                  <div className="ms">{t.p50}</div>
                   <div>
                     <span className={`health${t.health === 'warn' ? ' warn' : ''}`}>
                       {t.health === 'warn' ? 'degraded' : 'healthy'}
@@ -242,13 +322,8 @@ export function SystemSection() {
                     <button
                       type="button"
                       className="dry"
-                      onClick={() =>
-                        openConcierge({
-                          phase: t.name.startsWith('memory') ? 4 : t.name.includes('hybrid') ? 3 : 2,
-                          prompt: DRY_RUN_PROMPTS[t.name] ?? `Dry-run ${t.name}`,
-                          send: true,
-                        })
-                      }
+                      onClick={() => setDryRunTool(t)}
+                      aria-label={`Dry-run ${t.name}`}
                     >
                       dry-run
                     </button>
@@ -259,6 +334,14 @@ export function SystemSection() {
           </div>
         </div>
       </FadeIn>
+
+      {dryRunTool && (
+        <DryRunDrawer
+          tool={dryRunTool}
+          onClose={() => setDryRunTool(null)}
+          onSendToConcierge={runLive}
+        />
+      )}
     </section>
   );
 }

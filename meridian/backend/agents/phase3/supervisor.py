@@ -1,12 +1,23 @@
 """
-Phase 3 Supervisor Agent - Orchestrates specialized sub-agents.
+Phase 3 Supervisor — Retrieval Agent (Strands multi-agent delegation).
 
-Implements the enterprise pattern with:
-- Supervisor agent with no direct tools
-- Delegation logic to Search, Product, and Order agents
-- Claude Opus 4.7 via Amazon Bedrock
+Presenter walkthrough
+---------------------
+The supervisor's `@tool` methods are *delegation* tools — Bedrock calls
+`_delegate_to_search`, `_delegate_to_package`, or `_delegate_to_booking`,
+and each forwards to a specialist agent that owns Aurora access.
 
-Requirements: 11.1, 11.5
+Live: imported by `chat.py` → `phase3_supervisor_search()`.
+
+AWS docs:
+  - Bedrock model access (required before ``BedrockModel`` calls succeed):
+    https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html
+  - Inference profiles / model IDs:
+    https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids.html
+  - RDS Data API (specialist agents query Aurora):
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+
+Requirements: 11.1, 11.5, 11.9
 """
 
 import os
@@ -17,6 +28,8 @@ from typing import Callable, Any, Optional, List
 from strands import Agent, tool
 from strands.models import BedrockModel
 from pydantic import BaseModel
+
+from backend.config import config
 
 
 class ActivityEntry(BaseModel):
@@ -38,20 +51,24 @@ class AgentResponse(BaseModel):
     order: Optional[dict] = None
 
 
-class SupervisorAgent:
+class RetrievalAgent:
     """
-    Phase 3 Supervisor Agent that orchestrates specialized sub-agents.
-    
+    Phase 3 Retrieval Agent — coordinates Search, Package, and Booking specialists.
+
+    The supervisor has no direct database access. Its Strands tools are thin
+    delegation wrappers; Bedrock selects which specialist to invoke per turn.
+
     Requirements:
-    - 11.1: Includes a Supervisor_Agent that orchestrates specialized sub-agents
-    - 11.5: Supervisor has no direct tools and operates purely through delegation
+    - 11.1: Supervisor orchestrates specialized sub-agents
+    - 11.5: Business logic lives in specialists, not the supervisor
+    - 11.9: Activity logging for trace telemetry
     """
     
     def __init__(
         self,
         search_agent,
-        product_agent,
-        order_agent,
+        package_agent,
+        booking_agent,
         activity_callback: Optional[Callable[[ActivityEntry], Any]] = None
     ):
         """
@@ -59,13 +76,13 @@ class SupervisorAgent:
         
         Args:
             search_agent: Search agent for semantic / hybrid trip search
-            product_agent: Package agent for trip details and departure availability
-            order_agent: Booking agent for reservation processing
+            package_agent: Package agent for trip details and departure availability
+            booking_agent: Booking agent for reservation processing
             activity_callback: Optional callback for reporting agent activities
         """
         self.search_agent = search_agent
-        self.product_agent = product_agent
-        self.order_agent = order_agent
+        self.package_agent = package_agent
+        self.booking_agent = booking_agent
         self.activity_callback = activity_callback or (lambda x: None)
 
         # Cache of the most-recent search result so the live API can return
@@ -75,17 +92,17 @@ class SupervisorAgent:
 
         # Initialize Bedrock model - Claude Opus 4.7 (cross-region inference)
         self.model = BedrockModel(
-            model_id="global.anthropic.claude-opus-4-7-v1",
+            model_id=config.bedrock.model_id,
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
 
-        # Supervisor delegates via @tool functions; Bedrock chooses which to call.
+        # Delegation @tools — Bedrock sees three tools, each routing to a specialist.
         self.agent = Agent(
             model=self.model,
             tools=[
                 self._delegate_to_search,
-                self._delegate_to_product,
-                self._delegate_to_order,
+                self._delegate_to_package,
+                self._delegate_to_booking,
             ],
             system_prompt=self._get_system_prompt()
         )
@@ -118,7 +135,7 @@ Guidelines:
         details: Optional[str] = None,
         sql_query: Optional[str] = None,
         execution_time_ms: Optional[int] = None,
-        agent_name: str = "SupervisorAgent"
+        agent_name: str = "RetrievalAgent"
     ):
         """Log an activity entry. Requirement 11.9."""
         entry = ActivityEntry(
@@ -171,7 +188,7 @@ Guidelines:
         return result
     
     @tool
-    async def _delegate_to_product(self, action: str, package_id: Optional[str] = None, duration: Optional[str] = None) -> dict:
+    async def _delegate_to_package(self, action: str, package_id: Optional[str] = None, duration: Optional[str] = None) -> dict:
         """
         Delegate to the Package Agent for trip details or departure availability.
 
@@ -192,9 +209,9 @@ Guidelines:
         )
 
         if action == "details":
-            result = await self.product_agent.get_product_details(package_id)
+            result = await self.package_agent.get_package_details(package_id)
         elif action in ("availability", "inventory"):
-            result = await self.product_agent.check_inventory_status(package_id, duration)
+            result = await self.package_agent.check_departure_availability(package_id, duration)
         else:
             result = {"error": f"Unknown action: {action}"}
         
@@ -204,23 +221,23 @@ Guidelines:
             activity_type="delegation",
             title="Package Agent completed",
             execution_time_ms=execution_time,
-            agent_name="ProductAgent"
+            agent_name="PackageAgent"
         )
         
         return result
     
     @tool
-    async def _delegate_to_order(self, action: str, customer_id: Optional[str] = None, items: Optional[List[dict]] = None) -> dict:
+    async def _delegate_to_booking(self, action: str, customer_id: Optional[str] = None, items: Optional[List[dict]] = None) -> dict:
         """
         Delegate to the Booking Agent for booking calculations or reservations.
         
         Args:
             action: 'calculate' or 'process'
-            customer_id: Customer identifier (for process)
-            items: Order items
+            customer_id: Traveler identifier (for process)
+            items: Booking line items (package_id, travelers_count, duration)
             
         Returns:
-            Order information from Order Agent
+            Booking information from Booking Agent
         """
         start_time = datetime.utcnow()
         
@@ -231,9 +248,9 @@ Guidelines:
         )
         
         if action == "calculate":
-            result = await self.order_agent.calculate_total(items or [])
+            result = await self.booking_agent.calculate_total(items or [])
         elif action == "process":
-            result = await self.order_agent.process_order(customer_id, items or [])
+            result = await self.booking_agent.process_booking(customer_id, items or [])
         else:
             result = {"error": f"Unknown action: {action}"}
         
@@ -243,7 +260,7 @@ Guidelines:
             activity_type="delegation",
             title="Booking Agent completed",
             execution_time_ms=execution_time,
-            agent_name="OrderAgent"
+            agent_name="BookingAgent"
         )
         
         return result

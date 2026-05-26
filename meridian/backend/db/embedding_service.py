@@ -1,7 +1,17 @@
 """
 Embedding Service for Meridian.
 
-Generates text embeddings via Amazon Bedrock with model fallbacks.
+Generates text embeddings via Amazon Bedrock (Cohere Embed v4 by default).
+
+AWS docs:
+  - Bedrock embeddings overview:
+    https://docs.aws.amazon.com/bedrock/latest/userguide/embeddings.html
+  - Cohere Embed v4 model parameters (1024-d output for Aurora pgvector):
+    https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-embed-v4.html
+  - InvokeModel API (bedrock-runtime):
+    https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html
+  - Aurora PostgreSQL pgvector extension:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Extensions.html#AuroraPostgreSQL.Extensions.pgvector
 """
 
 import json

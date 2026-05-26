@@ -1,21 +1,27 @@
 """
 Bedrock AgentCore Memory adapter for Phase 4.
 
-The Phase 4 concierge writes every turn into AgentCore Memory and pulls
-recent session context back from it.  Aurora still owns the long-term
-preferences and interaction embeddings (RLS-scoped) — this module is the
-managed *session* layer the abstract claims.
+Part of the Phase 4 AgentCore platform story alongside Runtime, Gateway,
+and Identity.  Memory is the managed *session* layer; Aurora owns durable
+traveler preferences and interaction embeddings (RLS-scoped).
 
-Configuration (.env):
+Configuration (preferred — @aws/agentcore CLI):
 
-    AGENTCORE_MEMORY_ID=mem-abc123             # provision via control plane
-    AGENTCORE_REGION=us-east-1                 # optional, defaults to AWS_DEFAULT_REGION
+    cd meridian/agentcore
+    agentcore add memory --name meridian-session --strategies SEMANTIC --expiry 30
+    agentcore deploy -y
+    python ../scripts/sync_agentcore_env.py --write
 
-When `AGENTCORE_MEMORY_ID` is unset the adapter no-ops cleanly so the demo
-still runs offline.  This is the same mode used in workshops where
-attendees do not have AgentCore Memory provisioned.
+Memory ID is loaded from ``agentcore/.cli/deployed-state.json`` or env override:
 
-API references:
+    AGENTCORE_MEMORY_ID=mem-abc123
+    AGENTCORE_REGION=us-east-1
+
+AWS docs:
+  - AgentCore Memory:
+    https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/memory.html
+
+API references (boto3):
 - create_event:           https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore/client/create_event.html
 - list_memory_records:    https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore/client/list_memory_records.html
 - retrieve_memory_records: https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore/client/retrieve_memory_records.html
@@ -31,51 +37,43 @@ from typing import Any, Dict, List, Optional
 import boto3
 from botocore.exceptions import ClientError
 
+from backend.agentcore.cli_config import resolve_agentcore_config
+from backend.agentcore.errors import AgentCoreNotConfiguredError
+
 logger = logging.getLogger(__name__)
 
 
 class AgentCoreMemoryAdapter:
-    """Thin wrapper around the AgentCore data-plane client.
-
-    All methods are safe to call when no memory store is configured; they
-    return empty results and log a single warning per process.
-    """
+    """AgentCore Memory data-plane client — real create_event / retrieve APIs only."""
 
     def __init__(
         self,
         memory_id: Optional[str] = None,
         region: Optional[str] = None,
     ) -> None:
-        self.memory_id = memory_id or os.getenv("AGENTCORE_MEMORY_ID") or None
-        self.region = region or os.getenv(
-            "AGENTCORE_REGION", os.getenv("AWS_DEFAULT_REGION", "us-east-1")
-        )
+        cli = resolve_agentcore_config()
+        self.memory_id = memory_id or cli.memory_id or None
+        self.region = region or cli.region
+        self.cli_sources = cli.sources
         self._client = None
-        self._unavailable_reason: Optional[str] = None
-        if not self.memory_id:
-            self._unavailable_reason = "AGENTCORE_MEMORY_ID not set"
-
-    # ------------------------------------------------------------------ helpers
 
     @property
     def configured(self) -> bool:
-        return self.memory_id is not None and self._unavailable_reason is None
+        return self.memory_id is not None
 
-    @property
-    def status(self) -> str:
-        """Short human-readable status used in trace telemetry."""
-        if self.configured:
-            return "live"
-        return self._unavailable_reason or "disabled"
+    def _require_memory_id(self) -> str:
+        if not self.memory_id:
+            cfg = resolve_agentcore_config()
+            raise AgentCoreNotConfiguredError(
+                missing=("memory_id",),
+                project_dir=cfg.cli_project_dir or "",
+                sources=cfg.sources,
+            )
+        return self.memory_id
 
     def _get_client(self):
         if self._client is None:
-            try:
-                self._client = boto3.client("bedrock-agentcore", region_name=self.region)
-            except Exception as exc:
-                self._unavailable_reason = f"boto3 client init failed: {exc}"
-                logger.warning("AgentCore Memory unavailable: %s", self._unavailable_reason)
-                return None
+            self._client = boto3.client("bedrock-agentcore", region_name=self.region)
         return self._client
 
     @staticmethod
@@ -92,16 +90,13 @@ class AgentCoreMemoryAdapter:
         user_message: str,
         assistant_message: str,
     ) -> Dict[str, Any]:
-        """Write one user/assistant turn as a single AgentCore event."""
-        if not self.configured:
-            return {"status": "skipped", "reason": self.status}
+        """Write one user/assistant turn via ``create_event``."""
+        memory_id = self._require_memory_id()
         client = self._get_client()
-        if client is None:
-            return {"status": "skipped", "reason": self.status}
 
         try:
             response = client.create_event(
-                memoryId=self.memory_id,
+                memoryId=memory_id,
                 actorId=traveler_id,
                 sessionId=conversation_id,
                 eventTimestamp=datetime.utcnow(),
@@ -119,7 +114,7 @@ class AgentCoreMemoryAdapter:
             event_id = response.get("event", {}).get("eventId")
             return {"status": "ok", "event_id": event_id}
         except ClientError as exc:
-            return self._handle_client_error("create_event", exc)
+            raise self._client_error("create_event", exc) from exc
 
     # --------------------------------------------------------------- read path
 
@@ -130,21 +125,17 @@ class AgentCoreMemoryAdapter:
         limit: int = 10,
     ) -> List[Dict[str, Any]]:
         """Pull the most recent records AgentCore has for this session."""
-        if not self.configured:
-            return []
+        memory_id = self._require_memory_id()
         client = self._get_client()
-        if client is None:
-            return []
 
         try:
             response = client.list_memory_records(
-                memoryId=self.memory_id,
+                memoryId=memory_id,
                 namespace=self._namespace(traveler_id, conversation_id),
                 maxResults=limit,
             )
         except ClientError as exc:
-            self._handle_client_error("list_memory_records", exc)
-            return []
+            raise self._client_error("list_memory_records", exc) from exc
 
         rows: List[Dict[str, Any]] = []
         for rec in response.get("memoryRecordSummaries", []):
@@ -167,22 +158,18 @@ class AgentCoreMemoryAdapter:
         top_k: int = 5,
     ) -> List[Dict[str, Any]]:
         """AgentCore semantic recall scoped to this traveler's namespace."""
-        if not self.configured:
-            return []
+        memory_id = self._require_memory_id()
         client = self._get_client()
-        if client is None:
-            return []
 
         try:
             response = client.retrieve_memory_records(
-                memoryId=self.memory_id,
+                memoryId=memory_id,
                 namespace=self._namespace(traveler_id, conversation_id),
                 searchCriteria={"searchQuery": query, "topK": top_k},
                 maxResults=top_k,
             )
         except ClientError as exc:
-            self._handle_client_error("retrieve_memory_records", exc)
-            return []
+            raise self._client_error("retrieve_memory_records", exc) from exc
 
         return [
             {
@@ -194,13 +181,11 @@ class AgentCoreMemoryAdapter:
 
     # ----------------------------------------------------------------- errors
 
-    def _handle_client_error(self, op: str, exc: ClientError) -> Dict[str, Any]:
+    @staticmethod
+    def _client_error(op: str, exc: ClientError) -> RuntimeError:
         code = exc.response.get("Error", {}).get("Code", "Unknown")
-        if code == "ResourceNotFoundException":
-            self._unavailable_reason = f"AgentCore memory '{self.memory_id}' not found"
-            self.memory_id = None  # disable for the rest of the process
-        logger.warning("AgentCore Memory %s failed (%s): %s", op, code, exc)
-        return {"status": "error", "code": code}
+        logger.error("AgentCore Memory %s failed (%s): %s", op, code, exc)
+        return RuntimeError(f"AgentCore Memory {op} failed: {code}")
 
 
 _adapter: Optional[AgentCoreMemoryAdapter] = None

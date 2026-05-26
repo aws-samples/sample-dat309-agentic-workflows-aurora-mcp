@@ -2,6 +2,12 @@
 Configuration settings for Meridian backend.
 
 Centralizes all configurable values that were previously hardcoded.
+
+AWS docs (env vars used across phases):
+  - Aurora + RDS Data API:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+  - Bedrock model access:
+    https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html
 """
 
 import os
@@ -78,15 +84,15 @@ class AgentConfig:
 
     # Agent names and files for each phase
     search_agents: Dict[int, tuple] = field(default_factory=lambda: {
-        1: ("Phase1Agent", "agents/phase1/agent.py"),
-        2: ("Phase2Agent", "agents/phase2/agent.py"),
-        3: ("SupervisorAgent", "agents/phase3/supervisor.py"),
+        1: ("SQLAgent", "agents/phase1/agent.py"),
+        2: ("MCPAgent", "agents/phase2/agent.py"),
+        3: ("RetrievalAgent", "agents/phase3/supervisor.py"),
     })
 
-    order_agents: Dict[int, tuple] = field(default_factory=lambda: {
-        1: ("Phase1Agent", "agents/phase1/agent.py"),
-        2: ("Phase2Agent", "agents/phase2/agent.py"),
-        3: ("OrderAgent", "agents/phase3/order_agent.py"),
+    booking_agents: Dict[int, tuple] = field(default_factory=lambda: {
+        1: ("SQLAgent", "agents/phase1/agent.py"),
+        2: ("MCPAgent", "agents/phase2/agent.py"),
+        3: ("BookingAgent", "agents/phase3/booking_agent.py"),
     })
 
     # Progressive reveal delays (ms) - for demo purposes
@@ -98,6 +104,56 @@ class AgentConfig:
 
 
 @dataclass
+class BedrockConfig:
+    """Bedrock LLM configuration.
+
+    Every agent in the codebase reads its model identifier from here, so the
+    presenter can swap models for the entire demo via a single environment
+    variable (``BEDROCK_MODEL_ID``) without editing eight files.
+
+    Default is the Global cross-Region inference profile for Anthropic Claude
+    Opus 4.7 (``global.anthropic.claude-opus-4-7``). If you see::
+
+        ValidationException: The provided model identifier is invalid
+
+    that error comes from the Bedrock API itself — usually because the
+    profile isn't in your account's Model access list, or your region
+    doesn't route to it. Pick another profile from the Bedrock console
+    and set it in ``.env``::
+
+        BEDROCK_MODEL_ID=global.anthropic.claude-sonnet-4-5-20250929-v1:0
+
+    AWS docs:
+      - Model access:
+        https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html
+      - Model IDs / inference profiles:
+        https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids.html
+      - Cross-Region inference:
+        https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html
+
+    Quick check from the shell::
+
+        aws bedrock list-inference-profiles --region us-east-1 \\
+            --query "inferenceProfileSummaries[?contains(inferenceProfileId, 'anthropic')].inferenceProfileId"
+    """
+
+    DEFAULT_MODEL_ID: str = "global.anthropic.claude-opus-4-7"
+
+    model_id: str = field(
+        default_factory=lambda: os.getenv(
+            "BEDROCK_MODEL_ID",
+            BedrockConfig.DEFAULT_MODEL_ID,
+        )
+    )
+    region: str = field(
+        default_factory=lambda: os.getenv(
+            "BEDROCK_REGION",
+            os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
+        )
+    )
+
+
+@dataclass
 class Config:
     """Main configuration container."""
 
@@ -105,6 +161,7 @@ class Config:
     order: OrderConfig = field(default_factory=OrderConfig)
     upload: UploadConfig = field(default_factory=UploadConfig)
     agent: AgentConfig = field(default_factory=AgentConfig)
+    bedrock: BedrockConfig = field(default_factory=BedrockConfig)
 
     # Environment overrides
     debug: bool = field(default_factory=lambda: os.getenv("DEBUG", "false").lower() == "true")

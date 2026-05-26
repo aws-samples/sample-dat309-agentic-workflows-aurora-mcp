@@ -7,12 +7,24 @@ interface StickyNavProps {
   scrollY: number;
 }
 
-const navLinks = [
-  { label: 'How it works', target: 'howitworks' },
+interface NavLink {
+  label: string;
+  target: string;
+  href?: string;
+  external?: boolean;
+}
+
+const navLinks: NavLink[] = [
   { label: 'Concierge', target: 'agent' },
-  { label: 'Memory', target: 'memory' },
   { label: 'Trips', target: 'products' },
+  { label: 'Memory', target: 'memory' },
   { label: 'System', target: 'system' },
+  {
+    label: 'Docs',
+    target: 'docs',
+    href: 'https://github.com/aws-samples/sample-dat309-agentic-workflows-aurora-mcp#readme',
+    external: true,
+  },
 ];
 
 type Health = 'healthy' | 'checking' | 'down';
@@ -43,7 +55,7 @@ export function StickyNav({ scrollY: _scrollY }: StickyNavProps) {
 
   // Active section observer
   useEffect(() => {
-    const ids = navLinks.map((n) => n.target);
+    const ids = navLinks.filter((n) => !n.external).map((n) => n.target);
     const sections = ids
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => Boolean(el));
@@ -81,16 +93,28 @@ export function StickyNav({ scrollY: _scrollY }: StickyNavProps) {
         </div>
 
         <div className="mp-nav-center">
-          {navLinks.map((n) => (
-            <button
-              key={n.target}
-              type="button"
-              className={`mp-nav-link${active === n.target ? ' active' : ''}`}
-              onClick={() => scrollTo(n.target)}
-            >
-              {n.label}
-            </button>
-          ))}
+          {navLinks.map((n) =>
+            n.external && n.href ? (
+              <a
+                key={n.target}
+                className="mp-nav-link"
+                href={n.href}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {n.label} ↗
+              </a>
+            ) : (
+              <button
+                key={n.target}
+                type="button"
+                className={`mp-nav-link${active === n.target ? ' active' : ''}`}
+                onClick={() => scrollTo(n.target)}
+              >
+                {n.label}
+              </button>
+            ),
+          )}
         </div>
 
         <div className="mp-nav-right">

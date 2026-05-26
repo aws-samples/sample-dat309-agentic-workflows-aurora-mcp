@@ -7,6 +7,6 @@ This agent demonstrates the MVP pattern with:
 - Tools for product lookup, inventory check, price calculation, order processing
 """
 
-from .agent import Phase1Agent, create_phase1_agent
+from .agent import SQLAgent, create_sql_agent
 
-__all__ = ["Phase1Agent", "create_phase1_agent"]
+__all__ = ["SQLAgent", "create_sql_agent"]

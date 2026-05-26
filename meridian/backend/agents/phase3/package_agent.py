@@ -1,20 +1,27 @@
 """
-Phase 3 Package Agent - Specialized in trip package details and availability.
+Phase 3 Package Agent - Specialized in trip package details and departure availability.
 
 Implements package operations using:
 - RDS Data API for Aurora PostgreSQL access
-- Claude Opus 4.7 via Amazon Bedrock (cross-region inference)
+- Claude via Amazon Bedrock (configurable model_id)
+
+AWS docs:
+  - RDS Data API:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+  - Bedrock model IDs:
+    https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids.html
 """
 
 import os
 import uuid
 from datetime import datetime
-from typing import Callable, Any, Optional, List
+from typing import Callable, Any, Optional
 
 from strands import Agent, tool
 from strands.models import BedrockModel
 from pydantic import BaseModel
 
+from backend.config import config
 from backend.db.rds_data_client import get_rds_data_client
 
 
@@ -30,34 +37,25 @@ class ActivityEntry(BaseModel):
     agent_name: Optional[str] = None
 
 
-class ProductAgent:
+class PackageAgent:
     """Package Agent specialized in trip package details and departure availability."""
-    
+
     def __init__(self, activity_callback: Optional[Callable[[ActivityEntry], Any]] = None):
-        """
-        Initialize Product agent.
-        
-        Args:
-            activity_callback: Optional callback for reporting agent activities
-        """
         self.activity_callback = activity_callback or (lambda x: None)
         self.db = get_rds_data_client()
-        
-        # Initialize model (cross-region inference)
+
         self.model = BedrockModel(
-            model_id="global.anthropic.claude-opus-4-7-v1",
+            model_id=config.bedrock.model_id,
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
-        
-        # Create agent with product tools
+
         self.agent = Agent(
             model=self.model,
-            tools=[self._get_details_tool, self._check_inventory_tool],
+            tools=[self._get_details_tool, self._check_availability_tool],
             system_prompt=self._get_system_prompt()
         )
-    
+
     def _get_system_prompt(self) -> str:
-        """Get the system prompt for the product agent."""
         return """You are a Package Agent specialized in trip package information.
 
 Your capabilities:
@@ -68,7 +66,7 @@ When helping travelers:
 - Provide accurate package details (destination, operator, highlights)
 - Check slot availability before recommending
 - Suggest alternatives if departures are sold out"""
-    
+
     def _log_activity(
         self,
         activity_type: str,
@@ -77,7 +75,6 @@ When helping travelers:
         sql_query: Optional[str] = None,
         execution_time_ms: Optional[int] = None
     ):
-        """Log an activity entry."""
         entry = ActivityEntry(
             id=str(uuid.uuid4()),
             timestamp=datetime.utcnow().isoformat() + "Z",
@@ -86,38 +83,21 @@ When helping travelers:
             details=details,
             sql_query=sql_query,
             execution_time_ms=execution_time_ms,
-            agent_name="ProductAgent"
+            agent_name="PackageAgent"
         )
         self.activity_callback(entry)
-    
+
     @tool
     async def _get_details_tool(self, package_id: str) -> dict:
-        """
-        Get detailed trip package information.
-
-        Args:
-            package_id: Trip package identifier
-
-        Returns:
-            Package details
-        """
-        return await self.get_product_details(package_id)
+        """Get detailed trip package information."""
+        return await self.get_package_details(package_id)
 
     @tool
-    async def _check_inventory_tool(self, package_id: str, duration: Optional[str] = None) -> dict:
-        """
-        Check departure availability for a trip package.
+    async def _check_availability_tool(self, package_id: str, duration: Optional[str] = None) -> dict:
+        """Check departure availability for a trip package."""
+        return await self.check_departure_availability(package_id, duration)
 
-        Args:
-            package_id: Trip package identifier
-            duration: Optional duration option to check (e.g. "7 days")
-
-        Returns:
-            Availability status
-        """
-        return await self.check_inventory_status(package_id, duration)
-    
-    async def get_product_details(self, package_id: str) -> dict:
+    async def get_package_details(self, package_id: str) -> dict:
         """Get detailed information about a trip package."""
         start_time = datetime.utcnow()
 
@@ -146,7 +126,7 @@ When helping travelers:
         result['price_per_person'] = float(result['price_per_person'])
         return dict(result)
 
-    async def check_inventory_status(self, package_id: str, duration: Optional[str] = None) -> dict:
+    async def check_departure_availability(self, package_id: str, duration: Optional[str] = None) -> dict:
         """Check departure availability for a trip package."""
         start_time = datetime.utcnow()
 
@@ -194,8 +174,8 @@ When helping travelers:
         }
 
 
-def create_product_agent(
+def create_package_agent(
     activity_callback: Optional[Callable[[ActivityEntry], Any]] = None
-) -> ProductAgent:
-    """Create a Product agent instance."""
-    return ProductAgent(activity_callback=activity_callback)
+) -> PackageAgent:
+    """Create a Package agent instance."""
+    return PackageAgent(activity_callback=activity_callback)

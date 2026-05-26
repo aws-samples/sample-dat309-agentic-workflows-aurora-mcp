@@ -1,5 +1,11 @@
 """
 Initialize Aurora with meridian/backend/db/schema.sql (travel-native DDL).
+
+AWS docs:
+  - RDS Data API (used to run DDL):
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+  - Aurora PostgreSQL extensions (pgvector enabled in schema):
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Extensions.html
 """
 import os
 import re

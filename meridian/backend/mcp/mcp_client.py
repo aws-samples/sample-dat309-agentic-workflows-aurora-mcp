@@ -1,8 +1,20 @@
 """
 MCP (Model Context Protocol) Client for Meridian.
 
-Provides integration with awslabs.postgres-mcp-server for Phase 2 database operations.
-This enables the same search functionality as Phase 1, but through the MCP protocol.
+Connects to ``awslabs.postgres-mcp-server`` for Phase 2 database operations.
+The MCP server uses the same Aurora cluster as Phase 1, routed through MCP
+stdio transport instead of inline RDS Data API calls.
+
+AWS docs:
+  - RDS Data API (used by postgres-mcp-server ``rdsapi`` connection method):
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+  - Aurora PostgreSQL:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.AuroraPostgreSQL.html
+  - IAM database authentication (``pgwire_iam`` connection method):
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.html
+
+MCP server source (awslabs):
+  https://github.com/awslabs/mcp/tree/main/src/postgres-mcp-server
 """
 
 import os

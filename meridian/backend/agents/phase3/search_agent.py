@@ -1,26 +1,35 @@
 """
-Phase 3 Search Agent - Specialized in semantic trip package search.
+Phase 3 — Search Agent (Strands @tool + pgvector semantic search).
 
-Implements semantic search using:
-- Cohere Embed v4 (1024 dimensions)
-- pgvector for similarity search
-- RDS Data API for Aurora PostgreSQL access
-- Claude Opus 4.7 via Amazon Bedrock (cross-region inference)
+Presenter walkthrough
+---------------------
+Show `_semantic_search_tool` and `semantic_search()` when explaining
+specialist agents under the Phase 3 supervisor. Uses EmbeddingService
+(1024-dim Cohere Embed v4) to match Aurora's vector(1024) column.
+
+AWS docs:
+  - Cohere Embed v4 on Bedrock:
+    https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-embed-v4.html
+  - Aurora PostgreSQL pgvector:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Extensions.html#AuroraPostgreSQL.Extensions.pgvector
+  - RDS Data API (hybrid SQL execution):
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
 
 Requirements: 11.2, 11.6
 """
 
 import os
-import json
 import uuid
 from datetime import datetime
 from typing import Callable, Any, Optional, List
 
-import boto3
 from strands import Agent, tool
 from strands.models import BedrockModel
+
+from backend.config import config
 from pydantic import BaseModel
 
+from backend.db.embedding_service import get_embedding_service
 from backend.db.rds_data_client import get_rds_data_client
 
 
@@ -37,7 +46,6 @@ class ActivityEntry(BaseModel):
 
 
 # Cohere Embed v4 Configuration (1024 dimensions)
-EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "cohere.embed-v4:0")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
 
 
@@ -53,14 +61,10 @@ class SearchAgent:
     def __init__(self, activity_callback: Optional[Callable[[ActivityEntry], Any]] = None):
         self.activity_callback = activity_callback or (lambda x: None)
         self.db = get_rds_data_client()
-
-        self.bedrock_runtime = boto3.client(
-            'bedrock-runtime',
-            region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
-        )
+        self.embedding_service = get_embedding_service()
 
         self.model = BedrockModel(
-            model_id="global.anthropic.claude-opus-4-7-v1",
+            model_id=config.bedrock.model_id,
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
 
@@ -105,25 +109,6 @@ When searching:
         )
         self.activity_callback(entry)
 
-    def _generate_text_embedding(self, text: str, input_type: str = "search_query") -> List[float]:
-        """Generate embedding for text using Cohere Embed v4."""
-        request_body = {
-            "texts": [text],
-            "input_type": input_type,
-            "embedding_types": ["float"],
-            "truncate": "END"
-        }
-
-        response = self.bedrock_runtime.invoke_model(
-            modelId=EMBEDDING_MODEL_ID,
-            body=json.dumps(request_body),
-            contentType="application/json",
-            accept="application/json"
-        )
-
-        response_body = json.loads(response['body'].read())
-        return response_body['embeddings']['float'][0]
-
     @tool
     async def _semantic_search_tool(self, query: str, limit: int = 5) -> List[dict]:
         """
@@ -160,27 +145,27 @@ When searching:
             details=f"Query: {query[:50]}..."
         )
         
-        query_embedding = self._generate_text_embedding(query)
-        
+        query_embedding = self.embedding_service.generate_text_embedding(
+            query, input_type="search_query"
+        )
+
         embedding_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-        
+
         self._log_activity(
             activity_type="embedding",
             title="Text embedding generated",
-            details=f"Dimension: {len(query_embedding)}",
+            details=f"Dimension: {len(query_embedding)} ({EMBEDDING_DIMENSION}d pgvector)",
             execution_time_ms=embedding_time
         )
-        
-        # Search using semantic_product_search function
+
         search_start = datetime.utcnow()
-        
+
         sql = """
             SELECT * FROM semantic_trip_search(%s::vector, %s)
         """
-        
-        # Convert embedding to PostgreSQL vector format
+
         embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
-        
+
         results = await self.db.execute(sql, (embedding_str, limit))
         
         search_time = int((datetime.utcnow() - search_start).total_seconds() * 1000)

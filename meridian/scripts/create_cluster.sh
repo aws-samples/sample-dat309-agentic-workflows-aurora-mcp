@@ -2,6 +2,18 @@
 # Meridian Aurora PostgreSQL Cluster Provisioning Script
 # Creates an Aurora PostgreSQL 17.5 Serverless v2 cluster with pgvector support
 #
+# AWS docs:
+#   Creating an Aurora cluster:
+#     https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.CreateInstance.html
+#   Aurora Serverless v2:
+#     https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.html
+#   Enabling the RDS Data API:
+#     https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html#data-api.enabling
+#   Aurora PostgreSQL pgvector:
+#     https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Extensions.html#AuroraPostgreSQL.Extensions.pgvector
+#   Secrets Manager integration:
+#     https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/rds-secrets-manager.html
+#
 # Requirements implemented:
 # - 1.1: Aurora PostgreSQL 17.9 Serverless v2 cluster with identifier "meridian-demo" in us-east-1
 # - 1.2: Scaling from 0 to 64 ACUs

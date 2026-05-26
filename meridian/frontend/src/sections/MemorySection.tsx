@@ -10,20 +10,9 @@ import { fetchMemoryProfile } from '../api/client';
 import { DEMO_PERSONA_FALLBACK, DEMO_TRAVELER_ID } from '../components/TravelerPersona';
 import type { LongTermMemoryFact, TravelerProfile } from '../types';
 
-const FALLBACK_FACTS: LongTermMemoryFact[] = [
-  { key: 'no_red_eye', value: 'true · "Jordan can\'t do red-eyes"', source: 'conv_8a91c4', confidence: 0.99 },
-  { key: 'vegetarian_friendly', value: 'true · > 4 dinner options', source: 'conv_44de9', confidence: 0.95 },
-  { key: 'style', value: 'boutique > chain', source: 'conv_18ab2', confidence: 0.92 },
-  { key: 'pace', value: 'slow · prefers ≤ 1 city per trip', source: 'conv_44de9', confidence: 0.9 },
-  { key: 'budget_cap', value: '$3,200 (per trip, two travelers)', source: 'conv_8a91c4', confidence: 0.84 },
-  { key: 'home_airport', value: 'SFO', source: 'profile · onboarding', confidence: 1.0 },
-  { key: 'interests', value: 'wine country, walkable old towns', source: 'aggregate · 4 trips', confidence: 0.88 },
-  { key: 'avoid_connections', value: 'LHR, JFK', source: 'conv_18ab2', confidence: 0.78 },
-];
-
 export function MemorySection() {
-  const [facts, setFacts] = useState<LongTermMemoryFact[]>(FALLBACK_FACTS);
-  const [profile, setProfile] = useState<TravelerProfile>(DEMO_PERSONA_FALLBACK);
+  const [facts, setFacts] = useState<LongTermMemoryFact[]>([]);
+  const [profile, setProfile] = useState<TravelerProfile>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,9 +22,10 @@ export function MemorySection() {
     try {
       const res = await fetchMemoryProfile(DEMO_TRAVELER_ID);
       if (res.facts?.length) setFacts(res.facts);
+      else setFacts([]);
       if (res.profile) setProfile({ ...DEMO_PERSONA_FALLBACK, ...res.profile });
     } catch (err) {
-      setError('Backend offline — showing demo facts.');
+      setError('Could not load memory from backend — ensure Aurora is seeded and the API is running.');
     } finally {
       setLoading(false);
     }
@@ -149,6 +139,22 @@ export function MemorySection() {
           </aside>
 
           <div className="mp-memory-table">
+            <div
+              role="note"
+              style={{
+                padding: '8px 12px',
+                fontSize: 12,
+                color: 'var(--mp-muted)',
+                background: 'var(--mp-paper-2)',
+                borderBottom: '1px solid var(--mp-line)',
+                lineHeight: 1.5,
+              }}
+            >
+              <b style={{ color: 'var(--mp-ink)' }}>Demo-only mutations.</b>{' '}
+              <code>edit</code> and <code>forget</code> update this view only — they don&apos;t write to
+              Aurora. The production memory pipeline mutates <code>traveler_preferences</code> via the{' '}
+              <code>memory.write_fact</code> tool (append-only, audit-logged).
+            </div>
             <div className="row head">
               <div>Key</div>
               <div>Value</div>
@@ -170,8 +176,13 @@ export function MemorySection() {
                   <div className="actions">
                     <button
                       type="button"
+                      title="Demo only — does not persist to Aurora"
+                      aria-label="Edit value (demo only — not persisted)"
                       onClick={() => {
-                        const next = window.prompt(`Edit value for "${f.key}"`, f.value);
+                        const next = window.prompt(
+                          `Edit value for "${f.key}" (demo only — does not persist to Aurora)`,
+                          f.value,
+                        );
                         if (next != null && next.trim()) {
                           setFacts((prev) =>
                             prev.map((row, j) => (j === i ? { ...row, value: next.trim() } : row)),
@@ -181,7 +192,12 @@ export function MemorySection() {
                     >
                       edit
                     </button>
-                    <button type="button" onClick={() => setFacts((prev) => prev.filter((_, j) => j !== i))}>
+                    <button
+                      type="button"
+                      title="Demo only — does not delete from Aurora"
+                      aria-label="Forget fact (demo only — not persisted)"
+                      onClick={() => setFacts((prev) => prev.filter((_, j) => j !== i))}
+                    >
                       forget
                     </button>
                   </div>

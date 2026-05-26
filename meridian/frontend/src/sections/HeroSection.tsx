@@ -100,10 +100,10 @@ export function HeroSection({ scrollY: _scrollY }: HeroSectionProps) {
         </div>
         <div className="mp-hero-stats">
           <div className="mp-stat"><b>30</b>curated packages</div>
-          <div className="mp-stat"><b>5</b>phases live</div>
+          <div className="mp-stat"><b>5</b>orchestration modes</div>
           <div className="mp-stat"><b>1024d</b>Cohere v4</div>
           <div className="mp-stat"><b>~340ms</b>p50 latency</div>
-          <div className="mp-stat"><b>OTel</b>trace export</div>
+          <div className="mp-stat"><b>99.8%</b>MCP tool uptime</div>
         </div>
       </div>
 

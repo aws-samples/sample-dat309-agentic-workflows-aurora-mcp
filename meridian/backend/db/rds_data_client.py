@@ -3,6 +3,16 @@ RDS Data API Client for Meridian.
 
 Provides database access through AWS RDS Data API for Aurora Serverless v2.
 This is used when the cluster is in a private VPC and not directly accessible.
+
+AWS docs:
+  - RDS Data API overview:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+  - ExecuteStatement (boto3):
+    https://docs.aws.amazon.com/rdsdataservice/latest/APIReference/API_ExecuteStatement.html
+  - BeginTransaction (RLS-scoped sessions in Phase 4):
+    https://docs.aws.amazon.com/rdsdataservice/latest/APIReference/API_BeginTransaction.html
+  - Storing Aurora credentials in Secrets Manager:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/rds-secrets-manager.html
 """
 
 import os
@@ -222,6 +232,15 @@ class RDSDataClient:
     ):
         """
         Open a transaction with RLS session variables set.
+
+        Uses RDS Data API ``BeginTransaction`` so ``SET LOCAL`` / ``set_config``
+        GUCs stay scoped to this transaction — see ``examples/rls_for_agents.sql``.
+
+        AWS docs:
+          - BeginTransaction:
+            https://docs.aws.amazon.com/rdsdataservice/latest/APIReference/API_BeginTransaction.html
+          - CommitTransaction:
+            https://docs.aws.amazon.com/rdsdataservice/latest/APIReference/API_CommitTransaction.html
 
         Usage::
 

@@ -29,14 +29,14 @@ Phases 1–3 execute inside `chat.py` (`phase1_search`, `phase2_search`, `phase3
 | `backend/db/` | RDS Data API (incl. transaction + RLS-scoped session helpers), embeddings, `schema.sql` |
 | `backend/mcp/` | Phase 2 client → public `awslabs.postgres-mcp-server`; **custom `memory_server.py`** + its stdio client |
 | `backend/memory/` | Aurora traveler memory store + audit writer |
-| `backend/agentcore/` | Bedrock AgentCore Memory + Identity adapters (graceful no-op if unconfigured) |
+| `backend/agentcore/` | Bedrock AgentCore Runtime, Gateway, Memory, Identity — real API calls only |
 | `backend/agents/phase4/` | Live concierge + memory agents |
-| `backend/agents/phase5/` | LangGraph `Phase5Workflow` (StateGraph + PostgresSaver) |
+| `backend/agents/phase5/` | LangGraph `OrchestrationAgent` (StateGraph + PostgresSaver) |
 | `backend/agents/phase1–3/` | Reference Strands agents (workshop code samples) |
 | `backend/routers/` | FastAPI routes |
 | `examples/rls_for_agents.sql` | Aurora RLS policies + `agent_audit_log` + `agent_iam_audit` view |
 | `examples/memory_mcp_demo.py` | Stand-alone smoke test for the custom memory MCP server |
-| `scripts/provision_agentcore_memory.py` | Idempotent control-plane provisioner for AgentCore Memory |
+| `scripts/sync_agentcore_env.py` | Sync `agentcore deploy` state → `.env` |
 | `backend/catalog_compat.py` | Maps `trip_packages` rows → legacy API `Product` shape |
 | `frontend/src/sections/` | Live SPA sections |
 | `frontend/src/components/` | Shared UI (nav, trace, persona, thumbs) |

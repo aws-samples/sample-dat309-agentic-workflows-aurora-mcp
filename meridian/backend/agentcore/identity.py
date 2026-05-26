@@ -4,19 +4,33 @@ Bedrock AgentCore Identity adapter for Phase 4.
 Identity is what lets us tell the audit trail "this turn ran as workload
 identity X under IAM principal Y."  In a fully provisioned setup the
 adapter exchanges the workload identity token for a scoped resource
-credential before each turn; in workshop mode it falls back to
-`sts:GetCallerIdentity` so we still surface the IAM principal honestly.
+credential before each turn.
 
-Configuration (.env):
+Configuration (preferred — @aws/agentcore CLI):
+
+    cd meridian/agentcore
+    agentcore add identity --name meridian-workload   # when available in your CLI version
+    agentcore deploy -y
+
+Or override manually after deploy:
 
     AGENTCORE_WORKLOAD_IDENTITY=arn:aws:bedrock-agentcore:...:workload-identity/meridian
     AGENTCORE_RESOURCE_PROVIDER=meridian-aurora-rds-data
-    AGENTCORE_REGION=us-east-1
+    AGENTCORE_WORKLOAD_TOKEN=  # minted by Runtime — not set by hand in production
 
-API references:
-- create_workload_identity:    https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore-control/client/create_workload_identity.html
-- get_resource_oauth2_token:   https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore/client/get_resource_oauth2_token.html
-- get_resource_api_key:        https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore/client/get_resource_api_key.html
+AWS docs:
+  - AgentCore Identity:
+    https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity.html
+  - IAM GetCallerIdentity (fallback principal lookup):
+    https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html
+
+API references (boto3):
+- create_workload_identity:
+  https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore-control/client/create_workload_identity.html
+- get_resource_oauth2_token:
+  https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore/client/get_resource_oauth2_token.html
+- get_resource_api_key:
+  https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore/client/get_resource_api_key.html
 """
 
 from __future__ import annotations
@@ -25,6 +39,8 @@ import logging
 import os
 from dataclasses import dataclass
 from typing import Optional
+
+from backend.agentcore.cli_config import resolve_agentcore_config
 
 import boto3
 from botocore.exceptions import ClientError
@@ -49,11 +65,11 @@ class AgentCoreIdentityAdapter:
         resource_provider: Optional[str] = None,
         region: Optional[str] = None,
     ) -> None:
-        self.workload_identity = workload_identity or os.getenv("AGENTCORE_WORKLOAD_IDENTITY")
-        self.resource_provider = resource_provider or os.getenv("AGENTCORE_RESOURCE_PROVIDER")
-        self.region = region or os.getenv(
-            "AGENTCORE_REGION", os.getenv("AWS_DEFAULT_REGION", "us-east-1")
-        )
+        cli = resolve_agentcore_config()
+        self.workload_identity = workload_identity or cli.workload_identity
+        self.resource_provider = resource_provider or cli.resource_provider
+        self.region = region or cli.region
+        self.cli_sources = cli.sources
         self._sts = None
         self._runtime = None
         self._iam_identity_cache: Optional[str] = None

@@ -18,7 +18,7 @@
 | `backend/db/embedding_service.py` | Cohere Embed v4 on Bedrock (1024d) |
 | `backend/mcp/mcp_client.py` | MCP client (Phase 2) |
 | `backend/agents/phase3/supervisor.py` | Strands supervisor + specialist agents |
-| `backend/agents/phase4/concierge.py` | `ConciergeOrchestrator` (Phase 4) |
+| `backend/agents/phase4/concierge.py` | `MemoryAgent` (Phase 4) |
 | `backend/agents/phase4/memory_agent.py` | Strands `@tool` memory recall/persist |
 | `backend/memory/store.py` | Aurora memory CRUD |
 | `frontend/src/sections/AgentSection.tsx` | Live demo UI (chat + trace) |
@@ -58,15 +58,20 @@ python scripts/init_aurora_schema.py
 python scripts/seed_data.py
 ```
 
-**Optional — provision AgentCore Memory for Phase 4**
+**Optional — provision AgentCore for Phase 4 (@aws/agentcore CLI, Node-based)**
 
 ```bash
-python scripts/provision_agentcore_memory.py --name meridian-session
-# copy the printed id into .env as AGENTCORE_MEMORY_ID
+npm install -g @aws/agentcore
+cd agentcore
+agentcore add memory --name meridian-session --strategies SEMANTIC --expiry 30
+agentcore add gateway --name meridian-aurora --authorizer-type AWS_IAM
+# agentcore add gateway-target ...  # Aurora MCP / Lambda / OpenAPI target
+agentcore deploy -y
+cd .. && python scripts/sync_agentcore_env.py --write
 ```
 
-Without this the concierge logs an honest "AgentCore Memory unconfigured"
-in the trace and falls back to Aurora-only memory. The demo still runs.
+See `agentcore/README.md`. Without deploy, the concierge logs honest "not deployed"
+spans and falls back to Aurora + in-process Strands. The demo still runs.
 
 ---
 
@@ -204,7 +209,7 @@ and gets back `{}` — the RLS policy refuses to leak rows.
 | `Romantic week in Europe` | Packages in EU / romance-themed (Phase 1 returned 0) |
 | `Weekend in Paris under $2k` | Price-aware semantic match |
 | `Family-friendly beach resort` | Intent-based matches |
-| `Is the Maldives package available?` | Routes to ProductAgent availability path |
+| `Is the Maldives package available?` | Routes to PackageAgent availability path |
 
 ### The money shot — cross-phase comparison
 
@@ -250,7 +255,7 @@ Run a second query without clearing chat — show `conversation_id` continuity a
 
 ### Optional code walkthrough
 
-- `backend/agents/phase4/concierge.py` → `ConciergeOrchestrator.process_turn`
+- `backend/agents/phase4/concierge.py` → `MemoryAgent.process_turn`
 - `backend/agents/phase4/memory_agent.py` → `@tool` methods
 - `backend/memory/store.py` → Aurora reads/writes
 - `backend/agentcore/memory.py` → AgentCore Memory `create_event` / `list_memory_records`
@@ -359,7 +364,7 @@ aws rds-data execute-statement \
 
 ### What changed
 
-- Same Aurora data, same SearchAgent / AvailabilityAgent / MemoryAgent.
+- Same Aurora data, same SearchAgent / PackageAgent / MemoryAgent.
 - New orchestrator: `agents/phase5/workflow.py` builds a `StateGraph`:
 
   ```

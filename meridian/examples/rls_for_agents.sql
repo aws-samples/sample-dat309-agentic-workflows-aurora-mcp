@@ -20,6 +20,14 @@
 --      they share the same DB role.
 --
 -- Both are deployed by `python scripts/init_aurora_schema.py`.
+--
+-- AWS docs:
+--   RDS Data API (app sets GUCs via ExecuteStatement inside a transaction):
+--     https://docs.aws.amazon.com/rdsdataservice/latest/APIReference/API_BeginTransaction.html
+--   Aurora PostgreSQL:
+--     https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.AuroraPostgreSQL.html
+--   PostgreSQL RLS (Aurora PostgreSQL compatible):
+--     https://www.postgresql.org/docs/current/ddl-rowsecurity.html
 -- =============================================================================
 
 -- ----------------------------------------------------------------------------

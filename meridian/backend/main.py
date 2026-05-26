@@ -17,6 +17,12 @@ from pydantic import BaseModel
 # Load environment variables from .env file
 load_dotenv()
 
+from backend.logging_config import setup_logging, log_startup_banner
+
+# Honour LOG_LEVEL / LOG_JSON from .env before other imports log anything.
+setup_logging()
+log_startup_banner()
+
 # Import routers
 from backend.routers import chat_router, products_router, packages_router, memory_router
 
@@ -45,6 +51,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     print("Starting Meridian Backend...")
     print(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
     print(f"AWS Region: {os.getenv('AWS_DEFAULT_REGION', 'us-east-1')}")
+    print(f"Log level: {os.getenv('LOG_LEVEL', 'INFO')} · agent verbose: {os.getenv('LOG_AGENT_VERBOSE', 'true')}")
     
     yield
     

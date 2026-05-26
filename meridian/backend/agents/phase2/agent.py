@@ -1,13 +1,25 @@
 """
-Phase 2 Agent - Agent with MCP abstraction layer.
+Phase 2 — MCP Agent (Strands + postgres-mcp-server).
 
-Implements the scalable pattern using:
-- Strands SDK with MCP integration
-- awslabs.postgres-mcp-server for RDS Data API
-- Claude Opus 4.7 via Amazon Bedrock
-- Auto-discovered tools from MCP server
+Presenter walkthrough
+---------------------
+Show this module when explaining MCP as a *transport* layer:
+  • `MCPClient` discovers tools from awslabs.postgres-mcp-server at runtime
+  • Same Aurora schema as Phase 1 — different wire protocol (MCP vs inline SQL)
 
-Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
+Live demo note: `chat.py` → `phase2_search()` uses `backend/mcp/mcp_client.py`
+for the workshop demo path. This file shows the Strands-native MCP integration.
+
+AWS docs:
+  - RDS Data API (postgres-mcp-server ``rdsapi`` mode):
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+  - Aurora PostgreSQL:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.AuroraPostgreSQL.html
+
+MCP server (awslabs):
+  https://github.com/awslabs/mcp/tree/main/src/postgres-mcp-server
+
+Requirements: 10.1–10.5
 """
 
 import os
@@ -19,6 +31,8 @@ from strands import Agent
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
 from pydantic import BaseModel
+
+from backend.config import config
 
 
 class ActivityEntry(BaseModel):
@@ -40,7 +54,7 @@ class AgentResponse(BaseModel):
     order: Optional[dict] = None
 
 
-class Phase2Agent:
+class MCPAgent:
     """
     Phase 2 travel concierge with MCP abstraction layer.
     
@@ -66,7 +80,7 @@ class Phase2Agent:
         # Initialize Bedrock model - Claude Opus 4.7 (cross-region inference)
         # Requirement 10.3
         self.model = BedrockModel(
-            model_id="global.anthropic.claude-opus-4-7-v1",
+            model_id=config.bedrock.model_id,
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
         
@@ -170,7 +184,7 @@ Trip types:
             details=details,
             sql_query=sql_query,
             execution_time_ms=execution_time_ms,
-            agent_name="Phase2Agent"
+            agent_name="MCPAgent"
         )
         self.activity_callback(entry)
     
@@ -254,16 +268,8 @@ Trip types:
             await self.mcp_client.disconnect()
 
 
-def create_phase2_agent(
+def create_mcp_agent(
     activity_callback: Optional[Callable[[ActivityEntry], Any]] = None
-) -> Phase2Agent:
-    """
-    Create a Phase 2 agent instance.
-    
-    Args:
-        activity_callback: Optional callback for activity updates
-        
-    Returns:
-        Configured Phase2Agent instance
-    """
-    return Phase2Agent(activity_callback=activity_callback)
+) -> MCPAgent:
+    """Create an MCP agent instance."""
+    return MCPAgent(activity_callback=activity_callback)

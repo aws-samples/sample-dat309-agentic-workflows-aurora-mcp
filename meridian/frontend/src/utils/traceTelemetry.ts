@@ -42,7 +42,7 @@ function buildPhase4Preamble(
     span({
       activity_type: 'reasoning',
       title: 'Concierge session bootstrap',
-      agent_name: 'ConciergeOrchestrator',
+      agent_name: 'MemoryAgent',
       agent_file: 'agents/phase4/concierge.py',
       execution_time_ms: 18,
       telemetry: {
@@ -62,7 +62,7 @@ function buildPhase4Preamble(
     span({
       activity_type: 'reasoning',
       title: 'Load short-term memory (session)',
-      agent_name: 'MemoryAgent',
+      agent_name: 'TravelerMemoryAgent',
       agent_file: 'agents/phase4/memory_agent.py',
       execution_time_ms: 12,
       telemetry: {
@@ -85,7 +85,7 @@ function buildPhase4Preamble(
     span({
       activity_type: 'database',
       title: 'Recall long-term memory (Aurora)',
-      agent_name: 'MemoryAgent',
+      agent_name: 'TravelerMemoryAgent',
       agent_file: 'agents/phase4/memory_agent.py',
       execution_time_ms: 34,
       sql_query:
@@ -119,7 +119,7 @@ function buildPhase2Preamble(query: string, traceId: string, msgs: Message[]): A
     span({
       activity_type: 'reasoning',
       title: 'Session context loaded',
-      agent_name: 'Phase2Agent',
+      agent_name: 'MCPAgent',
       agent_file: 'agents/phase2/agent.py',
       execution_time_ms: 8,
       telemetry: {
@@ -163,7 +163,7 @@ function buildPhase1Preamble(_query: string, traceId: string): ActivityEntry[] {
     span({
       activity_type: 'reasoning',
       title: 'Direct agent invocation',
-      agent_name: 'Phase1Agent',
+      agent_name: 'SQLAgent',
       agent_file: 'agents/phase1/agent.py',
       execution_time_ms: 6,
       telemetry: {
@@ -254,7 +254,7 @@ function enrichActivity(a: ActivityEntry, phase: 1 | 2 | 3 | 4 | 5, query: strin
   } else if (type === 'inventory') {
     base.telemetry = {
       category: 'tool',
-      component: 'AvailabilityAgent',
+      component: 'PackageAgent',
       status: 'ok',
       fields: [
         { label: 'check', value: 'departure slots via Aurora' },
@@ -268,7 +268,7 @@ function enrichActivity(a: ActivityEntry, phase: 1 | 2 | 3 | 4 | 5, query: strin
       status: 'ok',
       tokens: { input: 890, output: 210 },
       fields: [
-        { label: 'model', value: 'global.anthropic.claude-opus-4-7-v1' },
+        { label: 'model', value: 'global.anthropic.claude-opus-4-7' },
         { label: 'format', value: 'trip_cards + natural language' },
         { label: 'grounding', value: 'Aurora rows + memory facts' },
       ],
@@ -292,7 +292,7 @@ function buildSynthesisStep(phase: 1 | 2 | 3 | 4 | 5, productCount: number): Act
   return span({
     activity_type: 'result',
     title: 'Compose grounded response',
-    agent_name: phase >= 3 ? (phase === 4 ? 'ConciergeOrchestrator' : 'SupervisorAgent') : `Phase${phase}Agent`,
+    agent_name: phase >= 3 ? (phase === 4 ? 'MemoryAgent' : phase === 5 ? 'OrchestrationAgent' : 'RetrievalAgent') : phase === 2 ? 'MCPAgent' : 'SQLAgent',
     agent_file:
       phase === 4
         ? 'agents/phase4/concierge.py'

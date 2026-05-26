@@ -1,8 +1,43 @@
 """
-Bedrock AgentCore Memory + Identity wrappers used by Phase 4.
+Bedrock AgentCore adapters for Phase 4 (Memory Agent).
 
-Aurora is still the durable system of record for traveler preferences and
-interaction embeddings.  AgentCore Memory handles the *session-store* slice
-of memory the abstract calls out: ephemeral, multi-turn context that the
-managed service summarizes and serves back.
+Provision and deploy with the **Node-based @aws/agentcore CLI** (preferred):
+
+    npm install -g @aws/agentcore
+    cd meridian/agentcore && agentcore deploy -y
+
+Resource ARNs/URLs resolve via ``backend/agentcore/cli_config.py`` from
+``agentcore/.cli/deployed-state.json`` or ``agentcore status --json``.
+
+Phase 4 platform story:
+  Runtime  — session-isolated agent hosting
+  Gateway  — managed MCP (tools/list + tools/call)
+  Memory   — managed session store
+  Identity — workload identity + resource credentials
+
+AWS docs:
+  - AgentCore overview:
+    https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/what-is-bedrock-agentcore.html
+  - Runtime / Gateway / Memory / Identity dev guide index:
+    https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/
 """
+
+from backend.agentcore.cli_config import (
+    agentcore_project_dir,
+    deployed_state_path,
+    resolve_agentcore_config,
+)
+from backend.agentcore.gateway import get_agentcore_gateway
+from backend.agentcore.identity import get_agentcore_identity
+from backend.agentcore.memory import get_agentcore_memory
+from backend.agentcore.runtime import get_agentcore_runtime
+
+__all__ = [
+    "agentcore_project_dir",
+    "deployed_state_path",
+    "resolve_agentcore_config",
+    "get_agentcore_gateway",
+    "get_agentcore_identity",
+    "get_agentcore_memory",
+    "get_agentcore_runtime",
+]

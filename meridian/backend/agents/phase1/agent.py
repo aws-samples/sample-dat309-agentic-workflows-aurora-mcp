@@ -1,13 +1,25 @@
 """
-Phase 1 Agent - Single agent with direct database access.
+Phase 1 — SQL Agent (Strands + direct Aurora access).
 
-Implements the MVP pattern using:
-- Strands SDK (strands-agents) for agent framework
-- Claude Opus 4.7 via Amazon Bedrock (cross-region inference)
-- RDS Data API for Aurora PostgreSQL access
-- Tools for package lookup, availability check, price calculation, booking processing
+Presenter walkthrough
+---------------------
+Show this module when explaining the Strands `@tool` pattern:
+  • `Agent(model=BedrockModel(...), tools=[...])` — Bedrock picks tools per turn
+  • Each `@tool` runs SQL via RDS Data API and logs queries for the trace
 
-Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
+Live demo note: `chat.py` → `phase1_search()` runs the same keyword SQL
+procedurally (no LLM loop) so Phase 1 demos stay deterministic. This file
+is the production-shaped Strands implementation.
+
+AWS docs:
+  - RDS Data API:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+  - Bedrock model IDs / inference profiles (``BedrockModel``):
+    https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids.html
+  - Cross-Region inference profiles (``global.*`` model IDs):
+    https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html
+
+Requirements: 9.1–9.5
 """
 
 import os
@@ -21,6 +33,7 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 from pydantic import BaseModel
 
+from backend.config import config
 from backend.db.rds_data_client import get_rds_data_client
 
 
@@ -43,7 +56,7 @@ class AgentResponse(BaseModel):
     order: Optional[dict] = None
 
 
-class Phase1Agent:
+class SQLAgent:
     """
     Phase 1 travel concierge with direct database access.
     
@@ -71,11 +84,11 @@ class Phase1Agent:
         # Initialize Bedrock model - Claude Opus 4.7 (cross-region inference)
         # Requirement 9.2
         self.model = BedrockModel(
-            model_id="global.anthropic.claude-opus-4-7-v1",
+            model_id=config.bedrock.model_id,
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
         
-        # Create agent with tools
+        # Register tools with Strands — Bedrock receives JSON schemas from @tool docstrings.
         self.agent = Agent(
             model=self.model,
             tools=[
@@ -130,7 +143,7 @@ Trip types in the catalog:
             details=details,
             sql_query=sql_query,
             execution_time_ms=execution_time_ms,
-            agent_name="Phase1Agent"
+            agent_name="SQLAgent"
         )
         self.activity_callback(entry)
     
@@ -138,6 +151,9 @@ Trip types in the catalog:
     async def _lookup_product(self, package_id: str) -> dict:
         """
         Look up a trip package by its ID.
+
+        Strands exposes this method to Bedrock as a callable tool. The agent
+        chooses when to invoke it based on the traveler's message.
 
         Args:
             package_id: Package identifier (e.g., 'CTY-002')
@@ -431,16 +447,8 @@ Trip types in the catalog:
         )
 
 
-def create_phase1_agent(
+def create_sql_agent(
     activity_callback: Optional[Callable[[ActivityEntry], Any]] = None
-) -> Phase1Agent:
-    """
-    Create a Phase 1 agent instance.
-    
-    Args:
-        activity_callback: Optional callback for activity updates
-        
-    Returns:
-        Configured Phase1Agent instance
-    """
-    return Phase1Agent(activity_callback=activity_callback)
+) -> SQLAgent:
+    """Create a SQL agent instance."""
+    return SQLAgent(activity_callback=activity_callback)

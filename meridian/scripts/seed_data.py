@@ -1,5 +1,13 @@
 """
 Seed Meridian Aurora: trip packages (with embeddings), travelers, profiles, preferences.
+
+AWS docs:
+  - RDS Data API (batch inserts):
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+  - Cohere Embed v4 (package embeddings):
+    https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-embed-v4.html
+  - Aurora pgvector:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Extensions.html#AuroraPostgreSQL.Extensions.pgvector
 """
 import json
 import os
@@ -22,7 +30,7 @@ from travel_catalog import (
 load_dotenv()
 console = Console()
 
-EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "global.cohere.embed-v4")
+EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL", "cohere.embed-v4:0")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
 BEDROCK_REGION = os.getenv("BEDROCK_REGION", "us-west-2")
 AURORA_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")

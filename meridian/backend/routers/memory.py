@@ -1,4 +1,9 @@
-"""Memory API — long-term preferences from Aurora."""
+"""Memory API — long-term preferences from Aurora.
+
+AWS docs:
+  - RDS Data API:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+"""
 
 from typing import List, Optional
 

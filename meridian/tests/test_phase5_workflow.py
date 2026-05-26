@@ -14,7 +14,7 @@ from typing import Any, List, Tuple
 import pytest
 
 from backend.agents.phase5.workflow import (
-    Phase5Workflow,
+    OrchestrationAgent,
     _classify_intent,
 )
 
@@ -32,14 +32,14 @@ def test_classify_routes_memory_query() -> None:
     assert _classify_intent("Do you remember our last trip?") == "memory_recall"
 
 
-def _build_workflow() -> Phase5Workflow:
+def _build_workflow() -> OrchestrationAgent:
     async def fake_search(q: str, limit: int = 5) -> Tuple[List[Any], List[Any]]:
         return ([{"package_id": "pkg-a", "name": "Kyoto cultural"}], [])
 
     async def fake_avail(q: str) -> Tuple[List[Any], List[Any], str]:
         return ([{"package_id": "pkg-a", "date": "2026-10-12"}], [], "")
 
-    return Phase5Workflow(search_fn=fake_search, availability_fn=fake_avail)
+    return OrchestrationAgent(search_fn=fake_search, availability_fn=fake_avail)
 
 
 def test_workflow_search_branch() -> None:

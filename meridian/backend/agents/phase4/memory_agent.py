@@ -1,10 +1,27 @@
 """
-Phase 4 Memory Agent — Strands SDK with @tool decorators.
+Phase 4 — Traveler Memory Agent (Strands @tool memory specialist).
 
-Each tool reads or writes Aurora memory tables via RDS Data API:
-- conversation_messages (short-term session)
-- customer_preferences (long-term facts)
-- interaction_embeddings (semantic recall)
+Presenter walkthrough
+---------------------
+This is the file to open when explaining Strands tool support for memory:
+  • Each `@tool` maps 1:1 to an Aurora table or pgvector recall path
+  • Tools are registered on both this agent AND the concierge's Agent(...)
+  • `_transaction_id` pins RLS scope when called inside `scoped_session`
+
+Tables:
+  • conversation_messages  — short-term session (recall_session_context)
+  • traveler_preferences   — long-term facts (recall_traveler_preferences)
+  • trip_interactions      — semantic recall (recall_similar_interactions)
+
+AWS docs:
+  - RDS Data API (all reads/writes):
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+  - Cohere Embed v4 (trip_interactions pgvector recall):
+    https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-embed-v4.html
+  - Aurora pgvector:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Extensions.html#AuroraPostgreSQL.Extensions.pgvector
+  - RLS policies (see ``examples/rls_for_agents.sql``):
+    https://www.postgresql.org/docs/current/ddl-rowsecurity.html
 """
 
 import os
@@ -16,6 +33,7 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 from pydantic import BaseModel
 
+from backend.config import config
 from backend.memory.store import get_memory_store
 
 
@@ -32,7 +50,7 @@ class ActivityEntry(BaseModel):
     telemetry: Optional[Dict[str, Any]] = None
 
 
-class MemoryAgent:
+class TravelerMemoryAgent:
     """
     Memory specialist with Strands @tool methods for Aurora-backed recall and persistence.
     """
@@ -46,7 +64,7 @@ class MemoryAgent:
         # transaction so the RLS session variables stay in scope.
         self._transaction_id: Optional[str] = None
         self.model = BedrockModel(
-            model_id="global.anthropic.claude-opus-4-7-v1",
+            model_id=config.bedrock.model_id,
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
         )
         self.agent = Agent(
@@ -58,8 +76,8 @@ class MemoryAgent:
                 self.persist_turn,
             ],
             system_prompt=(
-                "You are the Memory Agent for Meridian travel concierge. "
-                "Use @tool methods to load session context and customer preferences "
+                "You are the Traveler Memory Agent for Meridian concierge. "
+                "Use @tool methods to load session context and traveler preferences "
                 "from Aurora before search, and persist turns after responding."
             ),
         )
@@ -82,7 +100,7 @@ class MemoryAgent:
                 details=details or f"Invoked {tool_name} via strands-agents",
                 sql_query=sql_query,
                 execution_time_ms=execution_time_ms,
-                agent_name="MemoryAgent",
+                agent_name="TravelerMemoryAgent",
                 agent_file=self.AGENT_FILE,
                 telemetry=telemetry,
             )
@@ -167,7 +185,7 @@ class MemoryAgent:
         Semantic recall of similar past interactions via pgvector.
 
         Args:
-            customer_id: Customer identifier
+            traveler_id: Traveler identifier (e.g. trv_meridian_demo)
             query: Current user query for embedding similarity
             limit: Maximum interactions to return
         """
@@ -211,11 +229,11 @@ class MemoryAgent:
         Persist the current turn to short-term and semantic memory in Aurora.
 
         Args:
-            customer_id: Customer identifier
+            traveler_id: Traveler identifier
             conversation_id: Active conversation
             user_message: User utterance
             assistant_message: Assistant response summary
-            products_shown: Optional list of trip packages shown
+            packages_shown: Optional list of trip packages shown this turn
         """
         start = datetime.utcnow()
         tx = self._transaction_id
@@ -253,7 +271,7 @@ class MemoryAgent:
         return {"interaction_id": interaction_id, "status": "persisted"}
 
 
-def create_memory_agent(
+def create_traveler_memory_agent(
     activity_callback: Optional[Callable[[ActivityEntry], Any]] = None,
-) -> MemoryAgent:
-    return MemoryAgent(activity_callback=activity_callback)
+) -> TravelerMemoryAgent:
+    return TravelerMemoryAgent(activity_callback=activity_callback)

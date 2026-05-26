@@ -1,4 +1,14 @@
-"""Aurora-backed traveler memory for Phase 4."""
+"""
+Aurora-backed traveler memory for Phase 4.
+
+AWS docs:
+  - RDS Data API:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+  - Cohere Embed v4 (interaction embeddings):
+    https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-embed-v4.html
+  - Aurora pgvector:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Extensions.html#AuroraPostgreSQL.Extensions.pgvector
+"""
 
 import json
 import uuid
@@ -19,6 +29,38 @@ class MemoryStore:
     def _vector_literal(values: List[float]) -> str:
         return "[" + ",".join(str(v) for v in values) + "]"
 
+    async def ensure_traveler_exists(
+        self,
+        traveler_id: str,
+        transaction_id: Optional[str] = None,
+    ) -> None:
+        """Idempotently make sure a row exists in ``travelers`` for this id.
+
+        The Phase 4 demo flow tries to insert a ``conversations`` row scoped
+        to ``traveler_id`` on the first turn. ``conversations`` has a NOT
+        NULL FK to ``travelers``, so if the demo traveler was never seeded
+        (e.g. presenter rebuilt Aurora but skipped ``scripts/seed_data.py``),
+        that INSERT fails with::
+
+            ERROR: insert or update on table "conversations" violates
+            foreign key constraint "conversations_traveler_id_fkey"
+
+        We upsert a minimal stub row here. The real profile from
+        ``seed_data.py`` later overrides the placeholder fields via the
+        ``ON CONFLICT`` clause in that script (which uses ``DO UPDATE``).
+        """
+        placeholder_name = f"Traveler {traveler_id}"
+        placeholder_email = f"{traveler_id}@meridian.demo"
+        await self.db.execute(
+            """
+            INSERT INTO travelers (traveler_id, full_name, email, home_airport)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (traveler_id) DO NOTHING
+            """,
+            (traveler_id, placeholder_name, placeholder_email, None),
+            transaction_id=transaction_id,
+        )
+
     async def get_or_create_conversation(
         self,
         traveler_id: str,
@@ -33,6 +75,10 @@ class MemoryStore:
             )
             if rows:
                 return conversation_id
+
+        # Guarantee FK target exists before we touch ``conversations``.
+        # Cheap upsert; idempotent across turns.
+        await self.ensure_traveler_exists(traveler_id, transaction_id=transaction_id)
 
         new_id = conversation_id or f"conv_{uuid.uuid4().hex[:12]}"
         await self.db.execute(

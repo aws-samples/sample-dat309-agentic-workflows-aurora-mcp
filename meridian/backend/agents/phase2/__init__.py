@@ -8,6 +8,6 @@ This agent demonstrates the scalable pattern with:
 - Auto-discovered tools from MCP server
 """
 
-from .agent import Phase2Agent, create_phase2_agent
+from .agent import MCPAgent, create_mcp_agent
 
-__all__ = ["Phase2Agent", "create_phase2_agent"]
+__all__ = ["MCPAgent", "create_mcp_agent"]

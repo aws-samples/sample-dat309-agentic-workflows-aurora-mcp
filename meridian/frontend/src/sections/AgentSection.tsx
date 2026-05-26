@@ -7,20 +7,26 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FadeIn } from '../components/FadeIn';
-import { GanttSpan } from '../components/GanttSpan';
+import { ProConciergeResponse } from '../components/ProConciergeResponse';
+import { ProTraceTimeline } from '../components/ProTraceTimeline';
 import { DEMO_TRAVELER_ID, DEMO_PERSONA_FALLBACK } from '../components/TravelerPersona';
 import { ProductThumb } from '../components/ProductThumb';
 import { useAgentBridge } from '../context/AgentBridge';
 import { enrichTraceActivities } from '../utils/traceTelemetry';
+import {
+  activitiesToStageSpans,
+  buildReasoningChain,
+  sumSpanLatency,
+} from '../lib/activityToStageSpan';
 import { fetchMemoryProfile, sendChatMessage, processOrder } from '../api/client';
 import type { ActivityEntry, LongTermMemoryFact, Message, Phase, Product } from '../types';
 
 const PHASE_LABELS: Record<Phase, string> = {
-  1: 'SQL',
-  2: 'MCP',
-  3: 'Retrieval',
-  4: 'Memory',
-  5: 'Orchestration',
+  1: 'SQL Agent',
+  2: 'MCP Agent',
+  3: 'Retrieval Agent',
+  4: 'Memory Agent',
+  5: 'Orchestration Agent',
 };
 
 const PHASE_INFO: Record<Phase, {
@@ -51,8 +57,13 @@ const PHASE_INFO: Record<Phase, {
     ],
   },
   4: {
-    beat: 'Production. Knows Alex & Jordan, Tokyo Oct 12–19, the shellfish allergy. Grounded in Aurora.',
-    capabilities: ['traveler_preferences', 'RLS in RDS Data API tx', 'AgentCore Memory mirror'],
+    beat: 'Production. AgentCore Runtime + Gateway + Memory + Identity. Aurora RLS for durable prefs.',
+    capabilities: [
+      'AgentCore Runtime session',
+      'AgentCore Gateway MCP search',
+      'AgentCore Memory mirror',
+      'Aurora RLS + traveler_preferences',
+    ],
     starters: [
       'Tokyo trip for two in October',
       'Beach escape under $2500 — remember our food allergies',
@@ -94,7 +105,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
   1: [
     {
       name: 'sql_filter',
-      agent: 'Phase1Agent',
+      agent: 'SQLAgent',
       signature: 'run_sql(category, max_price)',
       args: [
         { name: 'category', type: 'str', note: 'e.g. "Beach & Resort"' },
@@ -138,35 +149,35 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
     },
     {
       name: 'availability',
-      agent: 'ProductAgent',
-      signature: '_check_inventory_tool(package_id, duration?)',
+      agent: 'PackageAgent',
+      signature: '_check_availability_tool(package_id, duration?)',
       args: [
         { name: 'package_id', type: 'str', note: 'e.g. "CTY-002"' },
         { name: 'duration', type: 'str?', note: 'e.g. "7 days"' },
       ],
       returns: 'departure_slots[]',
-      beat: 'Departure slot lookup against package_inventory.',
-      file: 'agents/phase3/product_agent.py',
+      beat: 'Departure slot lookup against trip_packages.availability.',
+      file: 'agents/phase3/package_agent.py',
       example: 'CTY-002 · 7 days → 4 dates remaining in May',
     },
     {
       name: 'booking',
-      agent: 'OrderAgent',
-      signature: '_process_order_tool(customer_id, items)',
+      agent: 'BookingAgent',
+      signature: '_process_booking_tool(customer_id, items)',
       args: [
         { name: 'customer_id', type: 'str' },
-        { name: 'items', type: 'list[dict]', note: 'product_id, quantity, size' },
+        { name: 'items', type: 'list[dict]', note: 'package_id, travelers_count, duration' },
       ],
-      returns: 'order { id, total, eta }',
-      beat: 'Calculate, hold, and persist a booking against trip_orders.',
-      file: 'agents/phase3/order_agent.py',
-      example: 'Hold CTY-002 · 7 days · 2 travelers → ord_4f2c',
+      returns: 'booking { booking_id, total, estimated_departure }',
+      beat: 'Calculate, hold, and persist a booking against bookings + booking_lines.',
+      file: 'agents/phase3/booking_agent.py',
+      example: 'Hold CTY-002 · 7 days · 2 travelers → BKG-4F2C8A1B',
     },
   ],
   4: [
     {
       name: 'recall_session',
-      agent: 'MemoryAgent',
+      agent: 'TravelerMemoryAgent',
       signature: 'recall_session_context(conversation_id, limit=6)',
       args: [
         { name: 'conversation_id', type: 'str' },
@@ -179,7 +190,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
     },
     {
       name: 'recall_facts',
-      agent: 'MemoryAgent',
+      agent: 'TravelerMemoryAgent',
       signature: 'recall_traveler_preferences(traveler_id, limit=8)',
       args: [
         { name: 'traveler_id', type: 'str' },
@@ -192,7 +203,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
     },
     {
       name: 'similar_trips',
-      agent: 'MemoryAgent',
+      agent: 'TravelerMemoryAgent',
       signature: 'recall_similar_interactions(traveler_id, query, limit=3)',
       args: [
         { name: 'traveler_id', type: 'str' },
@@ -206,7 +217,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
     },
     {
       name: 'persist_turn',
-      agent: 'MemoryAgent',
+      agent: 'TravelerMemoryAgent',
       signature: 'persist_turn(conversation_id, role, text, embedding)',
       args: [
         { name: 'conversation_id', type: 'str' },
@@ -223,7 +234,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
   5: [
     {
       name: 'classify',
-      agent: 'LangGraph node',
+      agent: 'OrchestrationAgent',
       signature: 'classify_intent(state)',
       args: [{ name: 'state', type: 'WorkflowState', note: 'last user msg' }],
       returns: 'intent ∈ {search, availability, recall, plan}',
@@ -246,7 +257,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
     },
     {
       name: 'synthesize',
-      agent: 'LangGraph node',
+      agent: 'OrchestrationAgent',
       signature: 'synthesize_reply(state)',
       args: [{ name: 'state', type: 'WorkflowState' }],
       returns: 'message + follow_ups',
@@ -282,6 +293,8 @@ export function AgentSection() {
   const [, setItinerary] = useState<ItineraryItem[]>([]);
   const [activeTraceTab, setActiveTraceTab] = useState<'spans' | 'memory' | 'sql' | 'cost'>('spans');
   const [activeSkill, setActiveSkill] = useState<string | null>(null);
+  const [selectedSpanIdx, setSelectedSpanIdx] = useState<number | null>(null);
+  const [lastQuery, setLastQuery] = useState<string | null>(null);
 
   const chatFeedRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLInputElement>(null);
@@ -394,6 +407,7 @@ export function AgentSection() {
     const text = (overrideText ?? input).trim();
     if (!text || typing) return;
     lastUserTextRef.current = text;
+    setLastQuery(text);
     setInput('');
     const userMsg: Message = { role: 'user', text };
     const history = [...msgs, userMsg];
@@ -403,6 +417,7 @@ export function AgentSection() {
     setCurrentStep(-1);
     setPendingActs([]);
     setFollowUps([]);
+    setSelectedSpanIdx(null);
 
     const tid = ensureTraceId();
 
@@ -497,6 +512,8 @@ export function AgentSection() {
     setFollowUps([]);
     setTyping(false);
     setActiveSkill(null);
+    setSelectedSpanIdx(null);
+    setLastQuery(null);
   }, []);
 
   const switchPhase = (i: number) => applyPhase((i + 1) as Phase);
@@ -507,6 +524,8 @@ export function AgentSection() {
     setPendingActs([]);
     setCurrentStep(-1);
     setFollowUps([]);
+    setSelectedSpanIdx(null);
+    setLastQuery(null);
     if (activityTimerRef.current) {
       clearTimeout(activityTimerRef.current);
       activityTimerRef.current = null;
@@ -643,10 +662,55 @@ export function AgentSection() {
     [acts],
   );
 
-  const totalSpans = acts.length + pendingActs.length;
-  const traceLive = currentStep >= 0;
+  const stageSpans = useMemo(() => activitiesToStageSpans(acts), [acts]);
+  const reasoningChain = useMemo(() => buildReasoningChain(stageSpans), [stageSpans]);
+  const spanLatencyTotal = useMemo(() => sumSpanLatency(stageSpans), [stageSpans]);
 
-  // SQL spans, memory facts (for tabs)
+  const lastBotMessage = useMemo(() => {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === 'bot') return msgs[i].text;
+    }
+    return '';
+  }, [msgs]);
+
+  const primaryProduct = useMemo(() => {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const m = msgs[i];
+      if (m.role === 'bot' && m.type === 'products' && m.products?.length) {
+        return m.products[0];
+      }
+    }
+    return null;
+  }, [msgs]);
+
+  const modelSpanIdx = useMemo(
+    () => stageSpans.findIndex((s) => s.kind === 'model'),
+    [stageSpans],
+  );
+
+  const traceActiveIndex =
+    currentStep >= 0
+      ? currentStep
+      : !typing && stageSpans.length > 0
+        ? stageSpans.length - 1
+        : -1;
+
+  const replyPhase: 'pending' | 'composing' | 'composed' = (() => {
+    if (typing) {
+      if (!stageSpans.length) return 'pending';
+      if (modelSpanIdx === -1) {
+        return traceActiveIndex >= stageSpans.length - 1 ? 'composing' : 'pending';
+      }
+      if (traceActiveIndex < modelSpanIdx) return 'pending';
+      return 'composing';
+    }
+    if (lastBotMessage && stageSpans.length) return 'composed';
+    return 'pending';
+  })();
+
+  const traceLive = currentStep >= 0;
+  const memorySpanLive = traceActiveIndex >= 0 && stageSpans[traceActiveIndex]?.kind === 'memory';
+  const totalSpans = acts.length + pendingActs.length;
   const sqlSpans = acts.filter((a) => Boolean(a.sql_query));
   const memorySpans = acts.filter((a) =>
     ['memory_short', 'memory_long'].includes(a.telemetry?.category ?? ''),
@@ -663,9 +727,9 @@ export function AgentSection() {
             <div className="mp-label-row">Phases 1–5 · live workspace</div>
             <h2>The room where the concierge works.</h2>
             <p>
-              Three panes: traveler context on the left, dialogue in the middle, a real trace on
-              the right. The trace is permalinked and OpenTelemetry-compatible — devs and travelers
-              see different views of the same source of truth.
+              Three panes: traveler context on the left, dialogue in the middle, a cinematic trace
+              on the right that <em>produces</em> the grounded concierge reply — same detail as the
+              kiosk demo, in Daylight Studio.
             </p>
           </div>
           <div className="actions">
@@ -823,6 +887,12 @@ export function AgentSection() {
                     <div className="sub">{DEMO_TRAVELER_ID}</div>
                   </div>
                 </div>
+                {lastQuery && (
+                  <div className={`mp-intent-prompt${memorySpanLive ? ' memory-live' : ''}`}>
+                    <span className="mp-intent-label">Current intent</span>
+                    <p>{lastQuery}</p>
+                  </div>
+                )}
                 <div className="mp-tv-tags">
                   {travelerTags.map((tag) => (
                     <span key={tag}>{tag}</span>
@@ -1174,37 +1244,25 @@ export function AgentSection() {
               </div>
 
               <div className="mp-trace-list">
-                {activeTraceTab === 'spans' &&
-                  (totalSpans === 0 ? (
-                    <div className="mp-trace-empty">
-                      <div className="pulser">
-                        <span /> <span /> <span />
-                      </div>
-                      <div>Waiting for activity</div>
-                      <div className="hint">Send a query to see the full agent trace</div>
-                    </div>
-                  ) : (
-                    <div className="mp-gantt">
-                      {acts.map((a, i) => (
-                        <GanttSpan
-                          key={a.id ?? `done-${i}`}
-                          entry={a}
-                          index={i}
-                          totalSpans={totalSpans}
-                          state={i === currentStep ? 'live' : 'done'}
-                        />
-                      ))}
-                      {pendingActs.map((a, i) => (
-                        <GanttSpan
-                          key={a.id ?? `pending-${i}`}
-                          entry={a}
-                          index={acts.length + i}
-                          totalSpans={totalSpans}
-                          state="pending"
-                        />
-                      ))}
-                    </div>
-                  ))}
+                {activeTraceTab === 'spans' && (
+                  <>
+                    <ProTraceTimeline
+                      spans={stageSpans}
+                      activities={acts}
+                      activeIndex={traceActiveIndex}
+                      selectedIndex={selectedSpanIdx}
+                      onSelect={setSelectedSpanIdx}
+                      totalLatencyMs={spanLatencyTotal || totalMs}
+                    />
+                    <ProConciergeResponse
+                      reply={lastBotMessage || 'Your grounded reply will appear here as the trace completes.'}
+                      reasoning={reasoningChain}
+                      phase={replyPhase}
+                      primaryProduct={primaryProduct}
+                      visible={typing || Boolean(lastBotMessage) || stageSpans.length > 0}
+                    />
+                  </>
+                )}
 
                 {activeTraceTab === 'memory' &&
                   (memoryFacts.length === 0 ? (

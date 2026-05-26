@@ -8,11 +8,8 @@ import { FadeIn } from '../components/FadeIn';
 import { useAgentBridge } from '../context/AgentBridge';
 import type { Phase } from '../types';
 
-type StepState = 'done' | 'live' | 'next';
-
 interface JourneyStep {
   num: string;
-  state: StepState;
   ph: string;
   title: string;
   serif: string;
@@ -26,8 +23,7 @@ interface JourneyStep {
 const steps: JourneyStep[] = [
   {
     num: '01',
-    state: 'live',
-    ph: 'Phase 01 · Retrieval stack',
+    ph: 'Phase 01 · Filters',
     title: 'SQL',
     serif: '',
     desc: 'The lab. Direct RDS Data API. Fast for exact matches — and it breaks on "romantic week in Europe."',
@@ -38,8 +34,7 @@ const steps: JourneyStep[] = [
   },
   {
     num: '02',
-    state: 'live',
-    ph: 'Phase 02 · Retrieval stack',
+    ph: 'Phase 02 · MCP',
     title: 'MCP',
     serif: '',
     desc: 'MCP changes the interface, not the intelligence. Typed tool, IAM auth — same gap on natural language.',
@@ -50,8 +45,7 @@ const steps: JourneyStep[] = [
   },
   {
     num: '03',
-    state: 'live',
-    ph: 'Phase 03 · Retrieval stack',
+    ph: 'Phase 03 · Intent',
     title: 'Retrieval',
     serif: '',
     desc: 'Where natural language works. Cohere Embed v4 + hybrid pgvector + tsvector. Strands supervisor delegates to specialists.',
@@ -62,19 +56,17 @@ const steps: JourneyStep[] = [
   },
   {
     num: '04',
-    state: 'live',
-    ph: 'Phase 04 · Production',
+    ph: 'Phase 04 · Personal',
     title: 'Memory',
     serif: '',
     desc: 'The concierge knows Alex & Jordan, their Tokyo trip Oct 12–19, the shellfish allergy. None of that\'s in the prompt — it\'s in Aurora. RLS pins per-traveler scope inside an RDS Data API transaction; every turn writes one audit row; AgentCore Memory mirrors session events.',
-    chips: ['traveler_preferences', 'RLS · Data API tx', 'audit log', 'AgentCore Memory'],
+    chips: ['AgentCore Runtime', 'AgentCore Gateway', 'AgentCore Memory', 'Aurora RLS'],
     scale: '~50,000 trips/day · returning travelers expect to be known',
     persona: 'Alex returns: "Tokyo for two in October." Party size, allergy, budget — already known.',
     skills: ['recall_session', 'recall_facts', 'similar_trips', 'persist_turn'],
   },
   {
     num: '05',
-    state: 'live',
     ph: 'Phase 05 · Orchestration',
     title: 'Orchestration',
     serif: '',
@@ -94,8 +86,14 @@ const STEP_PHASE: Record<string, Phase> = {
   '05': 5,
 };
 
+function stateFor(stepPhase: Phase, currentPhase: Phase): 'done' | 'live' | 'next' {
+  if (stepPhase === currentPhase) return 'live';
+  if (stepPhase < currentPhase) return 'done';
+  return 'next';
+}
+
 export function HowItWorksSection() {
-  const { openConcierge } = useAgentBridge();
+  const { openConcierge, phase: currentPhase } = useAgentBridge();
 
   return (
     <section id="howitworks" className="mp-section">
@@ -134,13 +132,17 @@ export function HowItWorksSection() {
       <FadeIn delay={0.1}>
         <div className="mp-journey">
           <div className="mp-journey-rail">
-            {steps.map((s) => (
+            {steps.map((s) => {
+              const stepPhase = STEP_PHASE[s.num];
+              const state = stateFor(stepPhase, currentPhase);
+              return (
               <button
                 key={s.num}
                 type="button"
-                className={`mp-journey-step ${s.state}`}
+                className={`mp-journey-step ${state}`}
+                aria-current={state === 'live' ? 'step' : undefined}
                 onClick={() =>
-                  openConcierge({ phase: STEP_PHASE[s.num], focus: true })
+                  openConcierge({ phase: stepPhase, focus: true })
                 }
               >
                 <span className="ph">{s.ph}</span>
@@ -173,7 +175,8 @@ export function HowItWorksSection() {
                   ))}
                 </div>
               </button>
-            ))}
+            );
+            })}
           </div>
         </div>
       </FadeIn>

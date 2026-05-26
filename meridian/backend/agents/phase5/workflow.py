@@ -21,6 +21,12 @@ Checkpointer
 If `LANGGRAPH_CHECKPOINT_DSN` is set we use `PostgresSaver` against Aurora
 (durable, multi-process).  Otherwise we use the in-process `MemorySaver`
 so the workshop demo still runs without direct DB connectivity.
+
+AWS docs (Aurora checkpoint store):
+  - Aurora PostgreSQL connection strings:
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Connecting.html
+  - RDS Data API (search/memory nodes reuse Phase 3/4 Aurora paths):
+    https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
 """
 
 from __future__ import annotations
@@ -64,7 +70,7 @@ def _activity(
     title: str,
     *,
     details: Optional[str] = None,
-    agent_name: str = "Phase5Workflow",
+    agent_name: str = "OrchestrationAgent",
     telemetry: Optional[Dict[str, Any]] = None,
     sql_query: Optional[str] = None,
     execution_time_ms: Optional[int] = None,
@@ -109,7 +115,7 @@ def _classify_intent(query: str) -> str:
     return "search"
 
 
-class Phase5Workflow:
+class OrchestrationAgent:
     """LangGraph workflow with classify/search/availability/synthesize nodes."""
 
     def __init__(
@@ -142,6 +148,7 @@ class Phase5Workflow:
     # ------------------------------------------------------------------ graph
 
     def _build_graph(self):
+        """Compile the LangGraph StateGraph with conditional routing + checkpointer."""
         builder = StateGraph(WorkflowState)
         builder.add_node("classify", self._node_classify)
         builder.add_node("search", self._node_search)
@@ -231,7 +238,7 @@ class Phase5Workflow:
                 execution_time_ms=elapsed,
                 telemetry={
                     "category": "orchestration",
-                    "component": "LangGraph → AvailabilityAgent",
+                    "component": "LangGraph → PackageAgent",
                     "status": "ok",
                     "fields": [
                         {"label": "node", "value": "availability"},
@@ -288,7 +295,11 @@ class Phase5Workflow:
                 f"Found {len(packages)} departure options matching your request."
             )
         elif intent == "memory_recall":
-            response = "Pulled the relevant context from your past sessions."
+            response = (
+                f"Recalled session + preference context, then matched {len(packages)} trips."
+                if packages
+                else "Recalled prior context — no new catalog matches for that query."
+            )
         elif packages:
             response = f"Workflow returned {len(packages)} trips that match your request."
         else:

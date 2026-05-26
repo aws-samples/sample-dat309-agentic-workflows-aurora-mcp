@@ -64,7 +64,7 @@ export function TravelerPersona({
         if (res.facts.length) setFacts(res.facts);
       })
       .catch(() => {
-        setProfile(DEMO_PERSONA_FALLBACK);
+        /* keep empty profile until backend is available */
       });
   }, [travelerId, profileProp, factsProp]);
 
@@ -116,9 +116,7 @@ export function TravelerPersona({
           </div>
         ) : (
           <div className="traveler-persona-facts">
-            <span className="traveler-persona-fact">2 travelers</span>
-            <span className="traveler-persona-fact">Tokyo Oct 12–19</span>
-            <span className="traveler-persona-fact">Shellfish allergy</span>
+            <span className="traveler-persona-fact">No memory facts loaded yet</span>
           </div>
         )}
         {!active && onActivate && (

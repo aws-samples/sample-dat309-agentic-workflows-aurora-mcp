@@ -1,5 +1,13 @@
 /**
- * Cross-section bridge into the concierge workspace (phase, prompt, send, focus).
+ * Cross-section bridge into the concierge workspace.
+ *
+ * The bridge exposes:
+ *  - `phase` as React state, so any section can highlight the active mode
+ *    (e.g. the phase journey rail) without prop drilling.
+ *  - `openConcierge(opts)` to focus the composer, switch phase, or submit a
+ *    prompt from outside the workspace (hero CTA, system dry-run, etc.).
+ *  - `register(handlers)` for the workspace to plug in its imperative
+ *    handles (setPhase, sendMessage, etc.).
  */
 import {
   createContext,
@@ -7,6 +15,7 @@ import {
   useContext,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from 'react';
 import type { Phase } from '../types';
@@ -40,11 +49,14 @@ const AgentBridgeContext = createContext<AgentBridgeValue | null>(null);
 
 export function AgentBridgeProvider({ children }: { children: ReactNode }) {
   const handlersRef = useRef<AgentHandlers | null>(null);
-  const phaseRef = useRef<Phase>(4);
+  // Phase is React state (not a ref) so consumers re-render when the
+  // workspace's active phase changes — the journey rail uses this to
+  // light up the active step.
+  const [phase, setPhase] = useState<Phase>(4);
 
   const register = useCallback((handlers: AgentHandlers | null) => {
     handlersRef.current = handlers;
-    if (handlers) phaseRef.current = handlers.phase;
+    if (handlers) setPhase(handlers.phase);
   }, []);
 
   const openConcierge = useCallback((opts?: OpenConciergeOptions) => {
@@ -52,7 +64,7 @@ export function AgentBridgeProvider({ children }: { children: ReactNode }) {
     if (opts?.clear) h?.clearChat();
     if (opts?.phase != null) {
       h?.setPhase(opts.phase);
-      phaseRef.current = opts.phase;
+      setPhase(opts.phase);
     }
     if (opts?.prompt != null) h?.setInput(opts.prompt);
     if (opts?.send && opts.prompt?.trim()) {
@@ -64,14 +76,8 @@ export function AgentBridgeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AgentBridgeValue>(
-    () => ({
-      register,
-      openConcierge,
-      get phase() {
-        return phaseRef.current;
-      },
-    }),
-    [register, openConcierge],
+    () => ({ register, openConcierge, phase }),
+    [register, openConcierge, phase],
   );
 
   return <AgentBridgeContext.Provider value={value}>{children}</AgentBridgeContext.Provider>;

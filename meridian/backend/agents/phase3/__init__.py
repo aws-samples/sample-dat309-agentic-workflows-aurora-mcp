@@ -7,28 +7,28 @@ Phase 3 Multi-Agent System - Supervisor architecture with semantic search.
 - Booking agent for reservation processing
 """
 
-from .supervisor import SupervisorAgent
+from .supervisor import RetrievalAgent
 from .search_agent import SearchAgent, create_search_agent
-from .product_agent import ProductAgent, create_product_agent
-from .order_agent import OrderAgent, create_order_agent
+from .package_agent import PackageAgent, create_package_agent
+from .booking_agent import BookingAgent, create_booking_agent
 
 __all__ = [
-    "SupervisorAgent",
+    "RetrievalAgent",
     "SearchAgent", "create_search_agent",
-    "ProductAgent", "create_product_agent",
-    "OrderAgent", "create_order_agent"
+    "PackageAgent", "create_package_agent",
+    "BookingAgent", "create_booking_agent",
 ]
 
 
 def create_phase3_system(activity_callback=None):
     """Create the complete Phase 3 multi-agent system."""
     search_agent = create_search_agent(activity_callback)
-    product_agent = create_product_agent(activity_callback)
-    order_agent = create_order_agent(activity_callback)
+    package_agent = create_package_agent(activity_callback)
+    booking_agent = create_booking_agent(activity_callback)
 
-    return SupervisorAgent(
+    return RetrievalAgent(
         search_agent=search_agent,
-        product_agent=product_agent,
-        order_agent=order_agent,
+        package_agent=package_agent,
+        booking_agent=booking_agent,
         activity_callback=activity_callback
     )

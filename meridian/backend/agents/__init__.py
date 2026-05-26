@@ -1,6 +1,9 @@
 """
-Agent implementations for Meridian.
+Agent implementations for Meridian (Phases 1–5).
 
-- phase1–3/: Reference Strands samples (not imported by the live API)
-- phase4/: Live concierge + memory agents used at runtime
+- phase1/: SQL filter search (reference sample)
+- phase2/: MCP-backed search (reference sample)
+- phase3/: Supervisor + search/package/booking specialists (reference sample)
+- phase4/: Live concierge + memory agents (imported at runtime)
+- phase5/: LangGraph workflow orchestration (imported at runtime)
 """

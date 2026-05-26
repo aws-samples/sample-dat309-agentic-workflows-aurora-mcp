@@ -1,6 +1,11 @@
-"""Phase 4 — Strands concierge + memory agents."""
+"""Phase 4 — Memory agent + traveler memory specialist."""
 
-from backend.agents.phase4.memory_agent import MemoryAgent, create_memory_agent
-from backend.agents.phase4.concierge import ConciergeOrchestrator, create_concierge
+from backend.agents.phase4.memory_agent import TravelerMemoryAgent, create_traveler_memory_agent
+from backend.agents.phase4.concierge import MemoryAgent, create_memory_agent
 
-__all__ = ["MemoryAgent", "create_memory_agent", "ConciergeOrchestrator", "create_concierge"]
+__all__ = [
+    "TravelerMemoryAgent",
+    "create_traveler_memory_agent",
+    "MemoryAgent",
+    "create_memory_agent",
+]

@@ -40,15 +40,112 @@ npm run dev
 
 Open http://localhost:5173 — the agent demo calls `http://localhost:8000`.
 
+## Two surfaces, one app
+
+The frontend ships **two surfaces** that share the same React/Vite/TypeScript bundle and the same backend API. Pick one based on the audience.
+
+| Surface | Route | Audience | Visual direction |
+| ------- | ----- | -------- | ---------------- |
+| **Meridian Pro** | `/` | 60-minute chalk talk, builders, internal demos | Polished light enterprise UI — Linear + Stripe dashboard. Top nav, hero, phase journey, three-pane concierge workspace, memory inspector, trip catalog, Aurora schema + MCP catalog. |
+| **Demo Stage** | `/demo-stage`, `/stage` | AWS Summit Village booth, keynote / kiosk | Cinematic dark control-room aesthetic for 16:9 monitors. Trace is the hero; auto-loops in kiosk mode. |
+
+The Demo Stage is **separate** — it does not inherit the light Pro styles, and the Pro app does not inherit the dark cinematic ones. Both surfaces use the same `/api/chat`, `/api/memory/{traveler_id}`, and `/api/packages` endpoints.
+
+### Run
+
+Open two terminals.
+
+**Terminal 1 — backend (FastAPI on :8000)**
+
+```bash
+cd meridian
+python -m venv venv               # one time
+source venv/bin/activate
+pip install -r requirements.txt   # one time
+
+cp .env.example .env              # one time — fill in Aurora cluster/secret ARN + region
+python scripts/init_aurora_schema.py   # one time — provisions tables + extensions
+python scripts/seed_data.py            # one time — 30 curated packages + demo traveler
+
+uvicorn backend.main:app --reload --port 8000
+```
+
+Health check: `curl http://localhost:8000/health` → `{"status":"ok"}`.
+
+**Terminal 2 — frontend (Vite on :5173)**
+
+```bash
+cd meridian/frontend
+npm install        # one time
+npm run dev        # http://localhost:5173
+npm run build      # tsc && vite build — gates on TypeScript + production bundle
+```
+
+Both surfaces require the backend and Aurora. Memory facts, traces, and trip results come from live API calls — there are no offline fixture fallbacks.
+
+### Meridian Pro — open `/`
+
+```text
+http://localhost:5173/
+```
+
+Sections, in order:
+
+1. **Top nav** — `Concierge · Trips · Memory · System · Docs`. The status pill probes `GET /health` every 30 s.
+2. **Hero** — “Plan. Fly. Land.” + 5 stats (packages · modes · 1024d Cohere v4 · ~340 ms p50 · 99.8 % MCP tool uptime) + live featured trip card.
+3. **Phase journey** — five-step rail (SQL → MCP → Retrieval → Memory → Orchestration). The active step is highlighted from the shared `AgentBridge` phase; clicking a step jumps the concierge into that phase.
+4. **Concierge workspace** — three panes (traveler context · chat · trace), live to `POST /api/chat`. Trace tabs: `Spans · Memory · SQL · Cost`.
+5. **Memory inspector** — fetches `GET /api/memory/{traveler_id}`. `edit` and `forget` mutate the in-page view only (clearly labelled demo-only); the real flow goes through the `memory.write_fact` tool.
+6. **Trip catalog** — pulls from `GET /api/products`. Each card opens the concierge with a pre-filled prompt.
+7. **System · Aurora + MCP** — Aurora schema map + MCP tool catalog. Each tool has a `dry-run` button that opens a local drawer with sample input/output (no backend round-trip) and a "Run live in concierge" button that does.
+
+#### Switching phases
+
+Phase 4 (Personal) is the default and is the most impressive working mode for a demo. To change phases:
+
+- Click any step in the **phase journey** rail.
+- Click any phase pill in the **workspace top bar**.
+- Or call the bridge programmatically from elsewhere: `openConcierge({ phase: 5, focus: true })`.
+
+The shared `AgentBridge` (`src/context/AgentBridge.tsx`) holds `phase` as React state, so any section that calls `useAgentBridge()` re-renders when the phase changes.
+
+#### Data sources
+
+| Source | Live endpoint |
+| ------ | ------------- |
+| Memory facts | `GET /api/memory/{traveler_id}` |
+| Traveler profile | `GET /api/memory/{traveler_id}` |
+| Trip catalog | `GET /api/products` |
+| Trace spans | `POST /api/chat` → `ChatResponse.activities` |
+| Demo Stage scenarios | `POST /api/chat` (prompts in `src/stage/data/stageScenarios.ts`) |
+
+MCP tool catalog labels in the System section are static reference copy; latencies are inferred from live trace activities when available.
+
+The lightweight named adapters (`chatResponseToMessages`, `activityTraceToSpans`, `memoryResponseToFacts`, `packagesResponseToTripCards`) live in `src/lib/traceAdapter.ts`. The heavier preamble-synthesis logic lives in `src/utils/traceTelemetry.ts`.
+
+### Demo Stage — open `/demo-stage`
+
+```bash
+npm run dev
+# Presenter mode (keyboard: Space=play/pause, ←/→=step, R=replay, B=builder view)
+open http://localhost:5173/demo-stage
+# Kiosk mode (auto-loops 3 scenarios, hides controls, respects reduced motion)
+open http://localhost:5173/demo-stage?kiosk=1
+# Start in builder view (more technical row labels)
+open http://localhost:5173/demo-stage?view=builder
+```
+
+See `meridian/frontend/src/stage/DemoStage.tsx` for the full keyboard map and scenario list.
+
 ## Five phases
 
 | Phase | UI label | What it does |
 | ----- | -------- | ------------ |
-| **1** | SQL | Direct SQL filters on `trip_packages` via RDS Data API (trip type, operator, price) |
-| **2** | MCP | Same catalog queries through `postgres-mcp-server` / MCP `run_query` |
-| **3** | Retrieval | Cohere Embed v4 (1024d) + hybrid pgvector + `tsvector` search; Strands supervisor delegates to specialist agents |
-| **4** | Memory | `ConciergeOrchestrator` + `MemoryAgent` (`@tool`) recall and persist traveler context in Aurora; mirrors session events to Bedrock AgentCore Memory; per-turn audit row + Aurora RLS |
-| **5** | Orchestration | LangGraph `StateGraph` (classify → search/availability/recall → synthesize) with `PostgresSaver` checkpointing in Aurora |
+| **1** | SQL Agent | Direct SQL filters on `trip_packages` via RDS Data API (trip type, operator, price) |
+| **2** | MCP Agent | Same catalog queries through `postgres-mcp-server` / MCP `run_query` |
+| **3** | Retrieval Agent | Cohere Embed v4 (1024d) + hybrid pgvector + `tsvector` search; Retrieval Agent delegates to specialist agents |
+| **4** | Memory Agent | `MemoryAgent` + `TravelerMemoryAgent` (`@tool`) recall and persist traveler context in Aurora; mirrors session events to Bedrock AgentCore Memory; per-turn audit row + Aurora RLS |
+| **5** | Orchestration Agent | LangGraph `StateGraph` (classify → search/availability/recall → synthesize) with `PostgresSaver` checkpointing in Aurora |
 
 **Phase 1 example:** `City breaks`, `Beach & Resort`, `Business travel under $1500`
 
@@ -107,8 +204,8 @@ meridian/
 │   ├── agents/
 │   │   ├── phase1/       # Direct RDS filters
 │   │   ├── phase2/       # MCP agent
-│   │   ├── phase3/       # Supervisor + search/product/order specialists
-│   │   ├── phase4/       # ConciergeOrchestrator + MemoryAgent
+│   │   ├── phase3/       # Supervisor + search/package/booking specialists
+│   │   ├── phase4/       # MemoryAgent + TravelerMemoryAgent
 │   │   └── phase5/       # LangGraph StateGraph workflow
 │   ├── agentcore/        # Bedrock AgentCore Memory + Identity adapters
 │   ├── memory/           # Aurora memory store
@@ -131,7 +228,7 @@ Key environment variables (see `.env.example`):
 - `EMBEDDING_MODEL=cohere.embed-v4:0`
 - `EMBEDDING_DIMENSION=1024`
 - `AURORA_CLUSTER_ARN`, `AURORA_SECRET_ARN`, `AURORA_DATABASE`
-- `STRANDS_ORCHESTRATION` — `full` (LLM-routed) or `direct` (procedural fallback) for Phases 3/4
+- `AGENTCORE_*` — Phase 4 requires deployed Runtime, Gateway, and Memory (sync via `scripts/sync_agentcore_env.py`)
 - `AGENTCORE_MEMORY_ID`, `AGENTCORE_REGION` — opt-in to Bedrock AgentCore Memory
 - `AGENTCORE_WORKLOAD_IDENTITY`, `AGENTCORE_RESOURCE_PROVIDER` — opt-in to AgentCore Identity
 - `LANGGRAPH_CHECKPOINT_DSN` — Phase 5 uses `PostgresSaver` when set, otherwise `MemorySaver`
