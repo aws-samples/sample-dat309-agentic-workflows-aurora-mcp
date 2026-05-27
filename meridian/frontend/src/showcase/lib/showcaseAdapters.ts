@@ -6,7 +6,6 @@ import type {
   Message,
   Phase,
   Product,
-  TripPackage,
 } from '../../types';
 import { SHOWCASE_FALLBACK_FACTS, SHOWCASE_FALLBACK_RECOMMENDATIONS } from './showcaseFallbackData';
 
@@ -49,7 +48,21 @@ export function phaseLabelFor(phase: Phase): ShowcasePhaseLabel {
   return SHOWCASE_PHASES.find((p) => p.phase === phase)?.label ?? 'Personal';
 }
 
-function tripPackageToProduct(pkg: TripPackage): Product {
+type TripPackageLike = {
+  package_id: string;
+  name: string;
+  destination?: string;
+  region?: string;
+  operator?: string;
+  price_per_person: number;
+  description?: string;
+  image_url?: string;
+  trip_type?: string;
+  durations?: string[] | null;
+  similarity?: number;
+};
+
+function tripPackageToProduct(pkg: TripPackageLike): Product {
   return {
     product_id: pkg.package_id,
     name: pkg.name,
@@ -63,7 +76,7 @@ function tripPackageToProduct(pkg: TripPackage): Product {
   };
 }
 
-export function packagesResponseToRecommendations(input: Product[] | TripPackage[] | null | undefined): Product[] {
+export function packagesResponseToRecommendations(input: Product[] | TripPackageLike[] | null | undefined): Product[] {
   if (!input?.length) return SHOWCASE_FALLBACK_RECOMMENDATIONS;
   const normalized = input.map((item) =>
     'package_id' in item ? tripPackageToProduct(item) : item,

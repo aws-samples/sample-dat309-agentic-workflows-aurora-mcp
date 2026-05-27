@@ -9,11 +9,11 @@ import { FadeIn } from '../components/FadeIn';
 import { fetchMemoryProfile } from '../api/client';
 import { DEMO_PERSONA_FALLBACK, DEMO_TRAVELER_ID } from '../components/TravelerPersona';
 import { PHASE_EYEBROW } from '../lib/phaseLabels';
-import { DEMO_MEMORY_FACTS, DEMO_TRAVELER } from '../lib/proDemoData';
+import { DEMO_TRAVELER } from '../lib/proDemoData';
 import type { LongTermMemoryFact, TravelerProfile } from '../types';
 
 export function MemorySection() {
-  const [facts, setFacts] = useState<LongTermMemoryFact[]>(DEMO_MEMORY_FACTS);
+  const [facts, setFacts] = useState<LongTermMemoryFact[]>([]);
   const [profile, setProfile] = useState<TravelerProfile>({ ...DEMO_PERSONA_FALLBACK, ...DEMO_TRAVELER });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export function MemorySection() {
       else setFacts([]);
       if (res.profile) setProfile({ ...DEMO_PERSONA_FALLBACK, ...res.profile });
     } catch {
-      setFacts(DEMO_MEMORY_FACTS);
+      setFacts([]);
       setProfile({ ...DEMO_PERSONA_FALLBACK, ...DEMO_TRAVELER });
       setError('Backend offline — showing fixture traveler memory until Aurora is available.');
     } finally {
