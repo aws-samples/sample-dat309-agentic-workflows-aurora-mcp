@@ -13,14 +13,14 @@ backend/main.py
   → routers/memory.py    # GET /api/memory/{traveler_id} (RLS-scoped)
 ```
 
-Phases 4 and 5 import agent / workflow modules at runtime:
+Production and Orchestration modes import agent / workflow modules at runtime:
 
-- `backend/agents/phase4/concierge.py` — Strands concierge + Aurora memory + AgentCore mirror
-- `backend/agents/phase4/memory_agent.py` — `@tool` recall/persist methods
-- `backend/agents/phase5/workflow.py` — LangGraph `StateGraph` + `PostgresSaver`/`MemorySaver`
+- `backend/agents/production_04/concierge.py` — Strands concierge + Aurora memory + AgentCore mirror
+- `backend/agents/production_04/memory_agent.py` — `@tool` recall/persist methods
+- `backend/agents/orchestration_05/workflow.py` — LangGraph `StateGraph` + `PostgresSaver`/`MemorySaver`
 - `backend/agentcore/memory.py`, `backend/agentcore/identity.py` — Bedrock AgentCore adapters
 
-Phases 1–3 execute inside `chat.py` (`phase1_search`, `phase2_search`, `phase3_search`). The matching files under `backend/agents/phase1|2|3/` are **reference Strands implementations** cited in trace `agent_file` paths — not imported by the live API.
+SQL/MCP/Retrieval modes execute inside `chat.py` (`sql_search`, `mcp_search`, `retrieval_search`). The matching files under `backend/agents/sql_01`, `backend/agents/mcp_02`, and `backend/agents/retrieval_03` are the imported mode implementations.
 
 ## Directory map
 
@@ -30,9 +30,9 @@ Phases 1–3 execute inside `chat.py` (`phase1_search`, `phase2_search`, `phase3
 | `backend/mcp/` | Phase 2 client → public `awslabs.postgres-mcp-server`; **custom `memory_server.py`** + its stdio client |
 | `backend/memory/` | Aurora traveler memory store + audit writer |
 | `backend/agentcore/` | Bedrock AgentCore Runtime, Gateway, Memory, Identity — real API calls only |
-| `backend/agents/phase4/` | Live concierge + memory agents |
-| `backend/agents/phase5/` | LangGraph `OrchestrationAgent` (StateGraph + PostgresSaver) |
-| `backend/agents/phase1–3/` | Reference Strands agents (workshop code samples) |
+| `backend/agents/production_04/` | Live concierge + memory agents |
+| `backend/agents/orchestration_05/` | LangGraph `OrchestrationAgent` (StateGraph + PostgresSaver) |
+| `backend/agents/sql_01,mcp_02,retrieval_03/` | SQL, MCP, and Retrieval mode agents |
 | `backend/routers/` | FastAPI routes |
 | `examples/rls_for_agents.sql` | Aurora RLS policies + `agent_audit_log` + `agent_iam_audit` view |
 | `examples/memory_mcp_demo.py` | Stand-alone smoke test for the custom memory MCP server |

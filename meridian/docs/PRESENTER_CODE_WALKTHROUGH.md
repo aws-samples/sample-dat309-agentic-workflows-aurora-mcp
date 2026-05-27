@@ -33,11 +33,11 @@ The UI always works. The **live API path** and the **agent modules you show in t
 
 | Phase | Live demo (`chat.py`) | Show in IDE (Strands pattern) |
 | ----- | --------------------- | ------------------------------ |
-| 1 | Procedural keyword SQL | `phase1/agent.py` — `@tool` + `Agent` |
-| 2 | MCP `run_query` session | `phase2/agent.py` — `MCPClient` + auto-discovered tools |
-| 3 | Hybrid search (+ Strands supervisor when `STRANDS_ORCHESTRATION=full`) | `phase3/supervisor.py` — delegation `@tool`s |
-| 4 | Full `MemoryAgent.process_turn()` | `phase4/concierge.py` + `memory_agent.py` |
-| 5 | Full `OrchestrationAgent` LangGraph | `phase5/workflow.py` — `StateGraph` |
+| 1 | Procedural keyword SQL | `sql_01/agent.py` — `@tool` + `Agent` |
+| 2 | MCP `run_query` session | `mcp_02/agent.py` — `MCPClient` + auto-discovered tools |
+| 3 | Hybrid search (+ Strands supervisor when `STRANDS_ORCHESTRATION=full`) | `retrieval_03/supervisor.py` — delegation `@tool`s |
+| 4 | Full `MemoryAgent.process_turn()` | `production_04/concierge.py` + `memory_agent.py` |
+| 5 | Full `OrchestrationAgent` LangGraph | `orchestration_05/workflow.py` — `StateGraph` |
 
 **Talk track:** “The demo API keeps deterministic fallbacks so the room never stalls. The agent modules are the patterns you copy into production.”
 
@@ -48,7 +48,7 @@ The UI always works. The **live API path** and the **agent modules you show in t
 **Demo query:** `City breaks` or `Beach & Resort`  
 **Beat:** Keyword filters break on “Romantic week in Europe.”
 
-### File: `backend/agents/phase1/agent.py`
+### File: `backend/agents/sql_01/agent.py`
 
 **Snippet A — Strands agent shell (show first):**
 
@@ -111,7 +111,7 @@ Same SQL idea, no LLM loop — reliable for the demo UI.
 **Demo query:** `Adventure & Outdoors`  
 **Beat:** MCP changes the *interface*, not the intelligence — same keyword gap.
 
-### File: `backend/agents/phase2/agent.py`
+### File: `backend/agents/mcp_02/agent.py`
 
 **Snippet A — MCPClient + auto-discovery:**
 
@@ -140,7 +140,7 @@ mcp_tools = await self.mcp_client.list_tools()
 **Demo query:** `Romantic week in Europe`  
 **Beat:** Hybrid pgvector + tsvector — NL finally works.
 
-### File: `backend/agents/phase3/supervisor.py`
+### File: `backend/agents/retrieval_03/supervisor.py`
 
 **Snippet A — Supervisor registers delegation tools:**
 
@@ -169,7 +169,7 @@ async def _delegate_to_search(self, query: str) -> dict:
 
 **Say:** “The supervisor’s tools are *delegation* tools — thin wrappers around specialist agents. Bedrock picks search vs package vs booking; specialists own Aurora access.”
 
-### File: `backend/agents/phase3/search_agent.py`
+### File: `backend/agents/retrieval_03/search_agent.py`
 
 **Snippet C — Specialist `@tool` + pgvector:**
 
@@ -208,7 +208,7 @@ async def semantic_search(self, query: str, limit: int = 5) -> dict:
 | **Memory** | `agentcore/memory.py` | `list` + `semantic retrieve` + `create_event` |
 | **Gateway** | `agentcore/gateway.py` | `tools/list` + `tools/call` (managed MCP search) |
 
-### File: `backend/agents/phase4/memory_agent.py`
+### File: `backend/agents/production_04/memory_agent.py`
 
 **Snippet A — Memory specialist `@tool`s (show this file first):**
 
@@ -236,7 +236,7 @@ class TravelerMemoryAgent:
 
 **Say:** “Each `@tool` is a memory operation you’d expose to any orchestrator — Strands today, LangGraph node tomorrow.”
 
-### File: `backend/agents/phase4/concierge.py`
+### File: `backend/agents/production_04/concierge.py`
 
 **Snippet B — Full AgentCore turn in concierge:**
 
@@ -290,7 +290,7 @@ agentcore status --json
 **Demo query:** `What dates are available for Tokyo in October?` (→ availability branch)  
 **Alt query:** `What did we discuss last time about Iceland?` (→ memory_recall branch)
 
-### File: `backend/agents/phase5/workflow.py`
+### File: `backend/agents/orchestration_05/workflow.py`
 
 **Snippet A — State + graph (draw this on the whiteboard):**
 
@@ -333,17 +333,17 @@ result = await self.graph.ainvoke(initial, config=config)
 | ----- | ---- | ----- |
 | 1 | `backend/agent_catalog.py` | All — startup catalog |
 | 2 | `backend/routers/chat.py` | Routing |
-| 3 | `backend/agents/phase1/agent.py` | 1 |
-| 4 | `backend/agents/phase2/agent.py` | 2 |
-| 5 | `backend/agents/phase3/supervisor.py` | 3 |
-| 6 | `backend/agents/phase3/search_agent.py` | 3 |
-| 7 | `backend/agents/phase4/memory_agent.py` | 4 |
-| 8 | `backend/agents/phase4/concierge.py` | 4 |
+| 3 | `backend/agents/sql_01/agent.py` | 1 |
+| 4 | `backend/agents/mcp_02/agent.py` | 2 |
+| 5 | `backend/agents/retrieval_03/supervisor.py` | 3 |
+| 6 | `backend/agents/retrieval_03/search_agent.py` | 3 |
+| 7 | `backend/agents/production_04/memory_agent.py` | 4 |
+| 8 | `backend/agents/production_04/concierge.py` | 4 |
 | 9 | `backend/agentcore/runtime.py` | 4 |
 | 10 | `backend/agentcore/gateway.py` | 4 |
 | 11 | `backend/agentcore/memory.py` | 4 |
 | 12 | `backend/agentcore/identity.py` | 4 |
-| 13 | `backend/agents/phase5/workflow.py` | 5 |
+| 13 | `backend/agents/orchestration_05/workflow.py` | 5 |
 
 ---
 

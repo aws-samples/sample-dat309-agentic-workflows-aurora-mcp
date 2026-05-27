@@ -1,4 +1,4 @@
-"""Ordered Orchestration mode agent exports."""
+"""Orchestration mode agent exports."""
 
 from .workflow import OrchestrationAgent
 

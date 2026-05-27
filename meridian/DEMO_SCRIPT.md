@@ -12,14 +12,14 @@
 
 | File | Purpose |
 | ---- | ------- |
-| `backend/routers/chat.py` | Live chat for phases 1–4 (`phase1_search`, `phase2_search`, `phase3_search`, `phase4_search`) |
+| `backend/routers/chat.py` | Live chat for SQL/MCP/Retrieval/Production (`sql_search`, `mcp_search`, `retrieval_search`, `production_search`) |
 | `backend/db/schema.sql` | Travel-native Aurora schema (`trip_packages`, travelers, memory tables) |
 | `backend/db/rds_data_client.py` | RDS Data API client |
 | `backend/db/embedding_service.py` | Cohere Embed v4 on Bedrock (1024d) |
 | `backend/mcp/mcp_client.py` | MCP client (Phase 2) |
-| `backend/agents/phase3/supervisor.py` | Strands supervisor + specialist agents |
-| `backend/agents/phase4/concierge.py` | `MemoryAgent` (Phase 4) |
-| `backend/agents/phase4/memory_agent.py` | Strands `@tool` memory recall/persist |
+| `backend/agents/retrieval_03/supervisor.py` | Strands supervisor + specialist agents |
+| `backend/agents/production_04/concierge.py` | `MemoryAgent` (Production mode) |
+| `backend/agents/production_04/memory_agent.py` | Strands `@tool` memory recall/persist |
 | `backend/memory/store.py` | Aurora memory CRUD |
 | `frontend/src/sections/AgentSection.tsx` | Live demo UI (chat + trace) |
 | `frontend/src/components/TravelerPersona.tsx` | Alex & Jordan Chen persona card |
@@ -153,7 +153,7 @@ Point to the **Architecture** section (five phase cards):
 ### Optional code walkthrough
 
 - `backend/mcp/mcp_client.py` — connects to the public `awslabs.postgres-mcp-server`
-- `backend/agents/phase2/agent.py`
+- `backend/agents/mcp_02/agent.py`
 - `backend/mcp/memory_server.py` — **our own MCP server** for traveler memory
 - `backend/mcp/memory_mcp_client.py` — the symmetric stdio client
 
@@ -255,8 +255,8 @@ Run a second query without clearing chat — show `conversation_id` continuity a
 
 ### Optional code walkthrough
 
-- `backend/agents/phase4/concierge.py` → `MemoryAgent.process_turn`
-- `backend/agents/phase4/memory_agent.py` → `@tool` methods
+- `backend/agents/production_04/concierge.py` → `MemoryAgent.process_turn`
+- `backend/agents/production_04/memory_agent.py` → `@tool` methods
 - `backend/memory/store.py` → Aurora reads/writes
 - `backend/agentcore/memory.py` → AgentCore Memory `create_event` / `list_memory_records`
 - `backend/agentcore/identity.py` → `sts:GetCallerIdentity` + `get_resource_api_key`
@@ -291,7 +291,7 @@ curl -s -X POST http://localhost:8000/api/chat/order \
 
 ### 1. RLS pinned per turn
 
-`backend/agents/phase4/concierge.py` opens an RDS Data API transaction at the
+`backend/agents/production_04/concierge.py` opens an RDS Data API transaction at the
 start of every Phase 4 turn and pins the session variables Aurora will
 enforce:
 
@@ -365,7 +365,7 @@ aws rds-data execute-statement \
 ### What changed
 
 - Same Aurora data, same SearchAgent / PackageAgent / MemoryAgent.
-- New orchestrator: `agents/phase5/workflow.py` builds a `StateGraph`:
+- New orchestrator: `agents/orchestration_05/workflow.py` builds a `StateGraph`:
 
   ```
   classify ─┬─→ search ─────────┐

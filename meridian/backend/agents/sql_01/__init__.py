@@ -1,4 +1,4 @@
-"""Ordered SQL mode agent exports."""
+"""SQL mode agent exports."""
 
 from .agent import SQLAgent, create_sql_agent
 

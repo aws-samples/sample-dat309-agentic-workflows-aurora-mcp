@@ -1,4 +1,4 @@
-"""Ordered Retrieval mode agent exports."""
+"""Retrieval mode agent exports."""
 
 from .supervisor import RetrievalAgent
 from .search_agent import SearchAgent, create_search_agent
@@ -28,7 +28,3 @@ def create_retrieval_system(activity_callback=None):
         booking_agent=booking_agent,
         activity_callback=activity_callback,
     )
-
-
-# Back-compat name used by existing call sites.
-create_phase3_system = create_retrieval_system

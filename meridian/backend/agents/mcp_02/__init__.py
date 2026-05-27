@@ -1,4 +1,4 @@
-"""Ordered MCP mode agent exports."""
+"""MCP mode agent exports."""
 
 from .agent import MCPAgent, create_mcp_agent
 
