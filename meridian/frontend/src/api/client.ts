@@ -1,37 +1,112 @@
 /**
  * API client for Meridian backend
  */
-import type { Product, ProductListResponse, ChatRequest, ChatResponse, OrderRequest, OrderResponse, MemoryProfileResponse } from '../types';
+import type {
+  ChatRequest,
+  ChatResponse,
+  MemoryProfileResponse,
+  OrderRequest,
+  OrderResponse,
+  PackageListResponse,
+  Product,
+  ProductListResponse,
+  TripPackage,
+} from '../types';
 
 const API_BASE = 'http://localhost:8000/api';
+
+function packageToProduct(pkg: TripPackage): Product {
+  return {
+    product_id: pkg.package_id,
+    name: pkg.name,
+    brand: pkg.operator,
+    price: pkg.price_per_person,
+    description: pkg.description,
+    image_url: pkg.image_url,
+    category: pkg.trip_type,
+    available_sizes: pkg.durations,
+    similarity: pkg.similarity,
+  };
+}
+
+function productToPackage(product: Product): TripPackage {
+  return {
+    package_id: product.product_id,
+    name: product.name,
+    trip_type: product.category,
+    destination: '',
+    region: '',
+    price_per_person: product.price,
+    operator: product.brand,
+    description: product.description,
+    image_url: product.image_url,
+    durations: product.available_sizes,
+    availability: null,
+    highlights: null,
+    similarity: product.similarity,
+  };
+}
+
+/**
+ * Fetch native trip packages from the backend.
+ *
+ * `/api/packages` is the travel-native contract. If an older backend only
+ * exposes the legacy `/api/products` shape, this adapter preserves the same
+ * typed frontend API while keeping the UI on trip language.
+ */
+export async function fetchPackages(category?: string, limit = 50, featured = false): Promise<TripPackage[]> {
+  const params = new URLSearchParams();
+  if (category) params.set('category', category);
+  params.set('limit', limit.toString());
+  if (featured) params.set('featured', 'true');
+
+  try {
+    const response = await fetch(`${API_BASE}/packages?${params}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch packages: ${response.statusText}`);
+    }
+    const data: PackageListResponse = await response.json();
+    return data.packages;
+  } catch (primaryError) {
+    const response = await fetch(`${API_BASE}/products?${params}`);
+    if (!response.ok) {
+      throw primaryError instanceof Error
+        ? primaryError
+        : new Error(`Failed to fetch packages: ${response.statusText}`);
+    }
+    const data: ProductListResponse = await response.json();
+    return data.products.map(productToPackage);
+  }
+}
 
 /**
  * Fetch all products from the backend
  */
 export async function fetchProducts(category?: string, limit = 50, featured = false): Promise<Product[]> {
-  const params = new URLSearchParams();
-  if (category) params.set('category', category);
-  params.set('limit', limit.toString());
-  if (featured) params.set('featured', 'true');
-  
-  const response = await fetch(`${API_BASE}/products?${params}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch products: ${response.statusText}`);
-  }
-  
-  const data: ProductListResponse = await response.json();
-  return data.products;
+  const packages = await fetchPackages(category, limit, featured);
+  return packages.map(packageToProduct);
 }
 
 /**
  * Fetch a single product by ID
  */
 export async function fetchProduct(productId: string): Promise<Product> {
-  const response = await fetch(`${API_BASE}/products/${productId}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch product: ${response.statusText}`);
+  try {
+    const response = await fetch(`${API_BASE}/packages/${productId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch package: ${response.statusText}`);
+    }
+    const data: TripPackage = await response.json();
+    return packageToProduct(data);
+  } catch (primaryError) {
+    const response = await fetch(`${API_BASE}/products/${productId}`);
+    if (!response.ok) {
+      throw primaryError instanceof Error
+        ? primaryError
+        : new Error(`Failed to fetch product: ${response.statusText}`);
+    }
+    return response.json();
   }
-  return response.json();
 }
 
 /**

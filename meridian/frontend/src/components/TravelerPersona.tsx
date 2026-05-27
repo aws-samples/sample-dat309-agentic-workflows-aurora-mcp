@@ -3,6 +3,7 @@
  */
 import { useEffect, useState } from 'react';
 import { fetchMemoryProfile } from '../api/client';
+import { DEMO_MEMORY_FACTS, DEMO_TRAVELER } from '../lib/proDemoData';
 import type { LongTermMemoryFact, TravelerProfile } from '../types';
 
 export const DEMO_TRAVELER_ID = 'trv_meridian_demo';
@@ -19,14 +20,9 @@ export function personaInitials(fullName: string): string {
 export const DEMO_PERSONA_INITIALS = personaInitials('Alex & Jordan Chen');
 
 export const DEMO_PERSONA_FALLBACK: TravelerProfile = {
-  full_name: 'Alex & Jordan Chen',
-  home_airport: 'SFO',
+  ...DEMO_TRAVELER,
   party_size: 2,
-  budget_min: 2000,
-  budget_max: 3500,
   seat_preference: 'Window on short-haul · aisle on long-haul',
-  dietary_notes: 'Shellfish allergy — exclude seafood dining',
-  trip_goal: 'Tokyo culture trip — target Oct 12–19',
 };
 
 interface TravelerPersonaProps {
@@ -49,7 +45,7 @@ export function TravelerPersona({
   const [profile, setProfile] = useState<TravelerProfile>(
     profileProp ?? DEMO_PERSONA_FALLBACK,
   );
-  const [facts, setFacts] = useState<LongTermMemoryFact[]>(factsProp ?? []);
+  const [facts, setFacts] = useState<LongTermMemoryFact[]>(factsProp ?? DEMO_MEMORY_FACTS);
 
   useEffect(() => {
     if (profileProp) setProfile(profileProp);
@@ -64,7 +60,8 @@ export function TravelerPersona({
         if (res.facts.length) setFacts(res.facts);
       })
       .catch(() => {
-        /* keep empty profile until backend is available */
+        setProfile(DEMO_PERSONA_FALLBACK);
+        setFacts(DEMO_MEMORY_FACTS);
       });
   }, [travelerId, profileProp, factsProp]);
 

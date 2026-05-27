@@ -3,21 +3,21 @@
  */
 import type { Phase } from '../types';
 
-/** Section eyebrows and demo-stage live pill (e.g. "Phase 4 · Production"). */
+/** Section eyebrows and demo-stage live pill (e.g. "Phase 4 · Memory"). */
 export const PHASE_EYEBROW: Record<Phase, string> = {
   1: 'Phase 1 · SQL',
   2: 'Phase 2 · MCP',
   3: 'Phase 3 · Retrieval',
-  4: 'Phase 4 · Production',
+  4: 'Phase 4 · Memory',
   5: 'Phase 5 · Orchestration',
 };
 
 /** Journey rail subtitle (zero-padded). */
 export const PHASE_JOURNEY_SUB: Record<Phase, string> = {
-  1: 'Phase 01 · Filters',
+  1: 'Phase 01 · SQL',
   2: 'Phase 02 · MCP',
-  3: 'Phase 03 · Intent',
-  4: 'Phase 04 · Production',
+  3: 'Phase 03 · Retrieval',
+  4: 'Phase 04 · Memory',
   5: 'Phase 05 · Orchestration',
 };
 
@@ -35,7 +35,7 @@ export const PHASE_PILL: Record<Phase, string> = {
   1: 'SQL',
   2: 'MCP',
   3: 'Retrieval',
-  4: 'Production',
+  4: 'Memory',
   5: 'Orchestration',
 };
 
