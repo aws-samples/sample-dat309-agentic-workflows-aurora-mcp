@@ -14,6 +14,7 @@ import type {
 } from '../types';
 
 const API_BASE = 'http://localhost:8000/api';
+const HEALTH_URL = 'http://localhost:8000/health';
 
 function packageToProduct(pkg: TripPackage): Product {
   return {
@@ -135,6 +136,17 @@ export async function fetchMemoryProfile(travelerId = 'trv_meridian_demo'): Prom
   const response = await fetch(`${API_BASE}/memory/${travelerId}`);
   if (!response.ok) {
     throw new Error(`Memory profile request failed: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Fetch backend health from the FastAPI root health endpoint.
+ */
+export async function fetchHealth<THealth = unknown>(): Promise<THealth> {
+  const response = await fetch(HEALTH_URL);
+  if (!response.ok) {
+    throw new Error(`Health request failed: ${response.statusText}`);
   }
   return response.json();
 }

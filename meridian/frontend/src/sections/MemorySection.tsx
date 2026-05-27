@@ -26,7 +26,7 @@ export function MemorySection() {
       if (res.facts?.length) setFacts(res.facts);
       else setFacts([]);
       if (res.profile) setProfile({ ...DEMO_PERSONA_FALLBACK, ...res.profile });
-    } catch (err) {
+    } catch {
       setFacts(DEMO_MEMORY_FACTS);
       setProfile({ ...DEMO_PERSONA_FALLBACK, ...DEMO_TRAVELER });
       setError('Backend offline — showing fixture traveler memory until Aurora is available.');
