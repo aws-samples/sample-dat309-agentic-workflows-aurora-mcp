@@ -1,5 +1,5 @@
 """
-Bedrock AgentCore adapters for Phase 4 (Memory Agent).
+Bedrock AgentCore adapters for Phase 4 (Production mode).
 
 Provision and deploy with the **Node-based @aws/agentcore CLI** (preferred):
 

@@ -49,8 +49,8 @@ const PHASE_INFO: Record<Phase, {
     highlight: 'Beach vacation with snorkeling',
   },
   3: {
-    beat: 'Where natural language works. Cohere Embed v4 + hybrid pgvector + tsvector.',
-    capabilities: ['Strands supervisor', 'Hybrid retrieval (1024d)', 'Specialist agents'],
+    beat: 'Where natural language works. Hybrid candidates (pgvector + tsvector) + Cohere Rerank.',
+    capabilities: ['Strands supervisor', 'Hybrid retrieval + rerank', 'Specialist agents'],
     starters: [
       'Romantic week in Europe',
       'Weekend in Paris under $2k',
@@ -115,7 +115,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
       ],
       returns: 'list[trip_package]',
       beat: 'Plain SQL WHERE clause on trip_packages via the RDS Data API.',
-      file: 'agents/phase1/agent.py',
+      file: 'agents/sql_01/agent.py',
       example: 'SELECT * FROM trip_packages WHERE category = $1 AND price <= $2',
     },
   ],
@@ -145,8 +145,8 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
         { name: 'limit', type: 'int', note: 'default 5' },
       ],
       returns: 'list[trip_package + similarity]',
-      beat: 'Hybrid pgvector + tsvector ranking on Cohere Embed v4 (1024d).',
-      file: 'agents/phase3/search_agent.py',
+      beat: 'pgvector + tsvector candidate set reranked by Cohere Rerank.',
+      file: 'agents/retrieval_03/search_agent.py',
       example: '"romantic week in Europe" → Tuscany, Provence, Lake Como',
     },
     {
@@ -159,7 +159,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
       ],
       returns: 'departure_slots[]',
       beat: 'Departure slot lookup against trip_packages.availability.',
-      file: 'agents/phase3/package_agent.py',
+      file: 'agents/retrieval_03/package_agent.py',
       example: 'CTY-002 · 7 days → 4 dates remaining in May',
     },
     {
@@ -172,7 +172,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
       ],
       returns: 'booking { booking_id, total, estimated_departure }',
       beat: 'Calculate, hold, and persist a booking against bookings + booking_lines.',
-      file: 'agents/phase3/booking_agent.py',
+      file: 'agents/retrieval_03/booking_agent.py',
       example: 'Hold CTY-002 · 7 days · 2 travelers → BKG-4F2C8A1B',
     },
   ],
@@ -188,7 +188,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
       ],
       returns: 'reply + products + memory_facts',
       beat: 'AgentCore Runtime + Gateway + MemoryAgent @tools + Aurora RLS.',
-      file: 'agents/phase4/concierge.py',
+      file: 'agents/production_04/concierge.py',
       example: 'Wine country + no red-eyes → hybrid search under RLS scope',
     },
     {
@@ -201,7 +201,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
       ],
       returns: 'messages[]',
       beat: 'Short-term turn context from conversation_messages.',
-      file: 'agents/phase4/memory_agent.py',
+      file: 'agents/production_04/memory_agent.py',
       example: 'Last 6 turns of conv_8a91 → "Tokyo · October · two"',
     },
     {
@@ -214,7 +214,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
       ],
       returns: 'facts[] { key, value, confidence }',
       beat: 'Long-term traveler facts from traveler_preferences.',
-      file: 'agents/phase4/memory_agent.py',
+      file: 'agents/production_04/memory_agent.py',
       example: 'aj_chen → party=2, allergies=[shellfish], budget≤$3.2k',
     },
     {
@@ -228,7 +228,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
       ],
       returns: 'interactions[] + similarity',
       beat: 'pgvector recall over interaction_embeddings.',
-      file: 'agents/phase4/memory_agent.py',
+      file: 'agents/production_04/memory_agent.py',
       example: '"slow + warm" → past Sicily + Sardinia conversations',
     },
     {
@@ -243,7 +243,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
       ],
       returns: 'message_id',
       beat: 'Write turn + embedding so the next session knows this one happened.',
-      file: 'agents/phase4/memory_agent.py',
+      file: 'agents/production_04/memory_agent.py',
       example: 'Insert into conversation_messages + interaction_embeddings',
     },
   ],
@@ -255,7 +255,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
       args: [{ name: 'state', type: 'WorkflowState', note: 'last user msg' }],
       returns: 'intent ∈ {search, availability, recall, plan}',
       beat: 'Branches the StateGraph to the right specialist edge.',
-      file: 'agents/phase5/workflow.py',
+      file: 'agents/orchestration_05/workflow.py',
       example: '"watch our dates" → plan (long-running)',
     },
     {
@@ -268,7 +268,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
       ],
       returns: 'checkpoint_id',
       beat: 'Aurora-backed checkpoints — resume weeks later.',
-      file: 'agents/phase5/workflow.py',
+      file: 'agents/orchestration_05/workflow.py',
       example: 'thread th_2614 paused at "watch dates" → resumed in October',
     },
     {
@@ -278,7 +278,7 @@ const PHASE_SKILLS: Record<Phase, SkillSpec[]> = {
       args: [{ name: 'state', type: 'WorkflowState' }],
       returns: 'message + follow_ups',
       beat: 'Compose final reply from accumulated tool outputs.',
-      file: 'agents/phase5/workflow.py',
+      file: 'agents/orchestration_05/workflow.py',
       example: 'search + availability + recall → "Hold CTY-002, 4 dates left"',
     },
   ],
@@ -757,7 +757,7 @@ export function AgentSection() {
       <FadeIn>
         <div className="mp-section-h-row">
           <div className="mp-section-h">
-            <div className="mp-label-row">Phases 1–5 · live workspace</div>
+            <div className="mp-label-row">SQL → MCP → Retrieval → Production → Orchestration · live workspace</div>
             <h2>The room where the concierge works.</h2>
             <p>
               Three panes: traveler context on the left, dialogue in the middle, a cinematic trace
@@ -835,7 +835,7 @@ export function AgentSection() {
             <div className="mp-skills-label">
               Skills
               <span className="mp-skills-sub">
-                Phase {phase} · {skills.length} {skills.length === 1 ? 'tool' : 'tools'}
+                {PHASE_PILL[phase]} · {skills.length} {skills.length === 1 ? 'tool' : 'tools'}
               </span>
             </div>
             <div className="mp-skills-row">
@@ -1026,7 +1026,7 @@ export function AgentSection() {
                     <div className="mp-bubble">
                       <p style={{ margin: 0 }}>
                         Hi — pick a starter on the left, or describe the trip you have in mind. In
-                        Phase 4 is production mode — AgentCore Runtime, Gateway, Memory, and Aurora
+                        Production mode uses AgentCore Runtime, Gateway, Memory, and Aurora
                         RLS ground every reply in your stored traveler facts.
                       </p>
                     </div>
@@ -1314,7 +1314,7 @@ export function AgentSection() {
                   (memoryFacts.length === 0 ? (
                     <div className="mp-trace-empty">
                       <div>No long-term memory recalled yet</div>
-                      <div className="hint">Switch to Phase 4 and send a query</div>
+                      <div className="hint">Switch to Production and send a query</div>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1363,7 +1363,7 @@ export function AgentSection() {
                   (sqlSpans.length === 0 ? (
                     <div className="mp-trace-empty">
                       <div>No SQL emitted on this turn</div>
-                      <div className="hint">Phase 1 / 2 will show direct queries</div>
+                      <div className="hint">SQL / MCP modes will show direct queries</div>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

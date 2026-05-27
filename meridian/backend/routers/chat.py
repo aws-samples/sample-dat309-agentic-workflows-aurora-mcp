@@ -4,8 +4,8 @@ Chat API Router for Meridian.
 Handles chat interactions with the AI travel concierge across five phases:
 - Phase 1: Direct RDS Data API connection (SQL filters on trip_packages)
 - Phase 2: Via MCP (awslabs.postgres-mcp-server) abstraction
-- Phase 3: Hybrid search — semantic (pgvector) + lexical (tsvector/tsrank)
-- Phase 4: Strands concierge + AgentCore + Aurora traveler memory
+- Phase 3: Hybrid retrieval (semantic + lexical) + Cohere rerank
+- Phase 4: Production concierge with AgentCore Runtime, Gateway, Memory
 - Phase 5: LangGraph workflow orchestration
 
 AWS docs (by phase):
@@ -181,7 +181,7 @@ def generate_follow_ups(query: str, products: List[Product], phase: int) -> List
     """Generate contextual follow-up suggestions based on the query and results.
 
     Phase 1 & 2: SQL filter search (trip_type, operator, price filters)
-    Phase 3: Hybrid semantic + lexical search (understands natural language)
+    Phase 3: Hybrid retrieval + Cohere rerank (understands natural language)
 
     Suggestions are designed to:
     1. Show queries that work in the current phase
@@ -309,7 +309,7 @@ def generate_follow_ups(query: str, products: List[Product], phase: int) -> List
 # Simple SQL queries directly to Aurora PostgreSQL
 # =============================================================================
 
-async def phase1_search(query: str, limit: int = 5) -> tuple[List[Product], List[ActivityEntry]]:
+async def sql_search(query: str, limit: int = 5) -> tuple[List[Product], List[ActivityEntry]]:
     """
     Phase 1: Direct database search using RDS Data API.
     Simple trip_type matching and LIKE queries.
@@ -324,7 +324,7 @@ async def phase1_search(query: str, limit: int = 5) -> tuple[List[Product], List
         title="Direct RDS Data API connection",
         details="Executing SQL query via HTTP endpoint",
         agent_name="SQLAgent",
-        agent_file="agents/phase1/agent.py"
+        agent_file="agents/sql_01/agent.py"
     ))
 
     # Use shared search utilities
@@ -336,7 +336,7 @@ async def phase1_search(query: str, limit: int = 5) -> tuple[List[Product], List
         title=search_title,
         sql_query=display_sql,
         agent_name="SQLAgent",
-        agent_file="agents/phase1/agent.py"
+        agent_file="agents/sql_01/agent.py"
     ))
 
     execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
@@ -350,7 +350,7 @@ async def phase1_search(query: str, limit: int = 5) -> tuple[List[Product], List
         title=f"Found {len(results)} trips",
         execution_time_ms=execution_time,
         agent_name="SQLAgent",
-        agent_file="agents/phase1/agent.py"
+        agent_file="agents/sql_01/agent.py"
     ))
 
     # Convert results to Product models
@@ -371,7 +371,7 @@ async def phase1_search(query: str, limit: int = 5) -> tuple[List[Product], List
 # Phase 2 requires MCP — no RDS Data API substitute.
 # =============================================================================
 
-async def phase2_search(query: str, limit: int = 5) -> tuple[List[Product], List[ActivityEntry]]:
+async def mcp_search(query: str, limit: int = 5) -> tuple[List[Product], List[ActivityEntry]]:
     """
     Phase 2: Search via MCP abstraction layer (postgres-mcp-server → Aurora).
     """
@@ -386,7 +386,7 @@ async def phase2_search(query: str, limit: int = 5) -> tuple[List[Product], List
         title="MCP: connect_to_database",
         details="Connecting to Aurora PostgreSQL via postgres-mcp-server",
         agent_name="MCPAgent",
-        agent_file="agents/phase2/agent.py"
+        agent_file="agents/mcp_02/agent.py"
     ))
     async with mcp_session() as client:
         results = await client.run_query(sql)
@@ -396,7 +396,7 @@ async def phase2_search(query: str, limit: int = 5) -> tuple[List[Product], List
         details=f"Executing via MCP: {search_title}",
         sql_query=display_sql,
         agent_name="MCPAgent",
-        agent_file="agents/phase2/agent.py"
+        agent_file="agents/mcp_02/agent.py"
     ))
 
     execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
@@ -410,7 +410,7 @@ async def phase2_search(query: str, limit: int = 5) -> tuple[List[Product], List
         details=f"Retrieved {len(results)} rows",
         execution_time_ms=execution_time,
         agent_name="MCPAgent",
-        agent_file="agents/phase2/agent.py"
+        agent_file="agents/mcp_02/agent.py"
     ))
 
     product_dicts = results_to_packages(results)
@@ -420,47 +420,44 @@ async def phase2_search(query: str, limit: int = 5) -> tuple[List[Product], List
 
 
 # =============================================================================
-# PHASE 3: Hybrid Search - Semantic (pgvector) + Lexical (tsvector/tsrank)
+# PHASE 3: Retrieval - semantic + lexical candidates + Cohere rerank
 #
 # AWS docs:
 #   Cohere Embed v4: https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-embed-v4.html
 #   Aurora pgvector: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Extensions.html#AuroraPostgreSQL.Extensions.pgvector
 # =============================================================================
 
-async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List[ActivityEntry]]:
+async def retrieval_search(query: str, limit: int = 5) -> tuple[List[Product], List[ActivityEntry]]:
     """
-    Phase 3: Hybrid search combining semantic and lexical approaches.
-    - Semantic: Cohere Embed v4 embeddings with pgvector cosine similarity
-    - Lexical: PostgreSQL tsvector/tsrank full-text search
-    - Final ranking: Weighted combination of both scores
+    Retrieval mode: hybrid candidates + Cohere rerank.
+    - Candidate retrieval: pgvector semantic + tsvector lexical search on Aurora
+    - Ranking: Cohere Rerank on Bedrock
     """
     activities = []
     start_time = datetime.utcnow()
-    
+
     db = get_rds_data_client()
-    
-    # Parse price filter
+
+    # Optional budget filter parsed from natural language.
     price_filter = None
     price_match = re.search(r'(?:under|below|less than|<)\s*\$?(\d+(?:\.\d{2})?)', query.lower())
     if price_match:
         price_filter = float(price_match.group(1))
-    
-    # Step 0: Supervisor delegates to SearchAgent
+
     activities.append(create_activity(
         activity_type="reasoning",
         title="Delegating to SearchAgent",
         details="Supervisor routing search request to specialized agent",
         agent_name="RetrievalAgent",
-        agent_file="agents/phase3/supervisor.py"
+        agent_file="agents/retrieval_03/supervisor.py"
     ))
-    
-    # Step 1: Generate query embedding
+
     activities.append(create_activity(
         activity_type="embedding",
         title="Generating query embedding",
         details="Cohere Embed v4 Embeddings (1024d)",
         agent_name="SearchAgent",
-        agent_file="agents/phase3/search_agent.py"
+        agent_file="agents/retrieval_03/search_agent.py"
     ))
     
     embedding_service = get_embedding_service()
@@ -473,101 +470,123 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
         title="Embedding generated",
         execution_time_ms=embedding_time,
         agent_name="SearchAgent",
-        agent_file="agents/phase3/search_agent.py"
+        agent_file="agents/retrieval_03/search_agent.py"
     ))
 
-    # Step 2: Hybrid search - Semantic + Lexical
+    # Step 2: Hybrid candidate retrieval (semantic + lexical).
     activities.append(create_activity(
         activity_type="search",
-        title="Hybrid search: Semantic + Lexical",
-        details="pgvector cosine + tsvector/tsrank",
+        title="Hybrid candidate retrieval",
+        details="pgvector cosine + tsvector/ts_rank",
         agent_name="SearchAgent",
-        agent_file="agents/phase3/search_agent.py"
+        agent_file="agents/retrieval_03/search_agent.py"
     ))
+    candidate_limit = max(limit * config.search.rerank_candidate_multiplier, 25)
+    semantic_sql = """
+        SELECT * FROM semantic_trip_search(%s::vector, %s)
+    """
+    semantic_rows = await db.execute(semantic_sql, (embedding_str, candidate_limit))
+    if price_filter is not None:
+        semantic_rows = [r for r in semantic_rows if float(r["price_per_person"]) <= price_filter]
 
-    if price_filter:
-        sql = """
-            WITH semantic_search AS (
-                SELECT package_id, name, operator, price_per_person, description, 
-                       image_url, trip_type, durations,
-                       1 - (embedding <=> %s::vector) as semantic_score
-                FROM trip_packages
-                WHERE price_per_person <= %s
-            ),
-            lexical_search AS (
-                SELECT package_id,
-                       ts_rank(
-                           to_tsvector('english', name || ' ' || COALESCE(description, '') || ' ' || COALESCE(operator, '')),
-                           plainto_tsquery('english', %s)
-                       ) as lexical_score
-                FROM trip_packages
-                WHERE price_per_person <= %s
-            )
-            SELECT s.package_id, s.name, s.operator, s.price_per_person, s.description,
-                   s.image_url, s.trip_type, s.durations,
-                   s.semantic_score,
-                   COALESCE(l.lexical_score, 0) as lexical_score,
-                   (0.7 * s.semantic_score + 0.3 * COALESCE(l.lexical_score, 0)) as combined_score
-            FROM semantic_search s
-            LEFT JOIN lexical_search l ON s.package_id = l.package_id
-            ORDER BY combined_score DESC
-            LIMIT %s
-        """
-        results = await db.execute(sql, (embedding_str, price_filter, query, price_filter, limit))
-    else:
-        sql = """
-            WITH semantic_search AS (
-                SELECT package_id, name, operator, price_per_person, description, 
-                       image_url, trip_type, durations,
-                       1 - (embedding <=> %s::vector) as semantic_score
-                FROM trip_packages
-            ),
-            lexical_search AS (
-                SELECT package_id,
-                       ts_rank(
-                           to_tsvector('english', name || ' ' || COALESCE(description, '') || ' ' || COALESCE(operator, '')),
-                           plainto_tsquery('english', %s)
-                       ) as lexical_score
-                FROM trip_packages
-            )
-            SELECT s.package_id, s.name, s.operator, s.price_per_person, s.description,
-                   s.image_url, s.trip_type, s.durations,
-                   s.semantic_score,
-                   COALESCE(l.lexical_score, 0) as lexical_score,
-                   (0.7 * s.semantic_score + 0.3 * COALESCE(l.lexical_score, 0)) as combined_score
-            FROM semantic_search s
-            LEFT JOIN lexical_search l ON s.package_id = l.package_id
-            ORDER BY combined_score DESC
-            LIMIT %s
-        """
-        results = await db.execute(sql, (embedding_str, query, limit))
+    lexical_sql = """
+        SELECT
+            package_id,
+            name,
+            operator,
+            price_per_person,
+            description,
+            image_url,
+            trip_type,
+            destination,
+            region,
+            durations,
+            ts_rank(search_vector, websearch_to_tsquery('english', %s)) AS lexical_score
+        FROM trip_packages
+        WHERE search_vector @@ websearch_to_tsquery('english', %s)
+    """
+    lexical_params: list[Any] = [query, query]
+    if price_filter is not None:
+        lexical_sql += " AND price_per_person <= %s"
+        lexical_params.append(price_filter)
+    lexical_sql += " ORDER BY lexical_score DESC LIMIT %s"
+    lexical_params.append(candidate_limit)
+    lexical_rows = await db.execute(lexical_sql, tuple(lexical_params))
+
+    # Merge candidates by package_id so rerank sees one entry per trip package.
+    merged_by_package: dict[str, dict[str, Any]] = {}
+    for row in semantic_rows:
+        merged_by_package[row["package_id"]] = dict(row)
+    for row in lexical_rows:
+        existing = merged_by_package.get(row["package_id"])
+        if existing:
+            existing["lexical_score"] = float(row.get("lexical_score", 0.0))
+        else:
+            merged_by_package[row["package_id"]] = dict(row)
+    candidate_rows = list(merged_by_package.values())
 
     search_time = int((datetime.utcnow() - start_time).total_seconds() * 1000) - embedding_time
-
-    if price_filter:
-        display_sql = f"WITH semantic_search AS (SELECT ..., 1 - (embedding <=> query_vector) as score FROM trip_packages WHERE price_per_person <= {price_filter}), lexical_search AS (SELECT ..., ts_rank(...) FROM trip_packages) SELECT ... ORDER BY (0.7 * semantic + 0.3 * lexical) DESC LIMIT {limit}"
-    else:
-        display_sql = f"WITH semantic_search AS (SELECT ..., 1 - (embedding <=> query_vector) as score FROM trip_packages), lexical_search AS (SELECT ..., ts_rank(...) FROM trip_packages) SELECT ... ORDER BY (0.7 * semantic + 0.3 * lexical) DESC LIMIT {limit}"
-
     activities.append(create_activity(
         activity_type="search",
-        title="pgvector HNSW + tsrank search",
-        details=f"Found {len(results)} trips",
-        sql_query=display_sql,
+        title="Hybrid candidates fetched",
+        details=(
+            f"{len(candidate_rows)} unique candidates "
+            f"(semantic={len(semantic_rows)}, lexical={len(lexical_rows)})"
+        ),
+        sql_query=(
+            "SELECT * FROM semantic_trip_search(query_vector, candidate_limit); "
+            "SELECT ... ts_rank(search_vector, websearch_to_tsquery(...)) ..."
+        ),
         execution_time_ms=search_time,
         agent_name="SearchAgent",
-        agent_file="agents/phase3/search_agent.py"
+        agent_file="agents/retrieval_03/search_agent.py"
+    ))
+
+    # Step 3: Cohere rerank over semantic candidates.
+    rerank_start = datetime.utcnow()
+    embedding_service = get_embedding_service()
+    docs = [
+        " | ".join([
+            row.get("name", "") or "",
+            row.get("destination", "") or "",
+            row.get("trip_type", "") or "",
+            row.get("operator", "") or "",
+            row.get("description", "") or "",
+        ])
+        for row in candidate_rows
+    ]
+    ranked_rows = candidate_rows
+    rerank_failed = False
+    try:
+        ranked = embedding_service.rerank_documents(query, docs, top_n=limit)
+        ranked_rows = [candidate_rows[item["index"]] for item in ranked if item["index"] < len(candidate_rows)]
+    except Exception:
+        rerank_failed = True
+        ranked_rows = candidate_rows[:limit]
+
+    rerank_time = int((datetime.utcnow() - rerank_start).total_seconds() * 1000)
+    activities.append(create_activity(
+        activity_type="search",
+        title="Cohere rerank applied" if not rerank_failed else "Cohere rerank unavailable",
+        details=(
+            f"Reranked to top {len(ranked_rows[:limit])} trips"
+            if not rerank_failed
+            else "Falling back to semantic rank order"
+        ),
+        execution_time_ms=rerank_time,
+        agent_name="SearchAgent",
+        agent_file="agents/retrieval_03/search_agent.py"
     ))
 
     activities.append(create_activity(
         activity_type="result",
-        title=f"SearchAgent returned {len(results)} results",
+        title=f"SearchAgent returned {len(ranked_rows[:limit])} results",
         details="Returning ranked trips to RetrievalAgent",
         agent_name="RetrievalAgent",
-        agent_file="agents/phase3/supervisor.py"
+        agent_file="agents/retrieval_03/supervisor.py"
     ))
 
-    products = [Product(**row_to_api_product(row)) for row in results]
+    products = [Product(**row_to_api_product(row)) for row in ranked_rows[:limit]]
     return products, activities
 
 
@@ -575,12 +594,12 @@ async def phase3_search(query: str, limit: int = 5) -> tuple[List[Product], List
 # PHASE 3 (live): Strands RetrievalAgent driving Bedrock tool delegation.
 # =============================================================================
 
-async def phase3_supervisor_search(
+async def retrieval_supervisor_search(
     query: str,
     limit: int = 5,
 ) -> tuple[List[Product], List[ActivityEntry]]:
     """Phase 3 via live Strands supervisor — Bedrock LLM picks the SearchAgent tool."""
-    from backend.agents.phase3 import create_phase3_system
+    from backend.agents.retrieval_03 import create_retrieval_system
 
     activities: List[ActivityEntry] = []
 
@@ -598,10 +617,10 @@ async def phase3_supervisor_search(
         title="RetrievalAgent invoked (Strands + Bedrock)",
         details="Bedrock will choose which specialist tool to call",
         agent_name="RetrievalAgent",
-        agent_file="agents/phase3/supervisor.py",
+        agent_file="agents/retrieval_03/supervisor.py",
     ))
 
-    supervisor = create_phase3_system(activity_callback=collect)
+    supervisor = create_retrieval_system(activity_callback=collect)
 
     packages, _llm_reply = await supervisor.process_search(query, activity_callback=collect)
 
@@ -625,7 +644,7 @@ async def phase3_supervisor_search(
             title="Supervisor search returned no trips",
             details="Strands delegation completed without package results",
             agent_name="RetrievalAgent",
-            agent_file="agents/phase3/supervisor.py",
+            agent_file="agents/retrieval_03/supervisor.py",
         ))
         return products, activities
 
@@ -634,7 +653,7 @@ async def phase3_supervisor_search(
         title=f"Supervisor returned {len(products)} trips",
         details="Bedrock-driven delegation completed",
         agent_name="RetrievalAgent",
-        agent_file="agents/phase3/supervisor.py",
+        agent_file="agents/retrieval_03/supervisor.py",
     ))
 
     return products, activities
@@ -664,7 +683,7 @@ def _memory_activity_to_entry(entry: Any) -> ActivityEntry:
     )
 
 
-async def phase5_memory_recall(
+async def workflow_memory_recall(
     query: str,
     *,
     traveler_id: str,
@@ -689,7 +708,7 @@ async def phase5_memory_recall(
         title="Aurora recall: traveler_preferences",
         details=f"{len(prefs)} durable preference facts",
         agent_name="MemoryAgent",
-        agent_file="agents/phase4/memory_agent.py",
+        agent_file="agents/production_04/memory_agent.py",
     ))
 
     if conversation_id:
@@ -699,7 +718,7 @@ async def phase5_memory_recall(
             title="Aurora recall: conversation_messages",
             details=f"{len(session)} recent session turns",
             agent_name="MemoryAgent",
-            agent_file="agents/phase4/memory_agent.py",
+            agent_file="agents/production_04/memory_agent.py",
         ))
 
     similar = await store.recall_similar_interactions(tid, query, limit=3)
@@ -708,15 +727,15 @@ async def phase5_memory_recall(
         title="Aurora recall: trip_interactions (pgvector)",
         details=f"{len(similar)} semantically similar past interactions",
         agent_name="MemoryAgent",
-        agent_file="agents/phase4/memory_agent.py",
+        agent_file="agents/production_04/memory_agent.py",
     ))
 
-    products, search_activities = await phase3_search(query, limit=5)
+    products, search_activities = await retrieval_search(query, limit=5)
     activities.extend(search_activities)
     return products, activities
 
 
-async def phase5_workflow(
+async def orchestration_workflow(
     query: str,
     traveler_id: str,
     conversation_id: Optional[str] = None,
@@ -724,17 +743,17 @@ async def phase5_workflow(
     """
     Phase 5: LangGraph StateGraph orchestrates classify → branch → synthesize.
 
-    Reuses Phase 3's hybrid search and availability check as graph nodes so the
+    Reuses Phase 3's retrieval search and availability check as graph nodes so the
     workflow story is "explicit edges + checkpoints" rather than "different
     search code."  Checkpointer is PostgresSaver when LANGGRAPH_CHECKPOINT_DSN
     is set, otherwise MemorySaver.
     """
-    from backend.agents.phase5.workflow import OrchestrationAgent
+    from backend.agents.orchestration_05.workflow import OrchestrationAgent
 
     workflow = OrchestrationAgent(
-        search_fn=phase3_search,
-        availability_fn=phase3_availability_check,
-        memory_recall_fn=phase5_memory_recall,
+        search_fn=retrieval_search,
+        availability_fn=retrieval_availability_search,
+        memory_recall_fn=workflow_memory_recall,
     )
     final_state = await workflow.run(
         query,
@@ -775,23 +794,23 @@ def _dict_to_activity_entry(activity: Any) -> ActivityEntry:
     )
 
 
-async def phase4_search(
+async def production_search(
     query: str,
     customer_id: str,
     conversation_id: Optional[str] = None,
     limit: int = 5,
 ) -> tuple[List[Product], List[ActivityEntry], str, str, List[MemoryFact]]:
     """
-    Phase 4: Recall Aurora memory via Strands @tool, AgentCore Gateway search, persist turn.
+    Production mode: Runtime session + Memory recall + Gateway search + persist turn.
 
     Requires deployed AgentCore Runtime, Gateway, and Memory — see ``agentcore/README.md``.
     """
-    from backend.agents.phase4.concierge import create_production_agent
+    from backend.agents.production_04.concierge import create_production_agent
     from backend.memory.store import DEMO_TRAVELER_ID
 
     tid = customer_id or DEMO_TRAVELER_ID
     runtime = create_production_agent()
-    products, raw_activities, message, conv_id, facts = await runtime.process_turn(
+    packages, raw_activities, message, conv_id, facts = await runtime.process_turn(
         query,
         tid,
         conversation_id,
@@ -809,14 +828,27 @@ async def phase4_search(
         )
         for f in facts
     ]
-    return products, activities, message, conv_id, memory_facts
+    api_products = [
+        Product(
+            product_id=(getattr(pkg, "package_id", "") or ""),
+            name=(getattr(pkg, "name", "") or ""),
+            brand=(getattr(pkg, "operator", "") or ""),
+            price=float(getattr(pkg, "price_per_person", 0.0) or 0.0),
+            description=(getattr(pkg, "description", "") or ""),
+            image_url=(getattr(pkg, "image_url", "") or ""),
+            category=(getattr(pkg, "trip_type", "") or ""),
+            similarity=getattr(pkg, "similarity", None),
+        )
+        for pkg in packages
+    ]
+    return api_products, activities, message, conv_id, memory_facts
 
 
 # =============================================================================
 # PHASE 3: PackageAgent — departure slots and package details
 # =============================================================================
 
-async def phase3_availability_check(query: str) -> tuple[List[Product], List[ActivityEntry], str]:
+async def retrieval_availability_search(query: str) -> tuple[List[Product], List[ActivityEntry], str]:
     """
     Phase 3: PackageAgent handles departure and slot queries.
     Supervisor delegates availability questions to the specialist agent.
@@ -833,7 +865,7 @@ async def phase3_availability_check(query: str) -> tuple[List[Product], List[Act
         title="Delegating to PackageAgent",
         details="Supervisor routing availability request to specialist agent",
         agent_name="RetrievalAgent",
-        agent_file="agents/phase3/supervisor.py"
+        agent_file="agents/retrieval_03/supervisor.py"
     ))
 
     query_lower = query.lower()
@@ -843,7 +875,7 @@ async def phase3_availability_check(query: str) -> tuple[List[Product], List[Act
         title="PackageAgent: Finding package",
         details="Searching for mentioned trip package",
         agent_name="PackageAgent",
-        agent_file="agents/phase3/package_agent.py"
+        agent_file="agents/retrieval_03/package_agent.py"
     ))
 
     sql = """
@@ -876,7 +908,7 @@ async def phase3_availability_check(query: str) -> tuple[List[Product], List[Act
             title="PackageAgent: Package not found",
             execution_time_ms=search_time,
             agent_name="PackageAgent",
-            agent_file="agents/phase3/package_agent.py"
+            agent_file="agents/retrieval_03/package_agent.py"
         ))
 
         activities.append(create_activity(
@@ -884,7 +916,7 @@ async def phase3_availability_check(query: str) -> tuple[List[Product], List[Act
             title="PackageAgent returned to Supervisor",
             details="No matching package found",
             agent_name="RetrievalAgent",
-            agent_file="agents/phase3/supervisor.py"
+            agent_file="agents/retrieval_03/supervisor.py"
         ))
 
         return [], activities, "I couldn't find that trip package. Try searching by destination, operator, or trip type."
@@ -898,7 +930,7 @@ async def phase3_availability_check(query: str) -> tuple[List[Product], List[Act
         details=f"Package: {product['name']}",
         sql_query="SELECT availability, durations FROM trip_packages WHERE package_id = ?",
         agent_name="PackageAgent",
-        agent_file="agents/phase3/package_agent.py"
+        agent_file="agents/retrieval_03/package_agent.py"
     ))
     
     # Calculate total stock
@@ -918,7 +950,7 @@ async def phase3_availability_check(query: str) -> tuple[List[Product], List[Act
         details=f"Total: {total_stock} departure slots available",
         execution_time_ms=availability_time,
         agent_name="PackageAgent",
-        agent_file="agents/phase3/package_agent.py"
+        agent_file="agents/retrieval_03/package_agent.py"
     ))
 
     activities.append(create_activity(
@@ -926,7 +958,7 @@ async def phase3_availability_check(query: str) -> tuple[List[Product], List[Act
         title="PackageAgent returned to Supervisor",
         details=f"Availability check complete for {product['name']}",
         agent_name="RetrievalAgent",
-        agent_file="agents/phase3/supervisor.py"
+        agent_file="agents/retrieval_03/supervisor.py"
     ))
 
     durations = product.get('durations', [])
@@ -964,8 +996,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
     Routes to the appropriate search implementation based on phase:
     - Phase 1: Direct RDS Data API filters
     - Phase 2: MCP-backed SQL
-    - Phase 3: Hybrid semantic + lexical search; PackageAgent for slot checks
-    - Phase 4: Strands concierge with Aurora traveler memory
+    - Phase 3: Hybrid retrieval + Cohere rerank; PackageAgent for slot checks
+    - Phase 4: Production concierge with AgentCore Runtime/Gateway/Memory
     """
     turn_started = log_turn_start(
         request.phase,
@@ -982,11 +1014,11 @@ async def chat(request: ChatRequest) -> ChatResponse:
             title="Processing with Multi-Agent Orchestration",
             details=f"Query: {request.message[:80]}{'...' if len(request.message) > 80 else ''}",
             agent_name="RetrievalAgent",
-            agent_file="agents/phase3/supervisor.py"
+            agent_file="agents/retrieval_03/supervisor.py"
         ))
         
         try:
-            products, availability_activities, message = await phase3_availability_check(request.message)
+            products, availability_activities, message = await retrieval_availability_search(request.message)
             activities.extend(availability_activities)
             
             follow_ups = ["Show similar trips", "What other durations are available?", "Find alternatives"]
@@ -1008,23 +1040,23 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 title="PackageAgent error",
                 details=str(e),
                 agent_name="PackageAgent",
-                agent_file="agents/phase3/package_agent.py"
+                agent_file="agents/retrieval_03/package_agent.py"
             ))
             # Fall through to regular search
 
-    # Phase 4: ProductionAgent + Aurora memory (@tool)
+    # Phase 4: ProductionAgent + AgentCore Runtime/Gateway/Memory
     if request.phase == 4:
         from backend.memory.store import DEMO_TRAVELER_ID
 
         activities.append(create_activity(
             activity_type="reasoning",
-            title="Processing with personal concierge (Strands + Aurora memory)",
+            title="Processing with Production concierge (Runtime + Gateway + Memory)",
             details=f"Query: {request.message[:80]}{'...' if len(request.message) > 80 else ''}",
             agent_name="ProductionAgent",
-            agent_file="agents/phase4/concierge.py",
+            agent_file="agents/production_04/concierge.py",
         ))
         try:
-            products, search_activities, message, conv_id, memory_facts = await phase4_search(
+            products, search_activities, message, conv_id, memory_facts = await production_search(
                 request.message,
                 customer_id=request.customer_id or DEMO_TRAVELER_ID,
                 conversation_id=request.conversation_id,
@@ -1046,17 +1078,17 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 turn_started,
             )
         except Exception as e:
-            log_error("phase4_search", error=str(e))
+            log_error("production_search", error=str(e))
             activities.append(create_activity(
                 activity_type="error",
                 title="Concierge error",
                 details=str(e),
                 agent_name="ProductionAgent",
-                agent_file="agents/phase4/concierge.py",
+                agent_file="agents/production_04/concierge.py",
             ))
             return _complete_chat_turn(
                 ChatResponse(
-                message="I encountered an error loading memory. Please try again.",
+                message="I encountered an error in Production mode. Please try again.",
                 products=None,
                 order=None,
                 activities=activities,
@@ -1071,7 +1103,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
     if request.phase == 5:
         from backend.memory.store import DEMO_TRAVELER_ID
         try:
-            workflow_packages, workflow_activities, message, conv_id = await phase5_workflow(
+            workflow_packages, workflow_activities, message, conv_id = await orchestration_workflow(
                 request.message,
                 traveler_id=request.customer_id or DEMO_TRAVELER_ID,
                 conversation_id=request.conversation_id,
@@ -1091,13 +1123,13 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 turn_started,
             )
         except Exception as e:
-            log_error("phase5_workflow", error=str(e))
+            log_error("orchestration_workflow", error=str(e))
             activities.append(create_activity(
                 activity_type="error",
                 title="LangGraph workflow error",
                 details=str(e),
                 agent_name="OrchestrationAgent",
-                agent_file="agents/phase5/workflow.py",
+                agent_file="agents/orchestration_05/workflow.py",
             ))
             return _complete_chat_turn(
                 ChatResponse(
@@ -1113,13 +1145,13 @@ async def chat(request: ChatRequest) -> ChatResponse:
             )
 
     # Phase 3: live Strands supervisor (Bedrock-driven tool delegation).
-    phase3_fn = phase3_supervisor_search
-    phase3_method = "Hybrid Search via Strands Supervisor (Bedrock-driven)"
+    phase3_fn = retrieval_supervisor_search
+    phase3_method = "Hybrid (pgvector + tsvector) + Cohere Rerank via Strands Supervisor"
 
     phase_configs = {
-        1: ("SQLAgent", "Direct RDS Data API", phase1_search, "agents/phase1/agent.py"),
-        2: ("MCPAgent", "MCP (postgres-mcp-server)", phase2_search, "agents/phase2/agent.py"),
-        3: ("RetrievalAgent", phase3_method, phase3_fn, "agents/phase3/supervisor.py"),
+        1: ("SQLAgent", "Direct RDS Data API", sql_search, "agents/sql_01/agent.py"),
+        2: ("MCPAgent", "MCP (postgres-mcp-server)", mcp_search, "agents/mcp_02/agent.py"),
+        3: ("RetrievalAgent", phase3_method, phase3_fn, "agents/retrieval_03/supervisor.py"),
     }
 
     agent_name, method, search_fn, agent_file = phase_configs[request.phase]
@@ -1228,12 +1260,12 @@ async def process_order(request: OrderRequest) -> OrderResponse:
 
     # Determine agent config based on phase
     phase_configs = {
-        1: ("SQLAgent", "agents/phase1/agent.py"),
-        2: ("MCPAgent", "agents/phase2/agent.py"),
-        3: ("BookingAgent", "agents/phase3/booking_agent.py"),
+        1: ("SQLAgent", "agents/sql_01/agent.py"),
+        2: ("MCPAgent", "agents/mcp_02/agent.py"),
+        3: ("BookingAgent", "agents/retrieval_03/booking_agent.py"),
         # Phase 4 booking is driven by the concierge orchestrator; the BookingAgent
         # in phase 3 is reused as the booking specialist.
-        4: ("BookingAgent", "agents/phase3/booking_agent.py"),
+        4: ("BookingAgent", "agents/retrieval_03/booking_agent.py"),
     }
     agent_name, agent_file = phase_configs[request.phase]
 

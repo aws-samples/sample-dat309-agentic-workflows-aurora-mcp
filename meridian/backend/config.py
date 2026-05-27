@@ -22,9 +22,8 @@ class SearchConfig:
     # Default result limit
     default_limit: int = 5
 
-    # Hybrid search weights (Phase 3)
-    semantic_weight: float = 0.7
-    lexical_weight: float = 0.3
+    # Candidate pool multiplier for semantic retrieval before reranking.
+    rerank_candidate_multiplier: int = 5
 
     # Category keyword mappings for Phase 1/2 search
     # Only exact category names or very specific keywords should match
@@ -84,15 +83,15 @@ class AgentConfig:
 
     # Agent names and files for each phase
     search_agents: Dict[int, tuple] = field(default_factory=lambda: {
-        1: ("SQLAgent", "agents/phase1/agent.py"),
-        2: ("MCPAgent", "agents/phase2/agent.py"),
-        3: ("RetrievalAgent", "agents/phase3/supervisor.py"),
+        1: ("SQLAgent", "agents/sql_01/agent.py"),
+        2: ("MCPAgent", "agents/mcp_02/agent.py"),
+        3: ("RetrievalAgent", "agents/retrieval_03/supervisor.py"),
     })
 
     booking_agents: Dict[int, tuple] = field(default_factory=lambda: {
-        1: ("SQLAgent", "agents/phase1/agent.py"),
-        2: ("MCPAgent", "agents/phase2/agent.py"),
-        3: ("BookingAgent", "agents/phase3/booking_agent.py"),
+        1: ("SQLAgent", "agents/sql_01/agent.py"),
+        2: ("MCPAgent", "agents/mcp_02/agent.py"),
+        3: ("BookingAgent", "agents/retrieval_03/booking_agent.py"),
     })
 
     # Progressive reveal delays (ms) - for demo purposes

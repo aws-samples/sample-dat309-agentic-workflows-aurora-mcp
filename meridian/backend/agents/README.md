@@ -10,7 +10,7 @@ Five orchestration phases, each teaching a different builder pattern on the **sa
 | 3 | Search Agent | `phase3/search_agent.py` | `@tool` semantic search (pgvector) |
 | 3 | Package Agent | `phase3/package_agent.py` | `@tool` details + departure availability |
 | 3 | Booking Agent | `phase3/booking_agent.py` | `@tool` totals + Aurora booking writes |
-| 4 | **Memory Agent** | `phase4/concierge.py` | Strands concierge + RLS + AgentCore |
+| 4 | **Production Agent** | `phase4/concierge.py` | Strands concierge + RLS + AgentCore |
 | 4 | Traveler Memory Agent | `phase4/memory_agent.py` | `@tool` recall / persist for Aurora memory |
 | 5 | **Orchestration Agent** | `phase5/workflow.py` | LangGraph `StateGraph` + checkpointer |
 
@@ -18,11 +18,11 @@ Five orchestration phases, each teaching a different builder pattern on the **sa
 
 | Phase | Live path | Strands module imported? |
 | ----- | --------- | ------------------------- |
-| 1 | `phase1_search()` — procedural keyword SQL | No (reference only) |
-| 2 | `phase2_search()` — MCP only (postgres-mcp-server) | No (reference only) |
-| 3 | `phase3_supervisor_search()` — Strands + Bedrock delegation | **Yes** (supervisor + SearchAgent) |
-| 4 | `phase4_search()` → `MemoryAgent.process_turn()` + AgentCore Gateway | **Yes** (concierge + TravelerMemoryAgent) |
-| 5 | `phase5_workflow()` → `OrchestrationAgent` | LangGraph (not Strands) |
+| 1 | `sql_search()` — procedural keyword SQL | No (reference only) |
+| 2 | `mcp_search()` — MCP only (postgres-mcp-server) | No (reference only) |
+| 3 | `retrieval_supervisor_search()` — Strands + Bedrock delegation | **Yes** (supervisor + SearchAgent) |
+| 4 | `production_search()` → `ProductionAgent.process_turn()` + AgentCore Gateway | **Yes** (concierge + TravelerMemoryAgent) |
+| 5 | `orchestration_workflow()` → `OrchestrationAgent` | LangGraph (not Strands) |
 
 **Presenter note:** Phases 1–2 agent modules are the **canonical Strands structure** to show on screen; the live API uses the same SQL/MCP mechanics without the LLM loop so demos stay reliable. Phases 3–5 import agent modules at runtime.
 

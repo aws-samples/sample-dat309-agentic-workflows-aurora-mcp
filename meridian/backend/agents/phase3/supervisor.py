@@ -17,7 +17,6 @@ AWS docs:
   - RDS Data API (specialist agents query Aurora):
     https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
 
-Requirements: 11.1, 11.5, 11.9
 """
 
 import os
@@ -47,8 +46,8 @@ class ActivityEntry(BaseModel):
 class AgentResponse(BaseModel):
     """Response from agent processing."""
     message: str
-    products: Optional[List[dict]] = None
-    order: Optional[dict] = None
+    packages: Optional[List[dict]] = None
+    booking: Optional[dict] = None
 
 
 class RetrievalAgent:
@@ -58,10 +57,6 @@ class RetrievalAgent:
     The supervisor has no direct database access. Its Strands tools are thin
     delegation wrappers; Bedrock selects which specialist to invoke per turn.
 
-    Requirements:
-    - 11.1: Supervisor orchestrates specialized sub-agents
-    - 11.5: Business logic lives in specialists, not the supervisor
-    - 11.9: Activity logging for trace telemetry
     """
     
     def __init__(
@@ -137,7 +132,7 @@ Guidelines:
         execution_time_ms: Optional[int] = None,
         agent_name: str = "RetrievalAgent"
     ):
-        """Log an activity entry. Requirement 11.9."""
+        """Log an activity entry."""
         entry = ActivityEntry(
             id=str(uuid.uuid4()),
             timestamp=datetime.utcnow().isoformat() + "Z",
@@ -248,7 +243,7 @@ Guidelines:
         )
         
         if action == "calculate":
-            result = await self.booking_agent.calculate_total(items or [])
+            result = await self.booking_agent.calculate_booking_total(items or [])
         elif action == "process":
             result = await self.booking_agent.process_booking(customer_id, items or [])
         else:
@@ -351,6 +346,6 @@ Guidelines:
 
         return AgentResponse(
             message=str(result),
-            products=None,
-            order=None
+            packages=None,
+            booking=None
         )

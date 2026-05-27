@@ -13,7 +13,7 @@ from typing import Any, List, Tuple
 
 import pytest
 
-from backend.agents.phase5.workflow import (
+from backend.agents.orchestration_05.workflow import (
     OrchestrationAgent,
     _classify_intent,
 )

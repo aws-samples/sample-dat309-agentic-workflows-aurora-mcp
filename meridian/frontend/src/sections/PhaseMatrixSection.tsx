@@ -1,7 +1,7 @@
 import { FadeIn } from '../components/FadeIn';
 
 type PhaseMatrixRow = {
-  phase: string;
+  modeLabel: string;
   mode: string;
   primaryAgent: string;
   specialists: string;
@@ -11,7 +11,7 @@ type PhaseMatrixRow = {
 
 const PHASE_MATRIX: PhaseMatrixRow[] = [
   {
-    phase: 'Phase 1',
+    modeLabel: 'SQL',
     mode: 'SQL',
     primaryAgent: 'SQLAgent',
     specialists: '—',
@@ -19,7 +19,7 @@ const PHASE_MATRIX: PhaseMatrixRow[] = [
     skills: 'sql_filter',
   },
   {
-    phase: 'Phase 2',
+    modeLabel: 'MCP',
     mode: 'MCP',
     primaryAgent: 'MCPAgent',
     specialists: '—',
@@ -27,7 +27,7 @@ const PHASE_MATRIX: PhaseMatrixRow[] = [
     skills: 'run_query',
   },
   {
-    phase: 'Phase 3',
+    modeLabel: 'Retrieval',
     mode: 'Retrieval',
     primaryAgent: 'RetrievalAgent',
     specialists: 'SearchAgent, PackageAgent, BookingAgent',
@@ -35,7 +35,7 @@ const PHASE_MATRIX: PhaseMatrixRow[] = [
     skills: '_semantic_search_tool, _check_availability_tool, _process_booking_tool',
   },
   {
-    phase: 'Phase 4',
+    modeLabel: 'Production',
     mode: 'Production',
     primaryAgent: 'ProductionAgent',
     specialists: 'MemoryAgent, RetrievalAgent',
@@ -44,7 +44,7 @@ const PHASE_MATRIX: PhaseMatrixRow[] = [
       'runtime_session, gateway_search, recall_session_context, recall_traveler_preferences, recall_similar_interactions, persist_turn',
   },
   {
-    phase: 'Phase 5',
+    modeLabel: 'Orchestration',
     mode: 'Orchestration',
     primaryAgent: 'OrchestrationAgent',
     specialists: 'SearchAgent, PackageAgent',
@@ -58,10 +58,10 @@ export function PhaseMatrixSection() {
     <section id="phase-matrix" className="mp-section">
       <FadeIn>
         <div className="mp-section-h">
-          <div className="mp-label-row">Quick reference · phase map</div>
-          <h2>Agents, tools, and skills by phase.</h2>
+          <div className="mp-label-row">Quick reference · mode map</div>
+          <h2>Agents, tools, and skills by mode.</h2>
           <p>
-            Keep this as your presenter cheat sheet: each row maps one phase to the exact agent,
+            Keep this as your presenter cheat sheet: each row maps one mode to the exact agent,
             specialist, tool, and skill names used across the demo.
           </p>
         </div>
@@ -72,7 +72,7 @@ export function PhaseMatrixSection() {
           <table className="mp-phase-matrix" aria-label="Phase agent tool skill matrix">
             <thead>
               <tr>
-                <th>Phase</th>
+                <th>Mode</th>
                 <th>Mode</th>
                 <th>Primary agent</th>
                 <th>Specialists</th>
@@ -82,8 +82,8 @@ export function PhaseMatrixSection() {
             </thead>
             <tbody>
               {PHASE_MATRIX.map((row) => (
-                <tr key={row.phase}>
-                  <td>{row.phase}</td>
+                <tr key={row.modeLabel}>
+                  <td>{row.modeLabel}</td>
                   <td>{row.mode}</td>
                   <td>{row.primaryAgent}</td>
                   <td>{row.specialists}</td>

@@ -15,7 +15,6 @@ AWS docs:
   - RDS Data API (hybrid SQL execution):
     https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
 
-Requirements: 11.2, 11.6
 """
 
 import os
@@ -53,9 +52,6 @@ class SearchAgent:
     """
     Search Agent specialized in semantic trip package search.
 
-    Requirements:
-    - 11.2: Search_Agent specialized in semantic product search
-    - 11.6: Performs semantic search using Cohere Embed v4 (1024 dims)
     """
 
     def __init__(self, activity_callback: Optional[Callable[[ActivityEntry], Any]] = None):
@@ -119,7 +115,7 @@ When searching:
             limit: Maximum number of results (default 5)
 
         Returns:
-            List of products with similarity scores
+            List of packages with similarity scores
         """
         return await self.semantic_search(query, limit)
 
@@ -127,14 +123,12 @@ When searching:
         """
         Perform semantic trip search using text embedding.
         
-        Requirement 11.6: Semantic search using Cohere Embed v4 (1024 dims)
-        
         Args:
             query: Search query text
             limit: Maximum number of results
             
         Returns:
-            Dict with products list and similarity scores
+            Dict with packages list and similarity scores
         """
         start_time = datetime.utcnow()
         
@@ -159,6 +153,7 @@ When searching:
         )
 
         search_start = datetime.utcnow()
+        candidate_limit = max(limit * config.search.rerank_candidate_multiplier, 25)
 
         sql = """
             SELECT * FROM semantic_trip_search(%s::vector, %s)
@@ -166,21 +161,91 @@ When searching:
 
         embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
 
-        results = await self.db.execute(sql, (embedding_str, limit))
+        semantic_rows = await self.db.execute(sql, (embedding_str, candidate_limit))
         
         search_time = int((datetime.utcnow() - search_start).total_seconds() * 1000)
         
         self._log_activity(
             activity_type="search",
             title=f"Semantic search: '{query}'",
-            details=f"Found {len(results)} packages",
+            details=f"Found {len(semantic_rows)} semantic candidates",
             sql_query="SELECT * FROM semantic_trip_search(...)",
             execution_time_ms=search_time
         )
-        
-        # Format results
+
+        lexical_sql = """
+            SELECT
+                package_id,
+                name,
+                operator,
+                price_per_person,
+                description,
+                image_url,
+                trip_type,
+                destination,
+                region,
+                durations,
+                ts_rank(search_vector, websearch_to_tsquery('english', %s)) AS lexical_score
+            FROM trip_packages
+            WHERE search_vector @@ websearch_to_tsquery('english', %s)
+            ORDER BY lexical_score DESC
+            LIMIT %s
+        """
+        lexical_rows = await self.db.execute(lexical_sql, (query, query, candidate_limit))
+        merged_by_package: dict[str, dict] = {}
+        for row in semantic_rows:
+            merged_by_package[row["package_id"]] = dict(row)
+        for row in lexical_rows:
+            existing = merged_by_package.get(row["package_id"])
+            if existing:
+                existing["lexical_score"] = float(row.get("lexical_score", 0.0))
+            else:
+                merged_by_package[row["package_id"]] = dict(row)
+        results = list(merged_by_package.values())
+        self._log_activity(
+            activity_type="search",
+            title="Lexical candidates merged",
+            details=f"{len(results)} unique candidates (lexical={len(lexical_rows)})",
+            sql_query="SELECT ... ts_rank(search_vector, websearch_to_tsquery(...)) ...",
+        )
+
+        rerank_start = datetime.utcnow()
+        docs = [
+            " | ".join(
+                [
+                    r.get("name", "") or "",
+                    r.get("destination", "") or "",
+                    r.get("trip_type", "") or "",
+                    r.get("operator", "") or "",
+                    r.get("description", "") or "",
+                ]
+            )
+            for r in results
+        ]
+        ranked = []
+        try:
+            ranked = self.embedding_service.rerank_documents(query, docs, top_n=limit)
+        except Exception as exc:
+            self._log_activity(
+                activity_type="reasoning",
+                title="Cohere rerank unavailable, using semantic rank",
+                details=str(exc)[:160],
+            )
+
+        rerank_time = int((datetime.utcnow() - rerank_start).total_seconds() * 1000)
+        if ranked:
+            self._log_activity(
+                activity_type="search",
+                title="Cohere rerank applied",
+                details=f"Top {min(limit, len(results))} hybrid candidates reranked",
+                execution_time_ms=rerank_time,
+            )
+            ordered_rows = [results[item["index"]] for item in ranked if item["index"] < len(results)]
+        else:
+            ordered_rows = results[:limit]
+
         packages = []
-        for r in results:
+        for r in ordered_rows[:limit]:
             packages.append({
                 "package_id": r['package_id'],
                 "name": r['name'],
@@ -190,7 +255,7 @@ When searching:
                 "image_url": r['image_url'],
                 "trip_type": r['trip_type'],
                 "destination": r.get('destination'),
-                "similarity": float(r['similarity'])
+                "similarity": float(r.get('similarity', 0.0))
             })
 
         return {"packages": packages, "query": query}

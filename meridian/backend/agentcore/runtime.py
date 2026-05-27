@@ -80,11 +80,10 @@ class AgentCoreRuntimeAdapter:
     @staticmethod
     def _build_runtime_session_id(conversation_id: str, traveler_id: str) -> str:
         """
-        Build an AgentCore-compliant runtimeSessionId.
+        Build an AgentCore-compliant runtime session id.
 
-        AgentCore Runtime enforces a minimum length for runtimeSessionId.
-        Conversation ids in Meridian can be shorter (e.g. ``conv_xxx``), so we
-        derive a stable, readable id with a hash suffix.
+        AgentCore validates a minimum runtimeSessionId length. Meridian conversation
+        ids can be shorter, so derive a stable id with a hash suffix.
         """
         source = (conversation_id or traveler_id or "session").strip()
         slug = re.sub(r"[^A-Za-z0-9_-]+", "-", source).strip("-_")

@@ -19,7 +19,6 @@ AWS docs:
 MCP server (awslabs):
   https://github.com/awslabs/mcp/tree/main/src/postgres-mcp-server
 
-Requirements: 10.1–10.5
 """
 
 import os
@@ -50,8 +49,8 @@ class ActivityEntry(BaseModel):
 class AgentResponse(BaseModel):
     """Response from agent processing."""
     message: str
-    products: Optional[List[dict]] = None
-    order: Optional[dict] = None
+    packages: Optional[List[dict]] = None
+    booking: Optional[dict] = None
 
 
 class MCPAgent:
@@ -60,12 +59,6 @@ class MCPAgent:
     
     Uses Strands SDK with MCP client for database operations via RDS Data API.
     
-    Requirements:
-    - 10.1: Implemented using Strands SDK with MCP integration
-    - 10.2: Uses awslabs.postgres-mcp-server for database operations via RDS Data API
-    - 10.3: Uses Claude Opus 4.7 via Amazon Bedrock
-    - 10.4: Auto-discovers available tools from MCP server
-    - 10.5: Logs MCP tool invocations and execution times
     """
     
     def __init__(self, activity_callback: Optional[Callable[[ActivityEntry], Any]] = None):
@@ -78,14 +71,12 @@ class MCPAgent:
         self.activity_callback = activity_callback or (lambda x: None)
         
         # Initialize Bedrock model - Claude Opus 4.7 (cross-region inference)
-        # Requirement 10.3
         self.model = BedrockModel(
             model_id=config.bedrock.model_id,
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         )
         
         # Initialize MCP client for postgres-mcp-server
-        # Requirement 10.2
         # The MCP server is configured without connection args - connection is established
         # via connect_to_database tool with connection_method: "rdsapi"
         self.mcp_client = MCPClient(
@@ -106,7 +97,6 @@ class MCPAgent:
         }
         
         # Create agent - tools will be auto-discovered from MCP server
-        # Requirement 10.4
         self.agent = None  # Initialized in async context
     
     async def _initialize_agent(self):
@@ -175,7 +165,7 @@ Trip types:
         sql_query: Optional[str] = None,
         execution_time_ms: Optional[int] = None
     ):
-        """Log an activity entry. Requirement 10.5."""
+        """Log an activity entry."""
         entry = ActivityEntry(
             id=str(uuid.uuid4()),
             timestamp=datetime.utcnow().isoformat() + "Z",
@@ -229,7 +219,7 @@ Trip types:
             activity_callback: Optional callback for activity updates
             
         Returns:
-            AgentResponse with message, optional products, and optional order
+            AgentResponse with message, optional packages, and optional booking
         """
         if activity_callback:
             self.activity_callback = activity_callback
@@ -258,8 +248,8 @@ Trip types:
         
         return AgentResponse(
             message=str(response),
-            products=None,
-            order=None
+            packages=None,
+            booking=None
         )
     
     async def close(self):

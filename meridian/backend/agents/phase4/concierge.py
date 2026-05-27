@@ -47,7 +47,10 @@ from backend.agentcore.gateway import get_agentcore_gateway
 from backend.agentcore.identity import get_agentcore_identity
 from backend.agentcore.memory import get_agentcore_memory
 from backend.agentcore.runtime import get_agentcore_runtime
-from backend.agents.phase4.memory_agent import MemoryAgent as TravelerMemorySpecialist, ActivityEntry as MemoryActivity
+from backend.agents.phase4.memory_agent import (
+    MemoryAgent as TravelerMemorySpecialist,
+    ActivityEntry as MemoryActivity,
+)
 from backend.db.rds_data_client import get_rds_data_client
 from backend.memory.store import get_memory_store
 
@@ -62,7 +65,7 @@ class ProductionAgent:
     via AgentCore Gateway MCP, and persists every turn under RLS.
     """
 
-    AGENT_FILE = "agents/phase4/concierge.py"
+    AGENT_FILE = "agents/production_04/concierge.py"
 
     def __init__(self, activity_callback: Optional[Callable[[MemoryActivity], Any]] = None):
         self.activity_callback = activity_callback or (lambda _: None)
@@ -185,9 +188,9 @@ class ProductionAgent:
         )
         from types import SimpleNamespace
 
-        products = [
+        packages = [
             SimpleNamespace(
-                product_id=p.get("package_id", ""),
+                package_id=p.get("package_id", ""),
                 name=p.get("name", ""),
                 operator=p.get("operator", ""),
                 price_per_person=float(p.get("price_per_person", 0.0)),
@@ -198,7 +201,7 @@ class ProductionAgent:
             )
             for p in packages_raw
         ]
-        return products, []
+        return packages, []
 
     async def process_turn(
         self,
@@ -403,7 +406,7 @@ class ProductionAgent:
             activities.extend(search_activities)
 
             shown = [
-                {"package_id": getattr(p, "product_id", None) or getattr(p, "package_id", ""), "name": p.name}
+                {"package_id": getattr(p, "package_id", None), "name": p.name}
                 for p in packages
             ]
 

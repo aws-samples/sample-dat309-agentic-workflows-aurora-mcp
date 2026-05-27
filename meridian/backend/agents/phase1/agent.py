@@ -19,7 +19,6 @@ AWS docs:
   - Cross-Region inference profiles (``global.*`` model IDs):
     https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html
 
-Requirements: 9.1–9.5
 """
 
 import os
@@ -52,8 +51,8 @@ class ActivityEntry(BaseModel):
 class AgentResponse(BaseModel):
     """Response from agent processing."""
     message: str
-    products: Optional[List[dict]] = None
-    order: Optional[dict] = None
+    packages: Optional[List[dict]] = None
+    booking: Optional[dict] = None
 
 
 class SQLAgent:
@@ -63,12 +62,6 @@ class SQLAgent:
     Uses Strands SDK with Claude Opus 4.7 via Bedrock (cross-region inference).
     Connects to Aurora PostgreSQL using RDS Data API.
     
-    Requirements:
-    - 9.1: Implemented using Strands SDK
-    - 9.2: Uses Claude Opus 4.7 via Amazon Bedrock
-    - 9.3: Connects to Aurora PostgreSQL using RDS Data API
-    - 9.4: Has tools for package lookup, availability check, price calculation, booking processing
-    - 9.5: Logs all database queries and execution times
     """
     
     def __init__(self, activity_callback: Optional[Callable[[ActivityEntry], Any]] = None):
@@ -82,7 +75,6 @@ class SQLAgent:
         self.db = get_rds_data_client()
         
         # Initialize Bedrock model - Claude Opus 4.7 (cross-region inference)
-        # Requirement 9.2
         self.model = BedrockModel(
             model_id=config.bedrock.model_id,
             region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
@@ -92,11 +84,11 @@ class SQLAgent:
         self.agent = Agent(
             model=self.model,
             tools=[
-                self._lookup_product,
-                self._search_products,
-                self._check_inventory,
-                self._calculate_total,
-                self._process_order
+                self._lookup_trip_package,
+                self._search_trip_packages,
+                self._check_departure_availability,
+                self._calculate_booking_total,
+                self._process_booking
             ],
             system_prompt=self._get_system_prompt()
         )
@@ -134,7 +126,7 @@ Trip types in the catalog:
         sql_query: Optional[str] = None,
         execution_time_ms: Optional[int] = None
     ):
-        """Log an activity entry. Requirement 9.5."""
+        """Log an activity entry."""
         entry = ActivityEntry(
             id=str(uuid.uuid4()),
             timestamp=datetime.utcnow().isoformat() + "Z",
@@ -148,7 +140,7 @@ Trip types in the catalog:
         self.activity_callback(entry)
     
     @tool
-    async def _lookup_product(self, package_id: str) -> dict:
+    async def _lookup_trip_package(self, package_id: str) -> dict:
         """
         Look up a trip package by its ID.
 
@@ -186,7 +178,7 @@ Trip types in the catalog:
         return dict(result)
     
     @tool
-    async def _search_products(
+    async def _search_trip_packages(
         self,
         query: str,
         trip_type: Optional[str] = None,
@@ -236,7 +228,7 @@ Trip types in the catalog:
         return [dict(r) for r in results]
     
     @tool
-    async def _check_inventory(
+    async def _check_departure_availability(
         self,
         package_id: str,
         duration: Optional[str] = None
@@ -291,16 +283,16 @@ Trip types in the catalog:
         }
     
     @tool
-    async def _calculate_total(self, items: List[dict]) -> dict:
+    async def _calculate_booking_total(self, items: List[dict]) -> dict:
         """
-        Calculate order total including tax and shipping.
+        Calculate booking total including tax and fees.
         
         Args:
             items: List of items with package_id, travelers_count, and optional duration
                    Example: [{"package_id": "CTY-002", "travelers_count": 2, "duration": "7 nights"}]
             
         Returns:
-            Order total breakdown with subtotal, tax, shipping, and total
+            Booking total breakdown with subtotal, tax, fees, and total
         """
         start_time = datetime.utcnow()
         
@@ -332,7 +324,7 @@ Trip types in the catalog:
         execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
         
         self._log_activity(
-            activity_type="order",
+            activity_type="booking",
             title=f"Calculate total for {len(items)} items",
             details=f"Subtotal: ${float(subtotal):.2f}, Total: ${float(total):.2f}",
             execution_time_ms=execution_time
@@ -348,7 +340,7 @@ Trip types in the catalog:
         }
     
     @tool
-    async def _process_order(
+    async def _process_booking(
         self,
         customer_id: str,
         items: List[dict]
@@ -362,7 +354,7 @@ Trip types in the catalog:
         """
         start_time = datetime.utcnow()
 
-        totals = await self._calculate_total(items)
+        totals = await self._calculate_booking_total(items)
 
         booking_id = f"BKG-{uuid.uuid4().hex[:8].upper()}"
 
@@ -388,7 +380,7 @@ Trip types in the catalog:
         execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
         self._log_activity(
-            activity_type="order",
+            activity_type="booking",
             title=f"Booking processed: {booking_id}",
             details=f"Traveler: {customer_id}, Total: ${totals['total']:.2f}",
             sql_query="INSERT INTO bookings...; INSERT INTO booking_lines...",
@@ -424,7 +416,7 @@ Trip types in the catalog:
             activity_callback: Optional callback for activity updates
             
         Returns:
-            AgentResponse with message, optional products, and optional order
+            AgentResponse with message, optional packages, and optional booking
         """
         if activity_callback:
             self.activity_callback = activity_callback
@@ -438,12 +430,12 @@ Trip types in the catalog:
         # Run the agent
         response = await self.agent.run(message)
         
-        # Parse response for products and orders
+        # Parse response for packages and bookings
         # The agent's response is the final message
         return AgentResponse(
             message=str(response),
-            products=None,  # Would be populated from tool results
-            order=None  # Would be populated from order processing
+            packages=None,  # Would be populated from tool results
+            booking=None  # Would be populated from booking processing
         )
 
 

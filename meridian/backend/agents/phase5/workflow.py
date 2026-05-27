@@ -52,7 +52,7 @@ except ImportError:  # pragma: no cover - optional extra
     PostgresSaver = None  # type: ignore
 
 
-AGENT_FILE = "agents/phase5/workflow.py"
+AGENT_FILE = "agents/orchestration_05/workflow.py"
 
 
 class WorkflowState(TypedDict, total=False):
