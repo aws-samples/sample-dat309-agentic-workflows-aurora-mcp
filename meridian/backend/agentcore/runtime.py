@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import json
 import logging
+import hashlib
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
@@ -75,10 +77,26 @@ class AgentCoreRuntimeAdapter:
             self._client = boto3.client("bedrock-agentcore", region_name=self.region)
         return self._client
 
+    @staticmethod
+    def _build_runtime_session_id(conversation_id: str, traveler_id: str) -> str:
+        """
+        Build an AgentCore-compliant runtime session id.
+
+        AgentCore validates a minimum runtimeSessionId length. Meridian conversation
+        ids can be shorter, so derive a stable id with a hash suffix.
+        """
+        source = (conversation_id or traveler_id or "session").strip()
+        slug = re.sub(r"[^A-Za-z0-9_-]+", "-", source).strip("-_")
+        if not slug:
+            slug = "session"
+        slug = slug[:24]
+        digest = hashlib.sha256(f"{traveler_id}:{conversation_id}".encode("utf-8")).hexdigest()[:32]
+        return f"rt-{slug}-{digest}"
+
     def session_for_turn(self, conversation_id: str, traveler_id: str) -> RuntimeSession:
         """Open a Runtime session and ping ``invoke_agent_runtime``."""
         arn = self._require_arn()
-        session_id = conversation_id or f"runtime-{traveler_id[:8]}"
+        session_id = self._build_runtime_session_id(conversation_id, traveler_id)
         invoke_status = self._invoke_session_start(arn, session_id, traveler_id)
         return RuntimeSession(
             runtime_arn=arn,

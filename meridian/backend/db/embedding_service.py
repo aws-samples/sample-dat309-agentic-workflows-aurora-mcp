@@ -16,7 +16,7 @@ AWS docs:
 
 import json
 import os
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import boto3
 
@@ -31,10 +31,12 @@ class EmbeddingService:
     )
     DEFAULT_DIMENSIONS = 1024
     MAX_TEXT_LENGTH = 2048
+    DEFAULT_RERANK_MODEL = "cohere.rerank-v3-5:0"
 
     def __init__(self, region: Optional[str] = None, dimensions: Optional[int] = None):
         self.region = region or os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         self.dimensions = dimensions or int(os.getenv("EMBEDDING_DIMENSION", self.DEFAULT_DIMENSIONS))
+        self.rerank_model_id = os.getenv("RERANK_MODEL", self.DEFAULT_RERANK_MODEL)
         self._bedrock_client = None
         configured = os.getenv("EMBEDDING_MODEL", self.PRIMARY_MODEL)
         self.model_candidates: List[str] = [configured]
@@ -112,6 +114,44 @@ class EmbeddingService:
         if last_error is not None:
             raise last_error
         raise RuntimeError("No embedding models configured")
+
+    def rerank_documents(
+        self,
+        query: str,
+        documents: List[str],
+        top_n: int,
+    ) -> List[Dict[str, Any]]:
+        """
+        Rerank candidate documents using Cohere Rerank on Bedrock.
+
+        Returns a list of dicts containing:
+            {"index": int, "score": float}
+        """
+        if not documents:
+            return []
+
+        request_body = {
+            "query": query,
+            "documents": [{"text": d[: self.MAX_TEXT_LENGTH]} for d in documents],
+            "top_n": max(1, min(top_n, len(documents))),
+            "return_documents": False,
+        }
+        response = self.bedrock_client.invoke_model(
+            modelId=self.rerank_model_id,
+            body=json.dumps(request_body),
+            contentType="application/json",
+            accept="application/json",
+        )
+        payload = json.loads(response["body"].read())
+        raw_results = payload.get("results") or payload.get("rerank_results") or []
+
+        ranked: List[Dict[str, Any]] = []
+        for item in raw_results:
+            idx = item.get("index")
+            score = item.get("relevance_score", item.get("score", 0.0))
+            if isinstance(idx, int):
+                ranked.append({"index": idx, "score": float(score)})
+        return ranked
 
 
 _service: Optional[EmbeddingService] = None

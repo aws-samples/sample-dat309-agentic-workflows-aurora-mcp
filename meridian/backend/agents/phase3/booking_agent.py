@@ -52,7 +52,7 @@ class BookingAgent:
 
         self.agent = Agent(
             model=self.model,
-            tools=[self._calculate_total_tool, self._process_booking_tool],
+            tools=[self._calculate_booking_total_tool, self._process_booking_tool],
             system_prompt=self._get_system_prompt()
         )
 
@@ -90,16 +90,16 @@ Guidelines:
         self.activity_callback(entry)
 
     @tool
-    async def _calculate_total_tool(self, items: List[dict]) -> dict:
+    async def _calculate_booking_total_tool(self, items: List[dict]) -> dict:
         """Calculate booking total for trip line items."""
-        return await self.calculate_total(items)
+        return await self.calculate_booking_total(items)
 
     @tool
     async def _process_booking_tool(self, customer_id: str, items: List[dict]) -> dict:
         """Process a new trip booking."""
         return await self.process_booking(customer_id, items)
 
-    async def calculate_total(self, items: List[dict]) -> dict:
+    async def calculate_booking_total(self, items: List[dict]) -> dict:
         """Calculate booking total including tax and service fee."""
         start_time = datetime.utcnow()
 
@@ -130,7 +130,7 @@ Guidelines:
         execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
         self._log_activity(
-            activity_type="order",
+            activity_type="booking",
             title=f"Calculate total for {len(items)} trip(s)",
             details=f"Subtotal: ${float(subtotal):.2f}, Total: ${float(total):.2f}",
             execution_time_ms=execution_time
@@ -151,7 +151,7 @@ Guidelines:
         """Process a new trip booking."""
         start_time = datetime.utcnow()
 
-        totals = await self.calculate_total(items)
+        totals = await self.calculate_booking_total(items)
 
         booking_id = f"BKG-{uuid.uuid4().hex[:8].upper()}"
 
@@ -177,7 +177,7 @@ Guidelines:
         execution_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
         self._log_activity(
-            activity_type="order",
+            activity_type="booking",
             title=f"Booking processed: {booking_id}",
             details=f"Traveler: {customer_id}, Total: ${totals['total']:.2f}",
             sql_query="INSERT INTO bookings...; INSERT INTO booking_lines...",

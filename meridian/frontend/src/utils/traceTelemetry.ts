@@ -43,7 +43,7 @@ function buildPhase4Preamble(
       activity_type: 'reasoning',
       title: 'Concierge session bootstrap',
       agent_name: 'ProductionAgent',
-      agent_file: 'agents/phase4/concierge.py',
+      agent_file: 'agents/production_04/concierge.py',
       execution_time_ms: 18,
       telemetry: {
         category: 'runtime',
@@ -63,7 +63,7 @@ function buildPhase4Preamble(
       activity_type: 'reasoning',
       title: 'Load short-term memory (session)',
       agent_name: 'MemoryAgent',
-      agent_file: 'agents/phase4/memory_agent.py',
+      agent_file: 'agents/production_04/memory_agent.py',
       execution_time_ms: 12,
       telemetry: {
         category: 'memory_short',
@@ -86,7 +86,7 @@ function buildPhase4Preamble(
       activity_type: 'database',
       title: 'Recall long-term memory (Aurora)',
       agent_name: 'MemoryAgent',
-      agent_file: 'agents/phase4/memory_agent.py',
+      agent_file: 'agents/production_04/memory_agent.py',
       execution_time_ms: 34,
       sql_query:
         "SELECT preference_key, preference_value, source, confidence FROM traveler_preferences WHERE traveler_id = :traveler_id ORDER BY confidence DESC LIMIT 8",
@@ -120,7 +120,7 @@ function buildPhase2Preamble(query: string, traceId: string, msgs: Message[]): A
       activity_type: 'reasoning',
       title: 'Session context loaded',
       agent_name: 'MCPAgent',
-      agent_file: 'agents/phase2/agent.py',
+      agent_file: 'agents/mcp_02/agent.py',
       execution_time_ms: 8,
       telemetry: {
         category: 'memory_short',
@@ -164,7 +164,7 @@ function buildPhase1Preamble(_query: string, traceId: string): ActivityEntry[] {
       activity_type: 'reasoning',
       title: 'Direct agent invocation',
       agent_name: 'SQLAgent',
-      agent_file: 'agents/phase1/agent.py',
+      agent_file: 'agents/sql_01/agent.py',
       execution_time_ms: 6,
       telemetry: {
         category: 'runtime',
@@ -206,9 +206,10 @@ function enrichActivity(a: ActivityEntry, phase: 1 | 2 | 3 | 4 | 5, query: strin
       fields:
         phase >= 3
           ? [
-              { label: 'strategy', value: 'hybrid retrieval' },
-              { label: 'semantic_weight', value: '0.70 (pgvector HNSW)' },
-              { label: 'lexical_weight', value: '0.30 (tsvector/ts_rank)' },
+              { label: 'strategy', value: 'hybrid retrieval + rerank' },
+              { label: 'semantic', value: 'pgvector HNSW candidates' },
+              { label: 'lexical', value: 'tsvector + ts_rank candidates' },
+              { label: 'ranker', value: 'cohere.rerank-v3-5:0' },
               ...(phase === 4
                 ? [{ label: 'memory_boost', value: 'party of 2 · Tokyo Oct · shellfish · budget filters' }]
                 : []),
@@ -295,9 +296,9 @@ function buildSynthesisStep(phase: 1 | 2 | 3 | 4 | 5, productCount: number): Act
     agent_name: phase >= 3 ? (phase === 4 ? 'ProductionAgent' : phase === 5 ? 'OrchestrationAgent' : 'RetrievalAgent') : phase === 2 ? 'MCPAgent' : 'SQLAgent',
     agent_file:
       phase === 4
-        ? 'agents/phase4/concierge.py'
+        ? 'agents/production_04/concierge.py'
         : phase === 3
-          ? 'agents/phase3/supervisor.py'
+          ? 'agents/retrieval_03/supervisor.py'
           : `agents/phase${phase}/agent.py`,
     execution_time_ms: 45 + phase * 10,
     telemetry: {
