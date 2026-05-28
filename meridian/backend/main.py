@@ -76,29 +76,36 @@ app = FastAPI(
     }
 )
 
-# Configure CORS for frontend communication
-# Allow requests from common frontend development ports
-cors_origins = [
-    "http://localhost:3000",      # React default
-    "http://localhost:5173",      # Vite default
-    "http://localhost:5174",      # Vite alternate
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",
-]
+# Configure CORS for frontend communication.
+#
+# This API has no cookie/session auth — the frontend calls it with plain JSON
+# and never sends credentials. For local/demo use we therefore accept ANY
+# origin so CORS preflights never 400. This matters because the app is opened
+# from several contexts during the workshop: localhost:5173, 127.0.0.1, ad-hoc
+# Vite ports, and embedded/preview browsers that send `Origin: null` (which is
+# not matchable by an explicit allow-list).
+#
+# To lock this down (e.g. a hosted deployment), set CORS_ORIGINS to a comma-
+# separated allow-list; that path re-enables credentialed, origin-scoped CORS.
+custom_origins = os.getenv("CORS_ORIGINS", "").strip()
 
-# Add any custom origins from environment
-custom_origins = os.getenv("CORS_ORIGINS", "")
 if custom_origins:
-    cors_origins.extend([origin.strip() for origin in custom_origins.split(",")])
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[origin.strip() for origin in custom_origins.split(",") if origin.strip()],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        # Must be False when allow_origins=["*"]; the API uses no cookies anyway.
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Include routers
 app.include_router(chat_router)
