@@ -29,7 +29,6 @@
    "12 spans" / "427ms" / "$1,950" don't shimmer when values change. */
 .mds-trace-summary span,
 .mds-rec-price b,
-.mds-cost-card b,
 .mds-span-meta {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum", "ss01";
@@ -2540,22 +2539,9 @@
   margin-top: 11px;
 }
 
-.mds-sql-list,
-.mds-cost-card {
+.mds-sql-list {
   display: grid;
   gap: 8px;
-}
-
-.mds-cost-card b {
-  color: #fff;
-  font-size: 26px;
-  font-weight: 720;
-}
-
-.mds-cost-card span {
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 13.5px;
-  font-weight: 540;
 }
 
 .mds-empty {

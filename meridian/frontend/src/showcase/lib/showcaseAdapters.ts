@@ -9,7 +9,7 @@ import type {
 } from '../../types';
 
 export type ShowcasePhaseLabel = 'SQL' | 'MCP' | 'Retrieval' | 'Production' | 'Workflow';
-export type ShowcaseTraceTab = 'spans' | 'memory' | 'sql' | 'cost';
+export type ShowcaseTraceTab = 'spans' | 'memory' | 'sql';
 export type BackendStatus = 'checking' | 'online' | 'offline';
 
 export interface ShowcasePhaseOption {
@@ -91,18 +91,20 @@ export const SHOWCASE_EXAMPLE_PROMPTS: Record<Phase, string[]> = {
   ],
   // Workflow: LangGraph StateGraph classifies intent and branches to
   // search / availability / memory_recall / plan, checkpointing each step
-  // to Aurora. The pills exercise each branch so the trace shows routing
-  // explicitly — and the finale is the "plan" intent, the case LangGraph
-  // genuinely EXCELS at: a multi-step chain (search → availability) that
-  // runs two sequential worker nodes with a PostgresSaver checkpoint
-  // between each. That's composition a single tool call can't make
-  // visible, so Phase 5 ends on a strength, not a limit.
-  //   1. availability branch (single node)
-  //   2. memory_recall branch (loads prior thread, then searches)
-  //   3. plan branch (search → availability, multi-node, the payoff)
+  // to Aurora. Phase 5 is the FINALE — there's no next phase to motivate,
+  // so all three pills are solid successes (no stretch/amber). Each one
+  // lands on a distinct branch so the trace shows routing explicitly, and
+  // the deck ends on the "plan" intent — the case LangGraph genuinely
+  // EXCELS at: a multi-step chain (search → availability) that runs two
+  // sequential worker nodes with a PostgresSaver checkpoint between each.
+  // That's composition a single tool call can't make visible.
+  //   1. availability branch — single node, lists open departures.
+  //   2. memory_recall branch — "remember/last time" loads the prior
+  //      thread, then matches against it (classify → memory_recall).
+  //   3. plan branch — search → availability, multi-node, the payoff.
   5: [
     'What dates are open for Kyoto in November? Show the slots.',
-    'Refine our last Iceland conversation with a winter focus',
+    'Remember our last Tokyo conversation? Pick it up with a culture focus',
     'Plan a Kyoto cultural trip and check which November departures are open',
   ],
 };
@@ -122,7 +124,6 @@ export interface ShowcaseTraceSpan {
   fields: { label: string; value: string; mono?: boolean }[];
   input?: string;
   output?: string;
-  costUsd?: number;
 }
 
 export const SHOWCASE_PHASES: ShowcasePhaseOption[] = [
@@ -247,7 +248,6 @@ export function activityToShowcaseTraceSpan(activity: ActivityEntry, index: numb
     fields: telemetry?.fields ?? [],
     input: index === 0 ? prompt : telemetry?.fields?.find((f) => f.label.toLowerCase().includes('input'))?.value,
     output: activity.details,
-    costUsd: estimateCost(activity, latencyMs),
   };
 }
 
@@ -262,14 +262,6 @@ function inferCategory(activity: ActivityEntry): string {
   if (type === 'security') return 'security';
   if (type === 'result') return 'synthesis';
   return 'orchestration';
-}
-
-function estimateCost(activity: ActivityEntry, latencyMs: number): number {
-  const tokens = activity.telemetry?.tokens;
-  if (tokens?.input || tokens?.output) {
-    return ((tokens.input ?? 0) * 0.000003 + (tokens.output ?? 0) * 0.000015);
-  }
-  return latencyMs * 0.00002;
 }
 
 export function healthResponseToStatus(response: unknown): BackendStatus {

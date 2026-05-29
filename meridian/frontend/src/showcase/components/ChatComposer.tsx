@@ -34,7 +34,13 @@ export function ChatComposer({ state, compact = false }: { state: MeridianShowca
             // prompt - one this phase cannot fully handle, so the next
             // phase has something to demonstrate against. Marked with a
             // distinct amber border so the presenter knows which is which.
-            const isStretch = index === queryStarters.length - 1 && queryStarters.length === 3;
+            // Workflow (Phase 5) is the finale — there's no next phase to
+            // motivate, and all three pills are solid LangGraph successes,
+            // so none of them are marked as a stretch.
+            const isStretch =
+              state.phaseLabel !== 'Workflow' &&
+              index === queryStarters.length - 1 &&
+              queryStarters.length === 3;
             return (
               <button
                 key={prompt}

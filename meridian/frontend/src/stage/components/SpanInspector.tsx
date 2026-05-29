@@ -1,6 +1,6 @@
 /**
  * SpanInspector — drawer that opens when an audience-level trace row is
- * clicked. Shows input, output, latency, cost, SQL/tool/model, and related
+ * clicked. Shows input, output, latency, tokens, SQL/tool/model, and related
  * Aurora table.
  */
 import { useEffect } from 'react';
@@ -65,10 +65,6 @@ export function SpanInspector({ span, onClose }: SpanInspectorProps) {
             <div>
               <span>Status</span>
               <b>{span.status ?? 'ok'}</b>
-            </div>
-            <div>
-              <span>Cost</span>
-              <b>{span.costUsd != null ? `$${span.costUsd.toFixed(3)}` : '—'}</b>
             </div>
             <div>
               <span>Tokens</span>

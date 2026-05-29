@@ -81,7 +81,6 @@ export interface MeridianShowcaseState {
   modelLabel: string;
   embedLabel: string;
   totalLatencyMs: number;
-  estimatedCostUsd: number;
   phaseExamples: string[];
   chatFilters: ChatFilters;
   setChatFilters: (next: ChatFilters) => void;
@@ -560,10 +559,6 @@ export function useMeridianShowcase(): MeridianShowcaseState {
     () => traceSpans.reduce((total, span) => total + span.latencyMs, 0),
     [traceSpans],
   );
-  const estimatedCostUsd = useMemo(
-    () => traceSpans.reduce((total, span) => total + (span.costUsd ?? 0), 0),
-    [traceSpans],
-  );
 
   return {
     selectedPhase,
@@ -593,7 +588,6 @@ export function useMeridianShowcase(): MeridianShowcaseState {
     modelLabel: runConfigModelLabel(selectedPhase, backendHealth),
     embedLabel: runConfigEmbedLabel(selectedPhase, backendHealth),
     totalLatencyMs,
-    estimatedCostUsd,
     phaseExamples: SHOWCASE_EXAMPLE_PROMPTS[selectedPhase] ?? [],
     chatFilters,
     setChatFilters: setChatFiltersState,

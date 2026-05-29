@@ -94,14 +94,14 @@ export function TracePanel({ state, compact = false }: { state: MeridianShowcase
       )}
       {!compact && (
         <div className="mds-trace-tabs" role="tablist" aria-label="Trace filters">
-          {(['spans', 'memory', 'sql', 'cost'] as const).map((tab) => (
+          {(['spans', 'memory', 'sql'] as const).map((tab) => (
             <button
               key={tab}
               type="button"
               className={state.traceTab === tab ? 'is-active' : ''}
               onClick={() => state.setTraceTab(tab)}
             >
-              {tab === 'spans' ? 'Trace' : tab === 'memory' ? 'Memory' : tab === 'sql' ? 'SQL' : 'Cost'}
+              {tab === 'spans' ? 'Trace' : tab === 'memory' ? 'Memory' : 'SQL'}
             </button>
           ))}
         </div>
@@ -134,7 +134,7 @@ export function TracePanel({ state, compact = false }: { state: MeridianShowcase
             </div>
           ))}
         </div>
-      ) : state.traceTab === 'sql' ? (
+      ) : (
         <div className="mds-sql-list">
           {sqlSpans.length ? (
             sqlSpans.map((span) => (
@@ -146,11 +146,6 @@ export function TracePanel({ state, compact = false }: { state: MeridianShowcase
           ) : (
             <div className="mds-empty">No SQL snippet on this turn.</div>
           )}
-        </div>
-      ) : (
-        <div className="mds-cost-card">
-          <b>${state.estimatedCostUsd.toFixed(4)}</b>
-          <span>{state.traceSpans.length} spans · {state.totalLatencyMs}ms · approximate</span>
         </div>
       )}
 
@@ -185,7 +180,6 @@ function CopyTraceButton({ state }: { state: MeridianShowcaseState }) {
       model: state.modelLabel,
       embed: state.embedLabel,
       total_latency_ms: state.totalLatencyMs,
-      estimated_cost_usd: Number(state.estimatedCostUsd.toFixed(6)),
       span_count: state.traceSpans.length,
       spans: state.traceSpans.map((span) => ({
         index: state.traceSpans.indexOf(span) + 1,
@@ -200,7 +194,6 @@ function CopyTraceButton({ state }: { state: MeridianShowcaseState }) {
         sql: span.sql,
         details: span.details,
         fields: span.fields,
-        cost_usd: span.costUsd,
       })),
     };
     const text = JSON.stringify(payload, null, 2);

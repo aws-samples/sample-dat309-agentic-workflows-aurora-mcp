@@ -173,7 +173,6 @@ export function DesktopMeridianApp({ state }: { state: MeridianShowcaseState }) 
         <div className="mds-desktop-scroll">
           <div className="mds-top-actions">
             <span>{state.backendStatus === 'online' ? 'Live backend' : 'Backend offline'}</span>
-            <span>USD</span>
           </div>
           <div className="mds-headline-row">
             <div>

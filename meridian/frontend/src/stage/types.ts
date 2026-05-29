@@ -37,8 +37,6 @@ export interface StageSpan {
   input?: string;
   /** Optional output preview for the inspector. */
   output?: string;
-  /** Optional dollar cost for this span. */
-  costUsd?: number;
   /** Optional input/output token counts for model spans. */
   tokensIn?: number;
   tokensOut?: number;
