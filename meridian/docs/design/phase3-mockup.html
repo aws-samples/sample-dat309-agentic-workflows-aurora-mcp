@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Phase 3 — corrected mockup</title>
+<style>
+  :root {
+    --bg: #161e2d;        /* AWS dark navy */
+    --ink: #ffffff;
+    --muted: #c5cdd8;
+    --dim: #8b97a7;
+    --green: #54d62c;     /* Strands swirl green */
+    --aurora: #c026d3;    /* Aurora magenta */
+    --box: #2a3547;       /* tool/agent box fill */
+    --boxline: #56657a;
+    --ghost: #5a6678;
+  }
+  * { box-sizing: border-box; }
+  html,body { margin:0; background:#0c1018; }
+  .slide {
+    width: 1280px; height: 720px; margin: 0 auto; position: relative;
+    background: var(--bg); color: var(--ink); overflow: hidden;
+    font-family: 'Amazon Ember','Helvetica Neue',Arial,sans-serif;
+  }
+  .pad { position:absolute; inset:0; padding: 34px 44px; }
+
+  h1 { font-size: 38px; font-weight: 700; margin: 0; letter-spacing:-0.01em; }
+  .kicker { font-size: 13px; letter-spacing: 0.28em; color: var(--muted); font-weight:700; margin-top:6px; }
+
+  /* spine query */
+  .query { position:absolute; left:44px; top:300px; width:170px; font-style:italic;
+    font-size:19px; line-height:1.35; color:var(--ink); }
+  .userglyph { position:absolute; left:60px; top:215px; font-size:42px; color:var(--ink); }
+
+  /* framework boundary */
+  .framework {
+    position:absolute; left:300px; top:150px; width:760px; height:500px;
+    border:2px solid var(--boxline); border-radius:22px;
+  }
+  .fw-label { position:absolute; left:322px; top:162px; font-size:20px; font-weight:600; }
+  .swirl { color: var(--green); font-weight:900; }
+
+  /* agents */
+  .agent { position:absolute; text-align:center; width:120px; }
+  .agent .ico { font-size:46px; color:var(--green); font-weight:900; line-height:1; }
+  .agent .nm { font-size:18px; font-weight:600; margin-top:4px; }
+  .ret { left:330px; top:300px; }
+  .search { left:560px; top:230px; }
+  .pkg { left:560px; top:400px; }
+  .book { left:560px; top:560px; }
+  .ret .sub { font-size:12px; color:var(--muted); }
+  .retbox { position:absolute; left:312px; top:392px; width:165px; border:1px solid var(--boxline);
+    border-radius:4px; padding:8px 10px; font-size:11px; color:var(--muted); line-height:1.5; }
+
+  /* tool capsule (Tools over MCP) inside each agent lane */
+  .cap { position:absolute; width:78px; }
+  .cap .tools { background:var(--box); border:1px solid var(--ink); border-radius:4px;
+    font-size:13px; text-align:center; padding:4px 0; font-weight:600; }
+  .cap .mcp { margin-top:5px; background:transparent; border:1px dashed var(--ghost);
+    border-radius:4px; font-size:12px; text-align:center; padding:3px 0; color:var(--dim); }
+  .cap-s { left:735px; top:300px; }
+  .cap-p { left:735px; top:470px; }
+  .cap-b { left:735px; top:630px; }
+
+  /* right-side tool endpoints */
+  .ep { position:absolute; background:var(--box); border:1px solid var(--boxline);
+    border-radius:6px; padding:8px 12px; font-family:ui-monospace,monospace; font-size:13px; }
+  .ep-sem  { left:1000px; top:300px; }
+  .ep-chk  { left:1000px; top:430px; }
+  .ep-det  { left:1000px; top:470px; }
+  .ep-book { left:1000px; top:630px; }
+
+  /* Aurora */
+  .aurora { position:absolute; left:1085px; top:520px; text-align:center; width:120px; }
+  .aurora .tile { width:74px; height:74px; margin:0 auto; border-radius:14px;
+    background:linear-gradient(135deg,#e935ff,#9a1bc4); display:grid; place-items:center; font-size:34px; }
+  .aurora .nm { font-size:16px; margin-top:6px; }
+
+  /* MCP ghost chip */
+  .mcpchip { position:absolute; left:905px; top:560px; width:120px;
+    border:1px dashed var(--ghost); border-radius:8px; padding:7px 9px; text-align:center;
+    color:var(--dim); font-size:11px; line-height:1.35; }
+
+  /* caption */
+  .cap-note { position:absolute; left:560px; top:678px; font-size:12px; color:var(--dim); font-style:italic; }
+
+  /* legend */
+  .legend { position:absolute; right:44px; bottom:30px; width:300px; font-size:13px; }
+  .legrow { display:flex; align-items:center; gap:10px; margin-bottom:9px; color:var(--muted); }
+  .legrow svg { flex-shrink:0; }
+
+  .footer { position:absolute; left:44px; bottom:18px; font-size:11px; color:var(--dim); }
+  .awslogo { position:absolute; left:44px; bottom:34px; font-size:20px; font-weight:700; }
+
+  svg.wires { position:absolute; inset:0; width:1280px; height:720px; pointer-events:none; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <!-- WIRES (drawn first, under boxes) -->
+  <svg class="wires" viewBox="0 0 1280 720">
+    <defs>
+      <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#ffffff"/>
+      </marker>
+      <marker id="arrg" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="#7a8699"/>
+      </marker>
+    </defs>
+
+    <!-- SOLID: user -> retrieval (query) -->
+    <line x1="120" y1="250" x2="320" y2="320" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/>
+    <!-- response back -->
+    <line x1="330" y1="350" x2="122" y2="285" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/>
+
+    <!-- SOLID: retrieval -> specialists -->
+    <path d="M455,320 C520,300 540,270 600,260" fill="none" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/>
+    <path d="M455,335 C520,400 540,420 600,430" fill="none" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/>
+    <path d="M455,350 C520,520 540,580 600,590" fill="none" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/>
+
+    <!-- SOLID: agent -> Tools capsule -->
+    <line x1="680" y1="260" x2="735" y2="315" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/>
+    <line x1="680" y1="430" x2="735" y2="485" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/>
+    <line x1="680" y1="590" x2="735" y2="645" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/>
+
+    <!-- SOLID: Tools -> endpoints -->
+    <line x1="813" y1="315" x2="1000" y2="312" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/>
+    <line x1="813" y1="485" x2="1000" y2="450" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/>
+    <line x1="813" y1="645" x2="1000" y2="642" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/>
+
+    <!-- SOLID: endpoints -> Aurora -->
+    <line x1="1120" y1="335" x2="1122" y2="520" stroke="#fff" stroke-width="2" marker-end="url(#arr)"/>
+    <line x1="1120" y1="470" x2="1122" y2="520" stroke="#fff" stroke-width="2" marker-end="url(#arr)"/>
+    <line x1="1120" y1="660" x2="1130" y2="600" stroke="#fff" stroke-width="2" marker-end="url(#arr)"/>
+
+    <!-- GHOST DASHED: MCP tab -> MCP chip (stops at chip, NOT Aurora) -->
+    <path d="M774,338 C850,360 880,540 905,575" fill="none" stroke="#7a8699" stroke-width="1.5"
+          stroke-dasharray="6 5" marker-end="url(#arrg)"/>
+    <path d="M774,508 C840,540 880,560 905,578" fill="none" stroke="#7a8699" stroke-width="1.5"
+          stroke-dasharray="6 5" marker-end="url(#arrg)"/>
+    <path d="M774,668 C840,640 880,610 905,592" fill="none" stroke="#7a8699" stroke-width="1.5"
+          stroke-dasharray="6 5" marker-end="url(#arrg)"/>
+  </svg>
+
+  <div class="pad">
+    <h1>Retrieval — supervised multi-agent search</h1>
+    <div class="kicker">MERIDIAN'S EVOLUTION</div>
+  </div>
+
+  <div class="userglyph">🧑‍💻</div>
+  <div class="query">"A romantic slow week somewhere with great wine"</div>
+
+  <div class="framework"></div>
+  <div class="fw-label">Strands Framework <span class="swirl">§</span></div>
+
+  <!-- agents -->
+  <div class="agent ret">
+    <div class="ico">§</div>
+    <div class="nm">Retrieval Agent</div>
+    <div class="sub">(orchestrator)</div>
+  </div>
+  <div class="retbox">– Query understanding<br>– Tool selection &amp; routing</div>
+
+  <div class="agent search"><div class="ico">§</div><div class="nm">Search Agent</div></div>
+  <div class="agent pkg"><div class="ico">§</div><div class="nm">Package Agent</div></div>
+  <div class="agent book"><div class="ico">§</div><div class="nm">Booking Agent</div></div>
+
+  <!-- task labels -->
+  <div style="position:absolute; left:485px; top:240px; font-size:12px; color:var(--muted);">Task: trip discovery</div>
+  <div style="position:absolute; left:485px; top:410px; font-size:12px; color:var(--muted);">Task: package + availability</div>
+  <div style="position:absolute; left:485px; top:570px; font-size:12px; color:var(--muted);">Task: booking + holds</div>
+
+  <!-- tool capsules -->
+  <div class="cap cap-s"><div class="tools">Tools</div><div class="mcp">MCP</div></div>
+  <div class="cap cap-p"><div class="tools">Tools</div><div class="mcp">MCP</div></div>
+  <div class="cap cap-b"><div class="tools">Tools</div><div class="mcp">MCP</div></div>
+
+  <!-- endpoints -->
+  <div class="ep ep-sem">semantic_search_tool</div>
+  <div class="ep ep-chk">check_availability_tool</div>
+  <div class="ep ep-det">get_details_tool</div>
+  <div class="ep ep-book">process_booking_tool</div>
+
+  <!-- Aurora -->
+  <div class="aurora">
+    <div class="tile">🛢️</div>
+    <div class="nm">Amazon Aurora</div>
+  </div>
+
+  <!-- MCP ghost chip -->
+  <div class="mcpchip">MCP contracts<br><span style="font-size:10px;">carried from Phase 2<br>(not on this path)</span></div>
+
+  <!-- clarifying caption (once) -->
+  <div class="cap-note">Tools reach Aurora via RDS Data API · MCP contracts inherited from Phase 2</div>
+
+  <!-- legend -->
+  <div class="legend">
+    <div class="legrow">
+      <svg width="46" height="10"><line x1="0" y1="5" x2="38" y2="5" stroke="#fff" stroke-width="2.5" marker-end="url(#arr)"/></svg>
+      <span><b style="color:#fff;">Strands routing</b> — live path (RDS Data API)</span>
+    </div>
+    <div class="legrow">
+      <svg width="46" height="10"><line x1="0" y1="5" x2="38" y2="5" stroke="#7a8699" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrg)"/></svg>
+      <span>carried from Phase 2 — MCP tool contracts</span>
+    </div>
+  </div>
+
+  <div class="awslogo">aws</div>
+  <div class="footer" style="left:120px;">© 2026, Amazon Web Services, Inc. or its affiliates. All rights reserved.</div>
+</div>
+</body>
+</html>

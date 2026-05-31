@@ -595,7 +595,7 @@ uvicorn backend.main:app --reload --port 8000`}
                       <div className="ds-kiosk-link-label">Strands + LangGraph</div>
                       <pre className="ds-kiosk-snippet">
 {`# Retrieval
-supervisor -> SearchAgent._semantic_search_tool(...)
+supervisor -> SearchAgent._hybrid_search_tool(...)
 
 # Workflow (LangGraph)
 StateGraph: classify -> branch -> synthesize`}

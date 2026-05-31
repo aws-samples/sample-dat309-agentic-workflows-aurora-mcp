@@ -15,7 +15,7 @@ def test_phase3_has_retrieval_specialists_and_skills() -> None:
     assert "PackageAgent" in spec.specialists
     assert "BookingAgent" in spec.specialists
     summary = format_skills_summary(3)
-    assert "_semantic_search_tool" in summary
+    assert "_hybrid_search_tool" in summary
     assert "SearchAgent" in summary
 
 

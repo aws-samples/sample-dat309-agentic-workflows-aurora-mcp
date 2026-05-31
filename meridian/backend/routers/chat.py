@@ -1218,22 +1218,22 @@ async def retrieval_supervisor_search(
     # Belt-and-suspenders: if Bedrock chose to answer conversationally
     # without calling the SearchAgent tool, we'd have an empty package
     # list even though the user clearly asked for a trip. Fall back to
-    # calling SearchAgent.semantic_search() directly so Phase 3 always
-    # surfaces pgvector results for product-shaped prompts.
+    # calling SearchAgent.hybrid_search() directly so Phase 3 always
+    # surfaces hybrid results for trip-shaped prompts.
     if not packages:
         activities.append(create_activity(
             activity_type="reasoning",
-            title="Supervisor returned no packages — fallback to direct semantic search",
+            title="Supervisor returned no packages — fallback to direct hybrid search",
             details=(
                 "Bedrock did not invoke _delegate_to_search; calling "
-                "SearchAgent.semantic_search directly to guarantee "
-                "pgvector + Cohere rerank coverage."
+                "SearchAgent.hybrid_search directly to guarantee "
+                "pgvector + tsvector + Cohere rerank coverage."
             ),
             agent_name="RetrievalAgent",
             agent_file="agents/retrieval_03/supervisor.py",
         ))
         try:
-            direct = await supervisor.search_agent.semantic_search(query, limit=limit)
+            direct = await supervisor.search_agent.hybrid_search(query, limit=limit)
             packages = direct.get("packages", [])
         except Exception as exc:
             log_error("retrieval_direct_fallback", error=str(exc))

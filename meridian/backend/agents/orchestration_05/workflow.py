@@ -225,6 +225,12 @@ class OrchestrationAgent:
     # ---------------------------------------------------------------- nodes
 
     async def _node_classify(self, state: WorkflowState) -> WorkflowState:
+        """Entry node: classify the query into an intent that drives routing.
+
+        Writes `intent` into state; the conditional edge out of this node reads
+        it to fan out to search / availability / memory_recall (or the 'plan'
+        path, which enters at search and chains into availability).
+        """
         start = datetime.utcnow()
         intent = _classify_intent(state["query"])
         elapsed = int((datetime.utcnow() - start).total_seconds() * 1000)
@@ -250,6 +256,11 @@ class OrchestrationAgent:
         return {"intent": intent, "activities": activities}
 
     async def _node_search(self, state: WorkflowState) -> WorkflowState:
+        """Worker node: run trip discovery (delegates to the Phase 3 search fn).
+
+        Checkpoints state to Aurora after returning. On the 'plan' path this is
+        step 1 of 2 — the conditional edge then routes to the availability node.
+        """
         start = datetime.utcnow()
         packages, search_activities = await self.search_fn(state["query"], limit=5)
         elapsed = int((datetime.utcnow() - start).total_seconds() * 1000)
@@ -301,6 +312,12 @@ class OrchestrationAgent:
         return {"packages": packages, "activities": activities}
 
     async def _node_availability(self, state: WorkflowState) -> WorkflowState:
+        """Worker node: check departure availability (delegates to Package fn).
+
+        On the 'plan' path this runs AFTER search (step 2 of 2) and layers
+        availability onto the prior trip results; for a standalone 'availability'
+        intent it surfaces the availability rows directly. Checkpoints after return.
+        """
         start = datetime.utcnow()
         avail_packages, sub_activities, _msg = await self.availability_fn(state["query"])
         elapsed = int((datetime.utcnow() - start).total_seconds() * 1000)
@@ -363,6 +380,11 @@ class OrchestrationAgent:
         return {"packages": packages, "activities": activities}
 
     async def _node_memory_recall(self, state: WorkflowState) -> WorkflowState:
+        """Worker node: recall prior context (delegates to the Phase 4 memory fn).
+
+        Skips gracefully if no memory function is wired. Checkpoints after return,
+        matching the search and availability nodes.
+        """
         start = datetime.utcnow()
         activities = list(state.get("activities", []))
         if self.memory_recall_fn is None:
@@ -396,9 +418,37 @@ class OrchestrationAgent:
         )
         for sa in sub_activities:
             activities.append(_coerce_activity(sa))
+        activities.append(
+            _activity(
+                "tool_call",
+                "Checkpoint · PostgresSaver.put",
+                details=f"Workflow state serialized after memory_recall node ({elapsed}ms)",
+                sql_query=(
+                    "INSERT INTO langgraph_checkpoints\n"
+                    "  (thread_id, checkpoint_ns, checkpoint_id,\n"
+                    "   parent_id, type, checkpoint, metadata)\n"
+                    "VALUES ($1, $2, $3, $4, 'msgpack', $5, $6)\n"
+                    "ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id)\n"
+                    "DO UPDATE SET checkpoint = EXCLUDED.checkpoint;"
+                ),
+                telemetry={
+                    "category": "memory_short",
+                    "component": "Aurora · langgraph_checkpoints",
+                    "status": "ok",
+                    "fields": [
+                        {"label": "checkpointer", "value": self.checkpointer_kind},
+                    ],
+                },
+            )
+        )
         return {"packages": packages, "activities": activities}
 
     async def _node_synthesize(self, state: WorkflowState) -> WorkflowState:
+        """Terminal node: compose the user-facing reply from accumulated state.
+
+        All branches converge here before END. The response wording reflects the
+        intent — notably the 'plan' path narrates the two-step, checkpointed run.
+        """
         packages = state.get("packages", []) or []
         intent = state.get("intent", "search")
         if intent == "plan":

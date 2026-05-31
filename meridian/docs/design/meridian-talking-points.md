@@ -208,7 +208,7 @@ Three layers, in order:
 
 - `RetrievalAgent` (supervisor) — Strands `@tool` delegation:
   `_delegate_to_search`, `_delegate_to_package`, `_delegate_to_booking`
-- `SearchAgent` — `_semantic_search_tool(query, limit)`
+- `SearchAgent` — `_hybrid_search_tool(query, limit)` (one tool; runs the full hybrid pipeline inside)
 - `PackageAgent` — `_get_details_tool`, `_check_availability_tool`
 - `BookingAgent` — `_calculate_booking_total_tool`, `_process_booking_tool`
 

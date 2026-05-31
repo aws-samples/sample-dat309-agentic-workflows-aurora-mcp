@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Phase 3 — Retrieval · hybrid search + rerank + supervisor</title>
+<style>
+  :root {
+    --bg: #0a1019; --panel: rgba(20,30,46,0.78); --panel-2: rgba(28,40,60,0.88);
+    --line: rgba(255,255,255,0.10); --line-2: rgba(255,255,255,0.18);
+    --ink: #f5f8fb; --ink-2: #d7e1ea; --muted: #9aa7b6; --dim: #6b7a8a;
+    --cyan: #28d7e6; --cyan-2: #65f4ff; --aurora: #c026d3; --bedrock: #00a884;
+    --gold: #f3c779; --leaf: #35d49c; --violet: #a68cff;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family:'SF Pro Display','Inter',-apple-system,system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  .slide {
+    width:100vw; aspect-ratio:16/9; max-height:100vh; margin:0 auto; padding:48px 60px 40px;
+    background:
+      radial-gradient(ellipse 50% 40% at 6% 94%, rgba(40,215,230,0.08), transparent 60%),
+      radial-gradient(ellipse 44% 50% at 94% 10%, rgba(166,140,255,0.08), transparent 60%),
+      var(--bg);
+    position:relative; overflow:hidden; display:grid; grid-template-rows:auto 1fr; gap:22px;
+  }
+  .head h1 { font-size:44px; letter-spacing:-0.025em; line-height:1.05; margin:0; font-weight:700; }
+  .head h1 .accent { color:var(--cyan); }
+  .badge { font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:var(--cyan);
+    font-weight:700; padding:5px 11px; border:1px solid rgba(40,215,230,0.35); border-radius:999px;
+    background:rgba(40,215,230,0.08); }
+  .sub { margin-top:8px; font-size:15.5px; color:var(--muted); max-width:96ch; line-height:1.5; }
+  .sub b { color:var(--ink-2); font-weight:600; }
+  .sub code { font-family:ui-monospace,'SF Mono',monospace; font-size:13.5px;
+    background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:4px; color:var(--cyan-2); }
+
+  .stage { display:grid; grid-template-columns: 200px 1.15fr 1.2fr; gap:18px; align-items:stretch; }
+
+  /* Generic card */
+  .card { border:1px solid var(--line); background:var(--panel); border-radius:16px;
+    padding:18px; position:relative; backdrop-filter:blur(14px); }
+  .card-h { position:absolute; top:-11px; left:18px; font-size:10.5px; letter-spacing:0.14em;
+    text-transform:uppercase; background:var(--bg); padding:3px 10px; color:var(--cyan); font-weight:700;
+    border:1px solid var(--line); border-radius:999px; }
+
+  /* Left: user + supervisor */
+  .left { display:flex; flex-direction:column; gap:14px; }
+  .user { display:flex; flex-direction:column; align-items:center; gap:8px; padding:6px 0; }
+  .user .ic { width:48px; height:48px; border:2px solid var(--ink-2); border-radius:50%; position:relative; }
+  .user .ic::before { content:''; position:absolute; width:16px; height:16px; border:2px solid var(--ink-2);
+    border-radius:50%; top:6px; left:50%; transform:translateX(-50%); }
+  .user .ic::after { content:''; position:absolute; width:28px; height:16px; border:2px solid var(--ink-2);
+    border-bottom:0; border-radius:16px 16px 0 0; bottom:5px; left:50%; transform:translateX(-50%); }
+  .user .lbl { font-size:12px; color:var(--ink-2); font-weight:600; }
+  .user .q { font-size:11px; color:var(--cyan-2); text-align:center; line-height:1.35;
+    font-family:ui-monospace,'SF Mono',monospace; padding:5px 8px; border:1px solid rgba(40,215,230,0.35);
+    border-radius:6px; background:rgba(40,215,230,0.06); }
+  .supervisor { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+  .supervisor .hex { width:72px; height:72px;
+    background:linear-gradient(135deg, rgba(166,140,255,0.28), rgba(166,140,255,0.06));
+    clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%); display:grid; place-items:center;
+    color:var(--violet); font-size:24px; }
+  .supervisor .nm { font-size:13px; font-weight:700; color:var(--ink); }
+  .supervisor .role { font-size:10px; color:var(--muted); font-family:ui-monospace,monospace; text-align:center; }
+
+  /* Specialists */
+  .specialists { display:flex; flex-direction:column; gap:10px; justify-content:center; }
+  .spec { border:1px solid var(--line); border-radius:12px; padding:11px 13px; background:rgba(0,0,0,0.2); }
+  .spec .nm { font-size:13px; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:8px; }
+  .spec .nm .dot { width:7px; height:7px; border-radius:50%; }
+  .spec.search .dot { background:var(--cyan); }
+  .spec.package .dot { background:var(--gold); }
+  .spec.booking .dot { background:var(--leaf); }
+  .spec .tools { margin-top:6px; display:flex; flex-wrap:wrap; gap:5px; }
+  .spec .tools code { font-family:ui-monospace,'SF Mono',monospace; font-size:10.5px; color:var(--cyan-2);
+    background:rgba(255,255,255,0.05); padding:2px 7px; border-radius:5px; }
+  .spec .delegate { font-size:9.5px; color:var(--dim); font-family:ui-monospace,monospace; margin-top:5px; }
+
+  /* Right: retrieval pipeline */
+  .pipeline { display:flex; flex-direction:column; gap:0; justify-content:center; }
+  .pstep { display:grid; grid-template-columns: 30px 1fr; gap:12px; align-items:center; }
+  .pstep .node { width:30px; height:30px; border-radius:50%; display:grid; place-items:center;
+    font-size:12px; font-weight:700; }
+  .pstep.embed .node { background:rgba(40,215,230,0.15); border:2px solid var(--cyan); color:var(--cyan); }
+  .pstep.hybrid .node { background:rgba(192,38,211,0.15); border:2px solid var(--aurora); color:#e879f9; }
+  .pstep.rerank .node { background:rgba(243,199,121,0.15); border:2px solid var(--gold); color:var(--gold); }
+  .pstep.result .node { background:rgba(53,212,156,0.15); border:2px solid var(--leaf); color:var(--leaf); }
+  .pstep .body .t { font-size:13px; font-weight:700; color:var(--ink); }
+  .pstep .body .d { font-size:11px; color:var(--muted); margin-top:1px; }
+  .pconn { width:2px; height:18px; background:var(--line-2); margin-left:14px; }
+
+  /* Bottom infra row */
+  .bottom { grid-column:1/-1; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:18px; align-items:center; }
+  .infra { display:flex; align-items:center; gap:13px; padding:14px 18px; border:1px solid var(--line);
+    border-radius:14px; background:var(--panel); backdrop-filter:blur(12px); }
+  .infra .ic { width:46px; height:46px; border-radius:10px; display:grid; place-items:center; flex-shrink:0; font-size:20px; color:white; }
+  .infra .ic.bedrock { background:linear-gradient(135deg,var(--bedrock),#007e60); }
+  .infra .ic.cohere { background:linear-gradient(135deg,#7c5cff,#4a2fd6); }
+  .infra .ic.aurora { background:linear-gradient(135deg,var(--aurora),#7e1ba8); }
+  .infra .meta .nm { font-size:13.5px; font-weight:700; color:var(--ink); }
+  .infra .meta .sub2 { font-size:11px; color:var(--muted); margin-top:2px; }
+
+  .footer-caption { grid-column:1/-1; margin-top:2px; padding:11px 18px; border-radius:10px;
+    background:rgba(243,199,121,0.06); border:1px dashed rgba(243,199,121,0.35);
+    font-size:13px; color:var(--gold); line-height:1.5; }
+  .footer-caption b { color:var(--ink); font-weight:600; }
+  .arrow { color:var(--dim); font-size:20px; align-self:center; text-align:center; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="head">
+    <div>
+      <span class="badge">Phase 03 · Retrieval</span>
+      <h1>Retrieval — <span class="accent">hybrid search + rerank</span>, supervised</h1>
+      <div class="sub">
+        A <b>Strands supervisor</b> delegates to three specialist agents. The Search agent runs
+        <b>hybrid retrieval</b> — <code>pgvector</code> + <code>tsvector</code> candidates — then a
+        <b>Cohere Rerank 3.5</b> pass picks the final order. This is where
+        <em>"a romantic slow week somewhere with great wine"</em> finally returns the right trips.
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <!-- LEFT: user + supervisor -->
+    <div class="left">
+      <div class="user">
+        <div class="ic"></div>
+        <div class="lbl">User</div>
+        <div class="q">"romantic slow week with great wine"</div>
+      </div>
+      <div class="card" style="flex:1; display:flex;">
+        <div class="card-h">Strands Supervisor</div>
+        <div class="supervisor">
+          <div class="hex">◆</div>
+          <div class="nm">RetrievalAgent</div>
+          <div class="role">delegates → specialists</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MIDDLE: specialists -->
+    <div class="card" style="display:flex;">
+      <div class="card-h">Specialist agents</div>
+      <div class="specialists" style="flex:1;">
+        <div class="spec search">
+          <div class="nm"><span class="dot"></span> Search Agent</div>
+          <div class="tools"><code>_semantic_search_tool(query, limit)</code></div>
+          <div class="delegate">← _delegate_to_search</div>
+        </div>
+        <div class="spec package">
+          <div class="nm"><span class="dot"></span> Package Agent</div>
+          <div class="tools"><code>_get_details_tool</code><code>_check_availability_tool</code></div>
+          <div class="delegate">← _delegate_to_package</div>
+        </div>
+        <div class="spec booking">
+          <div class="nm"><span class="dot"></span> Booking Agent</div>
+          <div class="tools"><code>_calculate_booking_total_tool</code><code>_process_booking_tool</code></div>
+          <div class="delegate">← _delegate_to_booking</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: retrieval pipeline -->
+    <div class="card" style="display:flex;">
+      <div class="card-h">Search pipeline (SearchAgent)</div>
+      <div class="pipeline" style="flex:1;">
+        <div class="pstep embed"><div class="node">1</div><div class="body">
+          <div class="t">Embed query · Cohere v4</div><div class="d">1024-dim vector · input_type=search_query</div></div></div>
+        <div class="pconn"></div>
+        <div class="pstep hybrid"><div class="node">2</div><div class="body">
+          <div class="t">Hybrid candidates · ~25</div><div class="d">semantic_trip_search() — pgvector + tsvector</div></div></div>
+        <div class="pconn"></div>
+        <div class="pstep rerank"><div class="node">3</div><div class="body">
+          <div class="t">Cohere Rerank 3.5</div><div class="d">re-scores candidates → top K by relevance</div></div></div>
+        <div class="pconn"></div>
+        <div class="pstep result"><div class="node">✓</div><div class="body">
+          <div class="t">Top trips + semantic_match</div><div class="d">Tuscany · Amalfi · Douro</div></div></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM: infra -->
+    <div class="bottom">
+      <div class="infra"><div class="ic bedrock">✶</div><div class="meta">
+        <div class="nm">Amazon Bedrock</div><div class="sub2">Claude Opus 4.8 · supervisor + specialists</div></div></div>
+      <div class="infra"><div class="ic cohere">≈</div><div class="meta">
+        <div class="nm">Cohere on Bedrock</div><div class="sub2">Embed v4 (1024d) · Rerank 3.5</div></div></div>
+      <div class="infra"><div class="ic aurora">◆</div><div class="meta">
+        <div class="nm">Amazon Aurora · pgvector</div><div class="sub2">trip_packages.embedding · HNSW + tsvector</div></div></div>
+    </div>
+
+    <div class="footer-caption">
+      <b>What's new:</b> embeddings match <em>meaning</em>, not keywords; the reranker fixes the
+      <em>order</em>; the supervisor picks the <em>specialist</em>.&nbsp;&nbsp;
+      <b>What's still missing:</b> it doesn't know <em>you</em> — no memory of party size, allergies,
+      or prior trips. That's Phase 4.
+    </div>
+  </div>
+</div>
+</body>
+</html>

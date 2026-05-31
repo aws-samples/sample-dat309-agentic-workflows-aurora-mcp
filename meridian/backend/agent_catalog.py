@@ -61,7 +61,7 @@ PHASE_CATALOG: Dict[int, PhaseSpec] = {
         method="Strands supervisor + Bedrock tool delegation",
         specialists=("SearchAgent", "PackageAgent", "BookingAgent"),
         skills=(
-            SkillSpec("_semantic_search_tool", "SearchAgent", "_semantic_search_tool(query, limit=5)", "agents/retrieval_03/search_agent.py"),
+            SkillSpec("_hybrid_search_tool", "SearchAgent", "_hybrid_search_tool(query, limit=5)", "agents/retrieval_03/search_agent.py"),
             SkillSpec("_check_availability_tool", "PackageAgent", "_check_availability_tool(package_id, duration?)", "agents/retrieval_03/package_agent.py"),
             SkillSpec("_process_booking_tool", "BookingAgent", "_process_booking_tool(customer_id, items)", "agents/retrieval_03/booking_agent.py"),
         ),

@@ -162,7 +162,7 @@ self.agent = Agent(
 @tool
 async def _delegate_to_search(self, query: str) -> dict:
     """Bedrock calls this when the traveler wants trip discovery."""
-    result = await self.search_agent.semantic_search(query)
+    result = await self.search_agent.hybrid_search(query)
     self.last_search_packages = result.get("packages", [])
     return result
 ```
@@ -171,14 +171,14 @@ async def _delegate_to_search(self, query: str) -> dict:
 
 ### File: `backend/agents/retrieval_03/search_agent.py`
 
-**Snippet C — Specialist `@tool` + pgvector:**
+**Snippet C — Specialist `@tool` + hybrid pipeline:**
 
 ```python
 @tool
-async def _semantic_search_tool(self, query: str, limit: int = 5) -> List[dict]:
-    return await self.semantic_search(query, limit)
+async def _hybrid_search_tool(self, query: str, limit: int = 5) -> List[dict]:
+    return await self.hybrid_search(query, limit)
 
-async def semantic_search(self, query: str, limit: int = 5) -> dict:
+async def hybrid_search(self, query: str, limit: int = 5) -> dict:
     query_embedding = self.embedding_service.generate_text_embedding(
         query, input_type="search_query"
     )

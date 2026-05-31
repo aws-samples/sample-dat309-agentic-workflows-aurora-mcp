@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Phase 5 — Orchestration · LangGraph + PostgresSaver</title>
+<style>
+  :root {
+    --bg: #0a1019; --panel: rgba(20,30,46,0.78); --panel-2: rgba(28,40,60,0.88);
+    --line: rgba(255,255,255,0.10); --line-2: rgba(255,255,255,0.18);
+    --ink: #f5f8fb; --ink-2: #d7e1ea; --muted: #9aa7b6; --dim: #6b7a8a;
+    --cyan: #28d7e6; --cyan-2: #65f4ff; --aurora: #c026d3; --bedrock: #00a884;
+    --gold: #f3c779; --leaf: #35d49c; --violet: #a68cff; --blue:#5ca8ff;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family:'SF Pro Display','Inter',-apple-system,system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  .slide { width:100vw; aspect-ratio:16/9; max-height:100vh; margin:0 auto; padding:48px 60px 40px;
+    background:
+      radial-gradient(ellipse 50% 40% at 6% 94%, rgba(166,140,255,0.08), transparent 60%),
+      radial-gradient(ellipse 44% 50% at 94% 8%, rgba(40,215,230,0.07), transparent 60%),
+      var(--bg);
+    position:relative; overflow:hidden; display:grid; grid-template-rows:auto 1fr; gap:22px; }
+  .head h1 { font-size:44px; letter-spacing:-0.025em; line-height:1.05; margin:0; font-weight:700; }
+  .head h1 .accent { color:var(--violet); }
+  .badge { font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:var(--violet);
+    font-weight:700; padding:5px 11px; border:1px solid rgba(166,140,255,0.35); border-radius:999px;
+    background:rgba(166,140,255,0.08); }
+  .sub { margin-top:8px; font-size:15.5px; color:var(--muted); max-width:100ch; line-height:1.5; }
+  .sub b { color:var(--ink-2); font-weight:600; }
+  .sub code { font-family:ui-monospace,'SF Mono',monospace; font-size:13.5px;
+    background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:4px; color:var(--violet); }
+
+  .stage { display:grid; grid-template-columns: 1.5fr 1fr; gap:18px; align-items:stretch; }
+
+  .card { border:1px solid var(--line); background:var(--panel); border-radius:16px; padding:20px 22px;
+    position:relative; backdrop-filter:blur(14px); }
+  .card-h { position:absolute; top:-11px; left:18px; font-size:10.5px; letter-spacing:0.14em;
+    text-transform:uppercase; background:var(--bg); padding:3px 10px; color:var(--violet); font-weight:700;
+    border:1px solid var(--line); border-radius:999px; }
+
+  /* StateGraph */
+  .graph { display:grid; grid-template-columns: 130px 1fr 130px; gap:14px; align-items:center; height:100%; }
+  .gnode { border-radius:12px; padding:11px 13px; text-align:center; border:1.5px solid; font-weight:700;
+    font-size:13px; background:rgba(0,0,0,0.2); }
+  .gnode small { display:block; font-weight:500; font-size:9.5px; color:var(--muted);
+    font-family:ui-monospace,monospace; margin-top:3px; }
+  .gnode.classify { border-color:var(--cyan); color:var(--cyan); }
+  .gnode.synth { border-color:var(--leaf); color:var(--leaf); }
+  .gnode.branch { border-color:var(--line-2); color:var(--ink-2); }
+  .branches { display:flex; flex-direction:column; gap:9px; }
+  .glabel { font-size:9px; color:var(--dim); font-family:ui-monospace,monospace; text-align:center; margin-bottom:2px; }
+  .gcol { display:flex; flex-direction:column; justify-content:center; gap:9px; }
+  .gcol.end { align-items:center; }
+  .endnode { border-radius:999px; padding:9px 16px; border:1.5px solid var(--gold); color:var(--gold); font-weight:700; font-size:12px; }
+
+  /* Right: checkpoint + code */
+  .right { display:flex; flex-direction:column; gap:14px; }
+  .ckpt { background:rgba(166,140,255,0.07); border:1px solid rgba(166,140,255,0.28); border-radius:12px; padding:13px 15px; }
+  .ckpt .h { font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--violet); font-weight:700; margin-bottom:7px; }
+  .ckpt .row { font-size:11.5px; color:var(--ink-2); display:flex; gap:8px; align-items:center; padding:2px 0; }
+  .ckpt .row code { font-family:ui-monospace,monospace; font-size:10.5px; color:var(--cyan-2); }
+  .codecard { flex:1; background:#0d1320; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .codecard .top { display:flex; align-items:center; gap:6px; padding:9px 13px; background:rgba(255,255,255,0.03); border-bottom:1px solid var(--line); }
+  .codecard .top .dot { width:9px; height:9px; border-radius:50%; }
+  .codecard .top .r{background:#ff5f57;} .codecard .top .y{background:#febc2e;} .codecard .top .g{background:#28c941;}
+  .codecard .top .name { margin-left:auto; font-size:10px; color:var(--dim); font-family:ui-monospace,monospace; }
+  .codecard pre { margin:0; padding:13px 15px; font-family:ui-monospace,'SF Mono',monospace; font-size:10.5px; line-height:1.6; color:#d6dde7; }
+  .codecard .kw{color:#ff79c6;} .codecard .fn{color:#50fa7b;} .codecard .str{color:#f1fa8c;} .codecard .com{color:var(--dim);}
+
+  /* Bottom infra */
+  .bottom { grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; align-items:center; }
+  .infra { display:flex; align-items:center; gap:13px; padding:13px 18px; border:1px solid var(--line);
+    border-radius:14px; background:var(--panel); backdrop-filter:blur(12px); }
+  .infra .ic { width:44px; height:44px; border-radius:10px; display:grid; place-items:center; flex-shrink:0; font-size:19px; color:white; }
+  .infra .ic.lang { background:linear-gradient(135deg,#a68cff,#6d28d9); }
+  .infra .ic.strands { background:linear-gradient(135deg,var(--bedrock),#007e60); }
+  .infra .ic.aurora { background:linear-gradient(135deg,var(--aurora),#7e1ba8); }
+  .infra .meta .nm { font-size:13px; font-weight:700; color:var(--ink); }
+  .infra .meta .sub2 { font-size:10.5px; color:var(--muted); margin-top:2px; }
+
+  .footer-caption { grid-column:1/-1; margin-top:2px; padding:11px 18px; border-radius:10px;
+    background:rgba(166,140,255,0.06); border:1px dashed rgba(166,140,255,0.35); font-size:13px; color:var(--violet); line-height:1.5; }
+  .footer-caption b { color:var(--ink); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="head">
+    <div>
+      <span class="badge">Phase 05 · Orchestration</span>
+      <h1>Orchestration — <span class="accent">LangGraph + PostgresSaver</span></h1>
+      <div class="sub">
+        When control flow needs to be <b>explicit, branchable, and resumable</b>, a
+        <b>LangGraph StateGraph</b> takes over. <code>classify</code> routes to the right worker via
+        conditional edges; every node writes a <b>PostgresSaver checkpoint</b> to Aurora. Pause a
+        trip on Tuesday, resume it Thursday — same state.
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <!-- LEFT: the StateGraph -->
+    <div class="card">
+      <div class="card-h">WorkflowState graph (orchestration_05/workflow.py)</div>
+      <div class="graph">
+        <div class="gcol">
+          <div class="gnode classify">classify<small>_classify_intent</small></div>
+        </div>
+        <div class="branches">
+          <div class="glabel">conditional edges (by intent)</div>
+          <div class="gnode branch">search<small>semantic retrieval</small></div>
+          <div class="gnode branch">availability<small>departure slots</small></div>
+          <div class="gnode branch">memory_recall<small>prior context</small></div>
+          <div class="gnode branch">plan<small>search → availability</small></div>
+        </div>
+        <div class="gcol end">
+          <div class="gnode synth">synthesize<small>compose reply</small></div>
+          <div style="color:var(--dim); font-size:18px;">↓</div>
+          <div class="endnode">END</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: checkpoint + code -->
+    <div class="right">
+      <div class="ckpt">
+        <div class="h">Durable checkpoints in Aurora</div>
+        <div class="row"><code>thread_id</code> → scopes a workflow run</div>
+        <div class="row"><code>PostgresSaver</code> → writes WorkflowState per node</div>
+        <div class="row">resume weeks later · MemorySaver fallback in-process</div>
+      </div>
+      <div class="codecard">
+        <div class="top"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="name">workflow.py</span></div>
+<pre><span class="kw">builder</span> = <span class="fn">StateGraph</span>(WorkflowState)
+builder.<span class="fn">add_node</span>(<span class="str">"classify"</span>, _node_classify)
+builder.<span class="fn">add_node</span>(<span class="str">"search"</span>, _node_search)
+builder.<span class="fn">add_conditional_edges</span>(
+    <span class="str">"classify"</span>,
+    <span class="kw">lambda</span> s: s[<span class="str">"intent"</span>],   <span class="com"># search|plan|…</span>
+)
+<span class="kw">return</span> builder.<span class="fn">compile</span>(
+    checkpointer=<span class="fn">PostgresSaver</span>(dsn),
+)</pre>
+      </div>
+    </div>
+
+    <!-- BOTTOM infra -->
+    <div class="bottom">
+      <div class="infra"><div class="ic lang">◇</div><div class="meta">
+        <div class="nm">LangGraph</div><div class="sub2">explicit StateGraph · conditional edges</div></div></div>
+      <div class="infra"><div class="ic strands">✶</div><div class="meta">
+        <div class="nm">Strands · inside nodes</div><div class="sub2">LLM tool routing per worker node</div></div></div>
+      <div class="infra"><div class="ic aurora">◆</div><div class="meta">
+        <div class="nm">Amazon Aurora</div><div class="sub2">langgraph_checkpoints · PostgresSaver</div></div></div>
+    </div>
+
+    <div class="footer-caption">
+      <b>The durability answer:</b> control flow becomes a first-class artifact — branchable,
+      checkpointed in Aurora, resumable.&nbsp;&nbsp; <b>Together:</b> AgentCore is the runtime,
+      LangGraph owns the flow, Strands picks the tools — all on one Aurora cluster.
+    </div>
+  </div>
+</div>
+</body>
+</html>

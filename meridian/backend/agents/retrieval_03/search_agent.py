@@ -1,11 +1,13 @@
 """
-Phase 3 — Search Agent (Strands @tool + pgvector semantic search).
+Phase 3 — Search Agent (Strands @tool + hybrid search over Aurora).
 
 Presenter walkthrough
 ---------------------
-Show `_semantic_search_tool` and `semantic_search()` when explaining
-specialist agents under the Phase 3 supervisor. Uses EmbeddingService
-(1024-dim Cohere Embed v4) to match Aurora's vector(1024) column.
+Show `_hybrid_search_tool` and `hybrid_search()` when explaining
+specialist agents under the Phase 3 supervisor. The agent exposes one
+tool; inside it runs the full hybrid pipeline: embed (1024-dim Cohere
+Embed v4) → pgvector candidates (`semantic_trip_search`) + tsvector
+lexical candidates → merge/dedup → Cohere Rerank 3.5.
 
 AWS docs:
   - Cohere Embed v4 on Bedrock:
@@ -66,7 +68,7 @@ class SearchAgent:
 
         self.agent = Agent(
             model=self.model,
-            tools=[self._semantic_search_tool],
+            tools=[self._hybrid_search_tool],
             system_prompt=self._get_system_prompt()
         )
 
@@ -75,13 +77,14 @@ class SearchAgent:
         return """You are a Search Agent specialized in finding trip packages for travelers.
 
 Your capabilities:
-- Semantic text search over the trip catalog using natural language
+- Hybrid search over the trip catalog using natural language
 
-You use Cohere Embed v4 embeddings with pgvector for high-quality semantic search.
+You combine Cohere Embed v4 + pgvector (semantic) with PostgreSQL
+full-text search (lexical), then re-rank with Cohere Rerank 3.5.
 
 When searching:
 - Understand the traveler's intent (destination, vibe, party size hints)
-- Use semantic search for open-ended trip discovery
+- Use hybrid search for open-ended trip discovery
 - Return relevant packages with similarity scores"""
 
     def _log_activity(
@@ -106,9 +109,9 @@ When searching:
         self.activity_callback(entry)
 
     @tool
-    async def _semantic_search_tool(self, query: str, limit: int = 5) -> List[dict]:
+    async def _hybrid_search_tool(self, query: str, limit: int = 5) -> List[dict]:
         """
-        Search for trip packages using semantic text search.
+        Search for trip packages using hybrid search (semantic + full-text + rerank).
 
         Args:
             query: Natural language search query
@@ -117,11 +120,12 @@ When searching:
         Returns:
             List of packages with similarity scores
         """
-        return await self.semantic_search(query, limit)
+        return await self.hybrid_search(query, limit)
 
-    async def semantic_search(self, query: str, limit: int = 5) -> dict:
+    async def hybrid_search(self, query: str, limit: int = 5) -> dict:
         """
-        Perform semantic trip search using text embedding.
+        Run the hybrid retrieval pipeline: embed → pgvector + tsvector
+        candidates → merge/dedup → Cohere Rerank 3.5.
         
         Args:
             query: Search query text
@@ -153,8 +157,16 @@ When searching:
         )
 
         search_start = datetime.utcnow()
+        # Pull a WIDER pool than we'll return (limit*5, floored at 25). The
+        # reranker needs candidates to choose from — feeding it only `limit`
+        # rows would leave it nothing to reorder. This is the recall step;
+        # the reranker is the precision step.
         candidate_limit = max(limit * config.search.rerank_candidate_multiplier, 25)
 
+        # --- Arm 1 of the hybrid retrieval: SEMANTIC (meaning) -----------------
+        # semantic_trip_search() is a pgvector cosine search (HNSW index). It is
+        # genuinely semantic-only; the "hybrid" part is assembled in Python below
+        # by merging these rows with the lexical arm.
         # Cast both args explicitly. Without ::integer, Python ints arrive as
         # bigint and Postgres can't find a matching overload (the function is
         # declared as semantic_trip_search(vector, integer)).
@@ -176,6 +188,11 @@ When searching:
             execution_time_ms=search_time
         )
 
+        # --- Arm 2 of the hybrid retrieval: LEXICAL (exact terms) -------------
+        # PostgreSQL full-text search over the generated `search_vector` tsvector.
+        # websearch_to_tsquery parses the query the way a search box would;
+        # ts_rank scores the match. This arm catches exact terms — a destination
+        # name, an operator — that pure embeddings can blur.
         lexical_sql = """
             SELECT
                 package_id,
@@ -195,6 +212,10 @@ When searching:
             LIMIT %s
         """
         lexical_rows = await self.db.execute(lexical_sql, (query, query, candidate_limit))
+        # --- Merge + dedup by package_id -------------------------------------
+        # This is the "fusion" step: union the two candidate pools keyed on
+        # package_id so a trip found by BOTH arms appears once (and carries its
+        # lexical_score). No weighted blending here — the reranker owns final order.
         merged_by_package: dict[str, dict] = {}
         for row in semantic_rows:
             merged_by_package[row["package_id"]] = dict(row)
@@ -212,6 +233,11 @@ When searching:
             sql_query="SELECT ... ts_rank(search_vector, websearch_to_tsquery(...)) ...",
         )
 
+        # --- Final stage: RERANK (precision) ---------------------------------
+        # Cohere Rerank 3.5 is a cross-encoder: it reads the query and each
+        # candidate *together* and scores true relevance, fixing the ordering
+        # that the two retrieval arms can only approximate. We flatten each
+        # candidate to a single text block for scoring.
         rerank_start = datetime.utcnow()
         docs = [
             " | ".join(
@@ -229,6 +255,8 @@ When searching:
         try:
             ranked = self.embedding_service.rerank_documents(query, docs, top_n=limit)
         except Exception as exc:
+            # Graceful degradation: if the reranker is unavailable, we keep the
+            # merged hybrid order rather than failing the request.
             self._log_activity(
                 activity_type="reasoning",
                 title="Cohere rerank unavailable, using semantic rank",
@@ -237,6 +265,8 @@ When searching:
 
         rerank_time = int((datetime.utcnow() - rerank_start).total_seconds() * 1000)
         if ranked:
+            # rerank_documents returns [{index, score}] pointing back into
+            # `results`; reorder the merged pool by the reranker's verdict.
             self._log_activity(
                 activity_type="search",
                 title="Cohere rerank applied",

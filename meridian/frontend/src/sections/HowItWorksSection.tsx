@@ -53,7 +53,7 @@ const steps: JourneyStep[] = [
     chips: ['pgvector HNSW', 'tsvector', 'Cohere v4', 'Cohere Rerank', 'Strands supervisor'],
     scale: '~5,000 trips/day · customer-facing natural language',
     persona: 'Alex: "A romantic slow week somewhere with great wine." pgvector + Cohere Rerank surface Tuscany Wine & Wellness. Then Alex asks "Pick up where we left off" — Retrieval honestly says no.',
-    skills: ['semantic_search', 'availability', 'rerank'],
+    skills: ['hybrid_search', 'availability', 'rerank'],
   },
   {
     num: '04',

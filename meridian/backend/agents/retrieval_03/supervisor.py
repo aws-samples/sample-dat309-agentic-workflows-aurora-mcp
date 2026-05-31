@@ -164,7 +164,7 @@ Guidelines:
             details=f"Query: {query}"
         )
 
-        result = await self.search_agent.semantic_search(query)
+        result = await self.search_agent.hybrid_search(query)
 
         # Cache for the live API caller to read structured packages out of band.
         self.last_search_packages = result.get("packages", [])

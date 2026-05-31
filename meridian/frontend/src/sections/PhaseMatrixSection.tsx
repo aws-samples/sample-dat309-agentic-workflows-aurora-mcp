@@ -32,7 +32,7 @@ const PHASE_MATRIX: PhaseMatrixRow[] = [
     primaryAgent: 'RetrievalAgent',
     specialists: 'SearchAgent, PackageAgent, BookingAgent',
     tools: 'trips.hybrid_search, availability.lookup, bookings.hold',
-    skills: '_semantic_search_tool, _check_availability_tool, _process_booking_tool',
+    skills: '_hybrid_search_tool, _check_availability_tool, _process_booking_tool',
   },
   {
     modeLabel: 'Production',

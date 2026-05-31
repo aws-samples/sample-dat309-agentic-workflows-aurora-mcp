@@ -213,6 +213,26 @@ class ProductionAgent:
         conversation_id: Optional[str],
         limit: int,
     ) -> Tuple[List[Any], List[Any], str, str, List[Dict[str, Any]]]:
+        """Run one production concierge turn through the full AgentCore envelope.
+
+        The turn is the Phase 4 story end to end — each step emits a trace span:
+          1. AgentCore Identity   — resolve the IAM/workload envelope (security span)
+          2. Aurora RLS           — open one transaction, pin app.current_traveler_id
+                                     so every read/write is per-traveler isolated
+          3. AgentCore Runtime    — session envelope (runtimeSessionId, microVM isolation)
+          4. AgentCore Memory     — recall recent session events + semantic recall
+          5. AgentCore Gateway    — managed MCP tools/list + tools/call for trip search
+          6. persist_turn         — write back to Aurora and mirror to AgentCore Memory
+
+        Args:
+            message: The traveler's utterance for this turn.
+            traveler_id: Traveler identifier (RLS scope, e.g. trv_meridian_demo).
+            conversation_id: Existing conversation id, or None to start one.
+            limit: Max trip packages to surface.
+
+        Returns:
+            Tuple of (packages, activities, response_text, conversation_id, memory_facts).
+        """
         require_agentcore_platform()
         activities: List[Any] = []
 
