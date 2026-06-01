@@ -54,7 +54,8 @@
       "Bash(echo \"py=$?\")",
       "Bash(python3 -c \"import ast; [ast.parse\\(open\\(p\\).read\\(\\)\\) for p in ['/Users/shayons/Desktop/Workshops/sample-dat309-agentic-workflows-aurora-mcp/meridian/backend/routers/chat.py', '/Users/shayons/Desktop/Workshops/sample-dat309-agentic-workflows-aurora-mcp/meridian/backend/llm_polish.py']]\")",
       "Bash(python3 -c \"import ast; [ast.parse\\(open\\(p\\).read\\(\\)\\) for p in ['/Users/shayons/Desktop/Workshops/sample-dat309-agentic-workflows-aurora-mcp/meridian/scripts/travel_catalog.py', '/Users/shayons/Desktop/Workshops/sample-dat309-agentic-workflows-aurora-mcp/meridian/backend/routers/chat.py']]\")",
-      "Bash(python3 -c \"import ast; ast.parse\\(open\\('/Users/shayons/Desktop/Workshops/sample-dat309-agentic-workflows-aurora-mcp/meridian/backend/llm_polish.py'\\).read\\(\\)\\)\")"
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\('/Users/shayons/Desktop/Workshops/sample-dat309-agentic-workflows-aurora-mcp/meridian/backend/llm_polish.py'\\).read\\(\\)\\)\")",
+      "mcp__Claude_in_Chrome__tabs_context_mcp"
     ]
   }
 }

@@ -228,7 +228,7 @@ def build_slide_two(prs: Presentation) -> None:
          "“Romantic week in Europe” now ranks correctly"),
         ("4", "Memory",
          "ConciergeOrchestrator  ·  Aurora memory + RLS + audit  ·  AgentCore Memory & Identity",
-         "Knows Alex & Jordan, Tokyo Oct 12–19, shellfish allergy"),
+         "Knows Alex Morgan, Tokyo Oct 12–19, shellfish allergy"),
         ("5", "Orchestration",
          "LangGraph StateGraph  ·  PostgresSaver checkpoints in Aurora",
          "classify → search / availability / recall → synthesize"),

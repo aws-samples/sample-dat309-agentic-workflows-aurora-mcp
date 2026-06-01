@@ -82,7 +82,11 @@ class MCPAgent:
         self.mcp_client = MCPClient(
             server_name="postgres-mcp-server",
             command="uvx",
-            args=["awslabs.postgres-mcp-server@latest"]
+            # Pinned to @1.0.9 to match the live runtime client
+            # (backend/mcp/mcp_client.py). @latest drifted to auto-discovering
+            # the Secrets Manager secret, which fails for a Serverless v2 secret
+            # whose name carries a random suffix; the pin avoids that on stage.
+            args=["awslabs.postgres-mcp-server@1.0.9"]
         )
         
         # Store connection parameters for database connection

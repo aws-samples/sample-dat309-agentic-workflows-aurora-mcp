@@ -22,7 +22,7 @@
 | `backend/agents/production_04/memory_agent.py` | Strands `@tool` memory recall/persist |
 | `backend/memory/store.py` | Aurora memory CRUD |
 | `frontend/src/sections/AgentSection.tsx` | Live demo UI (chat + trace) |
-| `frontend/src/components/TravelerPersona.tsx` | Alex & Jordan Chen persona card |
+| `frontend/src/components/TravelerPersona.tsx` | Alex Morgan persona card |
 | `scripts/travel_catalog.py` | 30 trip packages + demo traveler seed |
 
 ---
@@ -48,7 +48,7 @@ npm run dev
 
 - http://localhost:5173 loads Meridian
 - http://localhost:8000/health returns `healthy`
-- `GET /api/memory/trv_meridian_demo` returns Alex & Jordan profile facts
+- `GET /api/memory/trv_meridian_demo` returns Alex Morgan profile facts
 - Scroll to **Live demo** — persona card and phase pills visible
 
 **If Aurora was reset**
@@ -91,7 +91,7 @@ Point to the **Architecture** section (five phase cards):
 | 4 | Memory | Returning traveler — profile + preferences in Aurora |
 | 5 | Orchestration | LangGraph StateGraph with checkpointed control flow |
 
-> "Phases 1–3 teach the retrieval stack. Phase 4 is the production story: the agent **remembers** Alex and Jordan before it searches. Phase 5 is the workflow story: explicit, branchable, resumable orchestration."
+> "Phases 1–3 teach the retrieval stack. Phase 4 is the production story: the agent **remembers** Alex Morgan before it searches. Phase 5 is the workflow story: explicit, branchable, resumable orchestration."
 
 ---
 
@@ -228,11 +228,11 @@ and gets back `{}` — the RLS policy refuses to leak rows.
 
 ## Part 5 — Phase 4 · Memory (15 min)
 
-**Select:** `Phase 4 · Memory` (or click **Chat as Alex & Jordan → Phase 4** on the persona card)
+**Select:** `Phase 4 · Memory` (or click **Chat as Alex Morgan → Phase 4** on the persona card)
 
 ### What to say
 
-> "Phase 4 is the returning traveler. Meet **Alex & Jordan Chen** from SFO — party of two, Tokyo culture trip Oct 12–19, shellfish allergy. None of that is in the prompt; it's in **Aurora** (`traveler_profiles`, `traveler_preferences`, `conversation_messages`, `trip_interactions`)."
+> "Phase 4 is the returning traveler. Meet **Alex Morgan** from BOS — traveling as a party of two, Tokyo culture trip Oct 12–19, shellfish allergy. None of that is in the prompt; it's in **Aurora** (`traveler_profiles`, `traveler_preferences`, `conversation_messages`, `trip_interactions`)."
 
 Point to the **persona card** and trace memory spans:
 
@@ -465,7 +465,7 @@ Phase 5   Orchestration      LangGraph StateGraph + PostgresSaver checkpoints
 - Is the Maldives package available?  
 - Romantic week in Europe *(compare to Phase 1)*  
 
-### Phase 4 — suggested (as Alex & Jordan)
+### Phase 4 — suggested (as Alex Morgan)
 
 - Tokyo trip for two in October  
 - Beach escape under $2500 — remember my food allergies  
@@ -545,8 +545,8 @@ uvicorn backend.main:app --reload --port 8000
 | Field | Value |
 | ----- | ----- |
 | ID | `trv_meridian_demo` |
-| Name | Alex & Jordan Chen |
-| Home | SFO |
+| Name | Alex Morgan |
+| Home | BOS |
 | Party | 2 |
 | Goal | Tokyo culture trip — Oct 12–19 |
 | Dietary | Shellfish allergy |
