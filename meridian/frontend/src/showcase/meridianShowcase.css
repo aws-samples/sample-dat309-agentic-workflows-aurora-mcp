@@ -2150,8 +2150,9 @@
 .mds-fact-row,
 .mds-memory-mini div {
   display: grid;
-  grid-template-columns: 44% minmax(0, 1fr);
+  grid-template-columns: 40% minmax(0, 1fr);
   gap: 10px;
+  align-items: start;
   color: #ffffff;
   font-size: 13.5px;
   line-height: 1.35;
@@ -2171,11 +2172,13 @@
 
 .mds-fact-row b,
 .mds-memory-mini b {
-  overflow: hidden;
+  min-width: 0;
   color: #ffffff;
   font-weight: 660;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Let multi-value facts (loyalty_programs, recent_trips, tokyo_culture)
+     wrap onto a second line instead of truncating with an ellipsis. */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .mds-run-config {
