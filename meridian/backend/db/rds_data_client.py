@@ -256,10 +256,11 @@ class RDSDataClient:
         filter rows accordingly.
 
         IMPORTANT — why we SET LOCAL ROLE: the RDS Data API connects as the
-        cluster master user (meridian_admin), which inherits BYPASSRLS via
-        rds_superuser. BYPASSRLS skips RLS *even with* ENABLE + FORCE, so a
-        master-user connection never gets filtered (proven live: master sees
-        22 rows, a NOBYPASSRLS role sees 17). We therefore drop into the
+        DB user its secret maps to. Ours is the cluster master user
+        (meridian_admin), which inherits BYPASSRLS via rds_superuser. BYPASSRLS
+        skips RLS *even with* ENABLE + FORCE, so this connection never gets
+        filtered (proven live: master sees 22 rows, a NOBYPASSRLS role sees
+        17). We therefore drop into the
         least-privilege ``meridian_app`` role (NOBYPASSRLS) for the lifetime of
         this transaction — AFTER setting the GUCs — so the policies engage for
         the queries that run inside the block. See examples/rls_app_role.sql.

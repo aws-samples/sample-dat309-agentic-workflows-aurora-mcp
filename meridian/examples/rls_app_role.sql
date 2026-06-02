@@ -1,10 +1,12 @@
 -- =============================================================================
 -- meridian_app — a least-privilege role so Aurora RLS actually engages.
 --
--- WHY: the app connects via the RDS Data API as the cluster MASTER user
--- (meridian_admin). On Aurora the master user inherits BYPASSRLS (through
--- rds_superuser), and BYPASSRLS skips row-level security *even with* ENABLE +
--- FORCE on the table. Proven live:
+-- WHY: the RDS Data API connects as the user its secretArn maps to. OUR secret
+-- is the cluster MASTER user (meridian_admin), and on Aurora the master user
+-- inherits BYPASSRLS (through rds_superuser); BYPASSRLS skips row-level security
+-- *even with* ENABLE + FORCE on the table. (Pointing the secret at this role
+-- instead would also fix it — SET LOCAL ROLE keeps the master secret but drops
+-- the privilege per-transaction.) Proven live:
 --     as meridian_admin, GUC set : row_security_active = false, 22 rows
 --     as a NOBYPASSRLS role, same : row_security_active = true,  17 rows
 -- So the fix is NOT another table flag — the app must run scoped reads/writes

@@ -39,11 +39,13 @@
 --
 -- THE GOTCHA WE HIT (why FORCE alone was not enough) --------------------------
 --
---   The app reaches Aurora through the RDS Data API, which connects as the
---   cluster MASTER user (meridian_admin). On Aurora the master user inherits
---   the BYPASSRLS privilege (via the rds_superuser role). A BYPASSRLS role
---   skips Row-Level Security ENTIRELY — even with ENABLE + FORCE + a correct
---   policy + the GUC set. Proven live on this cluster:
+--   The RDS Data API connects as whatever DB user the secret in secretArn
+--   maps to — it is NOT inherently privileged. OUR secret happens to be the
+--   cluster MASTER user (meridian_admin), and on Aurora the master user
+--   inherits the BYPASSRLS privilege (via the rds_superuser role). A BYPASSRLS
+--   role skips Row-Level Security ENTIRELY — even with ENABLE + FORCE + a
+--   correct policy + the GUC set. So the cause is the SECRET we chose, not the
+--   Data API. Proven live on this cluster:
 --
 --       as meridian_admin  (BYPASSRLS) : row_security_active = false, 22 rows
 --       as meridian_app    (NOBYPASSRLS): row_security_active = true,  17 rows
@@ -115,9 +117,9 @@ ALTER TABLE trip_interactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 -- FORCE so the policies apply even to the table OWNER (Postgres exempts the
 -- owner from RLS otherwise). NOTE: FORCE is necessary but NOT sufficient here —
--- the app also connects as a BYPASSRLS master user, which skips RLS regardless.
--- The real fix is running queries as the NOBYPASSRLS meridian_app role; see the
--- header "THE GOTCHA" section and examples/rls_app_role.sql.
+-- our Data API secret maps to the master user, which has BYPASSRLS and skips
+-- RLS regardless. The real fix is running queries as the NOBYPASSRLS
+-- meridian_app role; see the header "THE GOTCHA" section and examples/rls_app_role.sql.
 ALTER TABLE traveler_preferences FORCE ROW LEVEL SECURITY;
 ALTER TABLE conversation_messages FORCE ROW LEVEL SECURITY;
 ALTER TABLE trip_interactions FORCE ROW LEVEL SECURITY;

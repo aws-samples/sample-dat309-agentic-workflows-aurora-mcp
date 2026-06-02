@@ -184,10 +184,12 @@ Open the **RLS tab** in the activity panel and hit **Re-run probe**. It runs the
   every interaction in this dataset is Alex's — RLS is still active, there's just nothing
   to filter out. The preferences table is where you see the cut, because that's where the
   decoy lives."*
-- **If asked "how does the count actually drop?" (ties to the RLS slide):** *"The app
-  connects as the Aurora master user, which would normally bypass RLS. Inside the
-  transaction we `SET LOCAL ROLE` to a least-privilege role and set the traveler GUC —
-  then the policy bites. That role switch is the whole trick."*
+- **If asked "how does the count actually drop?" (ties to the RLS slide):** *"The Data API
+  uses whatever DB user its secret maps to — ours is the master user, which has BYPASSRLS.
+  So inside the transaction we `SET LOCAL ROLE` to a least-privilege role and set the
+  traveler GUC — then the policy bites. That role switch is the whole trick."*
+  (If pushed: *"You could instead point the secret at a non-privileged user — same effect.
+  We keep the master secret and drop the privilege per-transaction."*)
 - **If asked about the `OR … = ''` branch (only if asked):** *"That empty-string branch is
   the admin/seed path; the app always sets the GUC, so it never hits it."* Don't volunteer
   this unprompted — it invites a "so it's not secure?" tangent.
