@@ -155,7 +155,37 @@ Runtime, Gateway, Memory, Identity, with Aurora RLS scoping every query."*
 
 **The four memory `@tools`:** `recall_session_context`, `recall_traveler_preferences`,
 `recall_similar_interactions`, `persist_turn`. All read/write Aurora; `persist_turn` is
-the only writer and writes both Aurora and AgentCore.
+the only writer (Aurora only — the AgentCore write-back is a separate orchestrator call).
+
+**Memory-slide narration (two tiers):** *"Memory has two tiers. Short-term session memory
+lives in AgentCore Memory, the managed layer — we mirror each turn with `create_event` and
+read it back into the trace with `list_memory_records` and `retrieve_memory_records`.
+Durable memory lives in Aurora: `trip_interactions` with embeddings for semantic recall
+over pgvector HNSW, traveler preferences for facts like the shellfish allergy and loyalty
+programs, and a durable copy of the session. Four MemoryAgent tools — three read, and
+`persist_turn` is the only writer — but it writes Aurora only; the AgentCore write-back is
+a separate call from the orchestrator. Every read, and that write, runs in one transaction
+that pins the traveler with `set_config('app.current_traveler_id', …)` and then `SET LOCAL
+ROLE` into a least-privilege role — so the RLS policy denies anything outside that
+traveler's scope. That role switch is the catch: our connection is the Aurora master user,
+which isn't subject to RLS otherwise — step down, and the policy applies. We'll watch it in
+the demo — 'what did we discuss last time?' This time it remembers the Tokyo thread,
+grounded in Alex's stored preferences. The grounding is all in Aurora — none of it's in the
+prompt."*
+
+**Memory Q&A (only if asked):**
+- *AgentCore vs Aurora?* — *"AgentCore is the managed session layer; Aurora is the durable
+  system of record where preferences and embeddings live, RLS-scoped — the mirror bridges
+  them."*
+- *What are the wrappers?* — *"Our **AgentCore Memory client** (`agentcore/memory.py`) has
+  wrapper methods — `record_turn`, `list_recent_turns`, `semantic_recall` — each calling
+  exactly one AgentCore Memory API: `create_event`, `list_memory_records`,
+  `retrieve_memory_records`. The slide shows the AWS API names; the wrappers are our thin
+  adapter. The MemoryAgent is separate — it owns the four Aurora `@tool`s above."*
+- *Does the AgentCore read drive the answer?* — *"No — the reply is grounded in the Aurora
+  recall tools; that's where preferences and past interactions come from. AgentCore Memory
+  is the managed session record we write and read back; Aurora is the retrieval source this
+  turn. Two real layers, clear division of labor."*
 
 **Demo — one Tokyo storyline, IN ORDER:**
 1. **Seed the thread** — *"Tokyo culture trip for two — boutique stays, local food, walkable neighborhoods."* Prompt carries no allergy/airport/loyalty; the agent weaves in shellfish allergy, BOS no-red-eyes, boutique-over-chain — all from Aurora **before** answering.
@@ -194,6 +224,20 @@ Open the **RLS tab** in the activity panel and hit **Re-run probe**. It runs the
   observable fact is master sees all rows, the non-privileged role sees only the
   traveler's. The lesson is run least-privilege, which production would do with its own
   secret anyway."*)
+- **The general principle (the safe, owner/FORCE-proof framing — use this on the RLS
+  slide):** *"RLS gives privileged roles special treatment — superusers and BYPASSRLS roles
+  are never subject to it, and a table's owner can sit outside it too. The Data API connects
+  as whatever user its secret maps to, and the simplest setup uses the cluster's master user
+  — which owns these tables. Rather than reason about exactly **when** a privileged, owning
+  role is covered, the best practice is simpler: don't run your scoped queries as it. Two
+  ways there — step down per-transaction to a least-privilege role, like we do; or create
+  the tables as a least-privilege role up front and point the app's secret at that role.
+  Either way you rely on the one rule that's never in doubt: a role that owns nothing, with
+  no special attributes, is always subject to the policy."*
+  (If someone invokes FORCE: *"Right — FORCE is meant to cover the owner. Which is exactly
+  why I don't want security depending on getting owner, superuser, and FORCE flags all
+  perfectly right. I run as a role that owns nothing and has no special attributes — subject
+  to the policy by construction, no flag-juggling."*)
 - **If asked about the `OR … = ''` branch (only if asked):** *"That empty-string branch is
   the admin/seed path; the app always sets the GUC, so it never hits it."* Don't volunteer
   this unprompted — it invites a "so it's not secure?" tangent.
