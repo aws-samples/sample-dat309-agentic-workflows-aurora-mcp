@@ -104,14 +104,22 @@ export const SHOWCASE_EXAMPLE_PROMPTS: Record<Phase, string[]> = {
   // EXCELS at: a multi-step chain (search → availability) that runs two
   // sequential worker nodes with a PostgresSaver checkpoint between each.
   // That's composition a single tool call can't make visible.
-  //   1. availability branch — single node, lists open departures.
-  //   2. memory_recall branch — "remember/last time" loads the prior
-  //      thread, then matches against it (classify → memory_recall).
-  //   3. plan branch — search → availability, multi-node, the payoff.
+  // The three pills are deliberately NON-overlapping so the routing is
+  // legible: each lands on a different branch, and the third is visibly a
+  // SUPERSET of work (two worker nodes + two checkpoints), not a reworded
+  // version of the first. Different destinations (Amalfi vs Kyoto) keep #1
+  // and #3 from sounding like the same question.
+  //   1. availability branch — single node, 1 checkpoint, lists open slots.
+  //      (classify → availability)
+  //   2. memory_recall branch — "what did we discuss" loads the prior thread.
+  //      (classify → memory_recall)
+  //   3. plan branch — THE PAYOFF. "end-to-end: find trips, then check
+  //      departures" maps 1:1 to two nodes lighting up with a PostgresSaver
+  //      checkpoint between each. (classify → search → availability)
   5: [
-    'What dates are open for Kyoto in November? Show the slots.',
-    'Remember our last Tokyo conversation? Pick it up with a culture focus',
-    'Plan a Kyoto cultural trip and check which November departures are open',
+    'What dates are open for the Amalfi Coast Villa Week?',
+    'What did we discuss last time? Pick up where we left off.',
+    'Plan a Kyoto cultural trip end-to-end: find matching trips, then check which November departures are open.',
   ],
 };
 
