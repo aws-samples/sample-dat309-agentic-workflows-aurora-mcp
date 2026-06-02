@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MeridianShowcaseState } from '../hooks/useMeridianShowcase';
 import type { ShowcaseTraceSpan } from '../lib/showcaseAdapters';
+import { WorkflowGraph } from './WorkflowGraph';
 
 // The five "thinking phases" Meridian narrates while a turn is in flight.
 // Each phase maps onto a contiguous slice of the trace span timeline so the
@@ -106,6 +107,13 @@ export function TracePanel({ state, compact = false }: { state: MeridianShowcase
           ))}
         </div>
       )}
+
+      {/* Phase 5 only: a StateGraph diagram that lights the executed path
+          (classify → branch → synthesize) from the real workflow spans. Sits
+          above the span list as a header diagram; spans remain the detail. */}
+      {(state.traceTab === 'spans' || compact) &&
+        state.selectedPhase === 5 &&
+        state.traceSpans.length > 0 && <WorkflowGraph state={state} />}
 
       {state.traceTab === 'spans' || compact ? (
         <div className="mds-span-list">
