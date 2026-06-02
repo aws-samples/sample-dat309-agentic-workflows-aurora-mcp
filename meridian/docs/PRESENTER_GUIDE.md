@@ -144,13 +144,14 @@ understands the request, and still has no idea who **you** are."*
 **Open with:** *"Retrieval was intelligence. Production is trust and memory — AgentCore
 Runtime, Gateway, Memory, Identity, with Aurora RLS scoping every query."*
 
-**The AgentCore stack on every turn:**
+**The AgentCore stack on every turn (claim Runtime + Gateway + Memory):**
 1. **Runtime** — session envelope (`runtimeSessionId`, microVM isolation)
-2. **Identity** — workload / IAM envelope (security span)
-3. **Memory** — `list_recent_turns` (session recall) + semantic recall + `create_event` mirror
-4. **Aurora RLS tx** — `scoped_session(traveler_id=…)` pins per-traveler scope; memory `@tools` run inside it
-5. **Gateway** — managed MCP `tools/list` + `tools/call` for trip search
-6. **persist_turn** — Aurora write + AgentCore Memory write-back
+2. **Memory** — `list_recent_turns` (session recall) + semantic recall + `create_event` mirror
+3. **Aurora RLS tx** — `scoped_session(traveler_id=…)` pins per-traveler scope + `SET LOCAL ROLE`; memory `@tools` run inside it
+4. **Gateway** — managed MCP `tools/list` + `tools/call` for trip search
+5. **persist_turn** — Aurora write + AgentCore Memory write-back
+
+*(Identity resolves the IAM principal per turn but is **not** part of the talk's claim.)*
 
 **The four memory `@tools`:** `recall_session_context`, `recall_traveler_preferences`,
 `recall_similar_interactions`, `persist_turn`. All read/write Aurora; `persist_turn` is
@@ -164,8 +165,35 @@ the only writer and writes both Aurora and AgentCore.
 **Talking points (trust pitch):** *"AgentCore Runtime isolates every session in a
 microVM. AgentCore Memory mirrors every turn. Aurora RLS wraps every query in a tx with
 `scoped_session(traveler_id=…)` — even a tool reading outside scope is denied by policy.
-Every turn writes one audit row: IAM principal, RLS scope, rows returned. That's the
+Every turn writes one audit row: RLS scope, rows returned. That's the
 concrete answer to 'how do I securely connect LLM agents to my database.'"*
+
+### The RLS probe — proving isolation live (the "answer before they ask it" beat)
+
+Open the **RLS tab** in the activity panel and hit **Re-run probe**. It runs the SAME
+`COUNT(*)` twice — scoped vs unscoped — and shows the real `pg_policies` USING clause.
+
+- **15-sec narration (say it as the bar collapses):** *"Same query, run twice. Without the
+  traveler's scope the database returns all 22 preference rows — every traveler's data.
+  With Row-Level Security and the traveler pinned, Aurora returns 17 — only Alex's. Those
+  5 hidden rows belong to a decoy traveler. The agent's SQL had no WHERE traveler_id — the
+  database refused to return them. That USING clause is the live policy, not a slide claim."*
+- **The teaching beat (point at 17 of 22):** *"Even if the LLM writes a query that forgets
+  to filter, it physically cannot leak another traveler's data."*
+- **Handle `trip_interactions: 90 of 90` before they ask:** *"No hidden rows there because
+  every interaction in this dataset is Alex's — RLS is still active, there's just nothing
+  to filter out. The preferences table is where you see the cut, because that's where the
+  decoy lives."*
+- **If asked "how does the count actually drop?" (ties to the RLS slide):** *"The app
+  connects as the Aurora master user, which would normally bypass RLS. Inside the
+  transaction we `SET LOCAL ROLE` to a least-privilege role and set the traveler GUC —
+  then the policy bites. That role switch is the whole trick."*
+- **If asked about the `OR … = ''` branch (only if asked):** *"That empty-string branch is
+  the admin/seed path; the app always sets the GUC, so it never hits it."* Don't volunteer
+  this unprompted — it invites a "so it's not secure?" tangent.
+
+> Identity: **not featured in this talk.** The code resolves the IAM principal per turn, but
+> we're claiming Runtime + Gateway + Memory only — cleaner and fully defensible.
 
 **Bridge → Phase 5:** *"That last prompt asked for three things in one breath. Strands chained them, but the routing was invisible. What if we want each step explicit, branchable, and resumable weeks later?"*
 
