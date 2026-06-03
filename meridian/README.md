@@ -188,7 +188,7 @@ Activity traces are returned inline on each `POST /api/chat` response (no separa
 | Orchestration | **LangGraph** `StateGraph` with `PostgresSaver` checkpoints (Phase 5) |
 | Database | Aurora PostgreSQL 17, RDS Data API, pgvector HNSW, Row-Level Security |
 | Embeddings & rerank | **Cohere Embed v4** (`cohere.embed-v4:0`, 1024d) + **Cohere Rerank 3.5** (`us.cohere.rerank-v3-5:0`) on Bedrock |
-| LLM | **Claude Opus 4.8** on Amazon Bedrock (`global.anthropic.claude-opus-4-8`), fallback Opus 4.8 → Sonnet 4.6 → Haiku 4.5 |
+| LLM | **Claude Sonnet 4.6** on Amazon Bedrock (`global.anthropic.claude-sonnet-4-6`), fallback Sonnet 4.6 → Haiku 4.5 → Opus 4.8 |
 | MCP | `awslabs.postgres-mcp-server` (generic SQL) **and** custom `meridian-concierge` FastMCP server (domain tools); plus `meridian-memory` (`backend/mcp/memory_server.py`) |
 | Memory & Identity | **Bedrock AgentCore Memory** + **AgentCore Identity** (Phase 4) |
 

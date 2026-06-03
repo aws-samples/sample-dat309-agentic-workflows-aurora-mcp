@@ -77,14 +77,15 @@ _CONCIERGE_SYSTEM = (
 )
 
 
-# Model fallback chain. Opus 4.8 is the headline; if the AWS account
-# doesn't have access to that cross-region profile (very common in
-# fresh accounts), we try Sonnet 4.6 and finally Haiku 4.5. The first
-# success wins; if all three fail we surface the last error.
+# Model fallback chain. The live primary is Sonnet 4.6 (set in .env /
+# config.bedrock.model_id) and _candidate_models() always tries that first.
+# This chain is the BACKUP order if the primary errors: stay fast — Sonnet
+# 4.6, then Haiku 4.5 — and keep Opus 4.8 last so a transient Sonnet hiccup
+# on stage never silently falls back to the slowest model. First success wins.
 _DEFAULT_FALLBACK_CHAIN: List[str] = [
-    "global.anthropic.claude-opus-4-8",
     "global.anthropic.claude-sonnet-4-6",
     "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "global.anthropic.claude-opus-4-8",
 ]
 
 

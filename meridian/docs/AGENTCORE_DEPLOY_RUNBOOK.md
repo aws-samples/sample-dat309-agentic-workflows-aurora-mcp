@@ -26,7 +26,7 @@ the session namespace and surfaced via `retrieve_memory_records` /
 aws sts get-caller-identity
 
 # 2. Region pinned to us-east-1 (Bedrock model access for Cohere
-#    Rerank cross-region inference profile and Claude Opus lives there).
+#    Rerank cross-region inference profile and Claude models live there).
 export AWS_DEFAULT_REGION=us-east-1
 
 # 3. AgentCore CLI installed:

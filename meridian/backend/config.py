@@ -111,7 +111,10 @@ class BedrockConfig:
     variable (``BEDROCK_MODEL_ID``) without editing eight files.
 
     Default is the Global cross-Region inference profile for Anthropic Claude
-    Opus 4.8 (``global.anthropic.claude-opus-4-8``). If you see::
+    Sonnet 4.6 (``global.anthropic.claude-sonnet-4-6``) — chosen for the live
+    demo because it's markedly faster per turn than Opus on venue networks.
+    Swap to ``global.anthropic.claude-opus-4-8`` for maximum quality. If you
+    see::
 
         ValidationException: The provided model identifier is invalid
 
@@ -136,7 +139,7 @@ class BedrockConfig:
             --query "inferenceProfileSummaries[?contains(inferenceProfileId, 'anthropic')].inferenceProfileId"
     """
 
-    DEFAULT_MODEL_ID: str = "global.anthropic.claude-opus-4-8"
+    DEFAULT_MODEL_ID: str = "global.anthropic.claude-sonnet-4-6"
 
     model_id: str = field(
         default_factory=lambda: os.getenv(
@@ -155,7 +158,7 @@ class BedrockConfig:
 def bedrock_model_label(model_id: str) -> str:
     """Human-readable label for Run config / health (from BEDROCK_MODEL_ID).
 
-    Covers the live fallback chain: Opus 4.8 -> Sonnet 4.6 -> Haiku 4.5.
+    Covers the live fallback chain: Sonnet 4.6 -> Haiku 4.5 -> Opus 4.8.
     """
     mid = model_id.lower()
     if "opus-4-8" in mid or "opus-4.8" in mid:

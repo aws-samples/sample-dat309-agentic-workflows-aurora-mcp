@@ -52,7 +52,7 @@ Or run the full setup script: `meridian/scripts/setup.sh`
 ## Tech stack
 
 - **Frontend:** React, Vite, TypeScript
-- **Backend:** FastAPI, Strands Agents, Amazon Bedrock (Claude Opus 4.8 + Cohere Embed v4 / Rerank 3.5)
+- **Backend:** FastAPI, Strands Agents, Amazon Bedrock (Claude Sonnet 4.6 + Cohere Embed v4 / Rerank 3.5)
 - **Data:** Aurora PostgreSQL 17, pgvector, RDS Data API
 - **Protocol:** Model Context Protocol (Phase 2)
 - **Orchestration:** Strands (Phases 1–4) · LangGraph `StateGraph` (Phase 5)

@@ -38,7 +38,7 @@ the session namespace and surfaced via `retrieve_memory_records` /
 # 1. AWS credentials (Isengard / SSO / aws configure). Confirm:
 aws sts get-caller-identity
 
-# 2. Region pinned to us-east-1 (Bedrock access for Cohere Rerank + Claude Opus):
+# 2. Region pinned to us-east-1 (Bedrock access for Cohere Rerank + Claude models):
 export AWS_DEFAULT_REGION=us-east-1
 
 # 3. AgentCore CLI (Node-based, installed globally):
@@ -150,7 +150,7 @@ Surfaces (see README "Two surfaces, one app" for the full map):
 ## 3) Health checks (must pass)
 
 ```bash
-curl -s http://localhost:8000/health | jq .                       # Opus 4.8 + cohere.embed-v4:0
+curl -s http://localhost:8000/health | jq .                       # Sonnet 4.6 + cohere.embed-v4:0
 curl -s http://localhost:8000/api/memory/trv_meridian_demo | jq . # Alex Morgan facts
 
 # Phase 4 smoke — exercises Bedrock → AgentCore Gateway → Aurora end to end:

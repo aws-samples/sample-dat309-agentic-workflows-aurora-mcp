@@ -7,8 +7,8 @@ snippets, env knobs, FAQ). The dry-run checklist is at the end.
 > **Source of truth:** every tool name, signature, and SQL example matches
 > `backend/agents/{sql_01, mcp_02, retrieval_03, production_04, orchestration_05}/`,
 > and every demo prompt matches the live pills in
-> `frontend/src/showcase/lib/showcaseAdapters.ts`. Model: Bedrock **Claude Opus 4.8**
-> (`global.anthropic.claude-opus-4-8`), fallback chain Opus 4.8 → Sonnet 4.6 → Haiku 4.5.
+> `frontend/src/showcase/lib/showcaseAdapters.ts`. Model: Bedrock **Claude Sonnet 4.6**
+> (`global.anthropic.claude-sonnet-4-6`), fallback chain Sonnet 4.6 → Haiku 4.5 → Opus 4.8.
 > Retrieval ranks with **Cohere Embed v4** + **Cohere Rerank 3.5** (`us.cohere.rerank-v3-5:0`).
 
 **Shape of the talk:** build the agent (Phases 1–2), make it intelligent and personal
