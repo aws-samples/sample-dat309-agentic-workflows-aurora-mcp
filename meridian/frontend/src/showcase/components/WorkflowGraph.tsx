@@ -30,18 +30,6 @@ const INTENT_PATHS: Record<string, NodeName[]> = {
   memory_recall: ['classify', 'memory_recall', 'synthesize'],
 };
 
-const ROUTE_LABELS: Record<string, string> = {
-  'start-classify': 'invoke graph',
-  'classify-search': 'intent=search | plan',
-  'classify-availability': 'intent=availability',
-  'classify-memory_recall': 'intent=memory',
-  'search-availability': 'plan step 2',
-  'search-synthesize': 'search result',
-  'availability-synthesize': 'availability result',
-  'memory_recall-synthesize': 'memory result',
-  'synthesize-end': 'response',
-};
-
 const NODE_RE = /Workflow node:\s*(classify|search|availability|memory_recall|synthes)/i;
 
 interface GraphActivation {
@@ -151,15 +139,15 @@ function compactDetails(details?: string): string | null {
   return details.length > 34 ? `${details.slice(0, 34)}...` : details;
 }
 
-function edgeLabel(from: GraphNodeName, to: GraphNodeName): string {
-  return ROUTE_LABELS[`${from}-${to}`] ?? 'then';
-}
-
 function stepForNode(node: GraphNodeName, pathNodes: GraphNodeName[]): number | null {
   if (!WORKFLOW_NODES.includes(node as NodeName)) return null;
   const workflowPath = pathNodes.filter((n): n is NodeName => WORKFLOW_NODES.includes(n as NodeName));
   const index = workflowPath.indexOf(node as NodeName);
   return index >= 0 ? index + 1 : null;
+}
+
+function isWorkflowNode(node: GraphNodeName): node is NodeName {
+  return WORKFLOW_NODES.includes(node as NodeName);
 }
 
 export function WorkflowGraph({ state }: { state: MeridianShowcaseState }) {
@@ -182,11 +170,12 @@ export function WorkflowGraph({ state }: { state: MeridianShowcaseState }) {
     ['availability', 'avail'],
     ['memory_recall', 'memory'],
   ] as const;
+  const workflowPathNodes = pathNodes.filter(isWorkflowNode);
 
   return (
     <div className="mds-wfgraph" role="img" aria-label="LangGraph workflow path">
       <div className="mds-wfgraph-head">
-        <span className="mds-wfgraph-title">LangGraph StateGraph</span>
+        <span className="mds-wfgraph-title">LangGraph route</span>
         {intent && <span className="mds-wfgraph-intent">intent: {intent}</span>}
       </div>
 
@@ -199,23 +188,25 @@ export function WorkflowGraph({ state }: { state: MeridianShowcaseState }) {
         ))}
       </div>
 
-      <div className="mds-wfgraph-route" aria-label="Executed route">
-        {pathNodes.map((node, index) => {
+      <div className="mds-wfgraph-route-summary" aria-label="Executed route from START to END">
+        <span className={litNodes.has('start') ? 'is-lit' : ''}>START</span>
+        <i aria-hidden="true" />
+        <b>{workflowPathNodes.length} steps</b>
+        <i aria-hidden="true" />
+        <span className={litNodes.has('end') ? 'is-lit' : ''}>END</span>
+      </div>
+
+      <div className="mds-wfgraph-route" aria-label="Executed workflow nodes">
+        {workflowPathNodes.map((node) => {
           const visited = litNodes.has(node);
           const current = currentNode === node;
           const next = nextNode === node;
           const step = stepForNode(node, pathNodes);
           const fact = nodeFacts.get(node as NodeName);
           const checkpointed = checkpointAfter.has(node as NodeName);
-          const previous = pathNodes[index - 1];
 
           return (
             <div className="mds-wfgraph-route-row" key={node}>
-              {previous && (
-                <div className={`mds-wfgraph-route-edge${visited ? ' is-active' : ''}`}>
-                  <span>{edgeLabel(previous, node)}</span>
-                </div>
-              )}
               <div
                 className={[
                   'mds-wfgraph-route-node',
@@ -225,17 +216,19 @@ export function WorkflowGraph({ state }: { state: MeridianShowcaseState }) {
                 ].filter(Boolean).join(' ')}
               >
                 <span className="mds-wfgraph-route-step">
-                  {step ?? (node === 'start' ? 'S' : 'E')}
+                  {step}
                 </span>
                 <span className="mds-wfgraph-route-copy">
                   <b>{NODE_LABELS[node]}</b>
-                  {fact && <em>{fact}</em>}
-                </span>
-                {checkpointed && (
-                  <span className="mds-wfgraph-route-ckpt">
-                    checkpoint
+                  <span className="mds-wfgraph-route-meta">
+                    {fact && <em>{fact}</em>}
+                    {checkpointed && (
+                      <span className="mds-wfgraph-route-ckpt">
+                        checkpoint
+                      </span>
+                    )}
                   </span>
-                )}
+                </span>
               </div>
             </div>
           );

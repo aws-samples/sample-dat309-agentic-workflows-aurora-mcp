@@ -4467,22 +4467,26 @@
    labels over dense graph geometry while still lighting real trace spans.
    ========================================================================== */
 .mds-wfgraph {
-  margin: 0 0 12px;
-  padding: 12px;
-  border-radius: 12px;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 8px 0 10px;
+  padding: 10px;
+  border-radius: 10px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--mds-cyan) 7%, transparent), transparent 46%),
-    var(--mds-fill-1);
+    var(--mds-fill-2);
   border: 1px solid var(--mds-line);
 }
 .mds-wfgraph-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 7px;
 }
 .mds-wfgraph-title {
+  min-width: 0;
   font-size: calc(13px * var(--mds-fs));
   font-weight: 800;
   letter-spacing: 0;
@@ -4491,35 +4495,40 @@
 }
 .mds-wfgraph-intent {
   flex: 0 0 auto;
+  max-width: 100%;
+  overflow: hidden;
   font-family: var(--mds-font-mono);
-  font-size: calc(12px * var(--mds-fs));
+  font-size: calc(11.5px * var(--mds-fs));
   font-weight: 800;
-  padding: 3px 9px;
+  padding: 3px 8px;
   border-radius: 999px;
   color: var(--mds-cyan);
   background: var(--mds-cyan-soft);
   border: 1px solid var(--mds-cyan-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .mds-wfgraph-branches {
-  display: grid;
-  grid-template-columns: auto repeat(4, minmax(0, 1fr));
-  gap: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
 .mds-wfgraph-branches span {
-  font-size: calc(11.5px * var(--mds-fs));
+  margin-right: 2px;
+  font-size: calc(10.5px * var(--mds-fs));
   font-weight: 750;
   color: var(--mds-on-surface-faint);
 }
 .mds-wfgraph-branches b {
-  min-width: 0;
-  padding: 4px 5px;
+  flex: 0 0 auto;
+  padding: 3px 6px;
   border-radius: 999px;
   border: 1px solid var(--mds-line);
   background: var(--mds-fill-2);
   color: var(--mds-on-surface-soft);
-  font-size: calc(11.5px * var(--mds-fs));
+  font-size: calc(10.5px * var(--mds-fs));
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
@@ -4532,53 +4541,62 @@
   color: var(--mds-cyan);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--mds-cyan) 20%, transparent);
 }
-.mds-wfgraph-route {
+.mds-wfgraph-route-summary {
   display: grid;
-  gap: 4px;
-}
-.mds-wfgraph-route-row {
-  display: grid;
-  gap: 4px;
-}
-.mds-wfgraph-route-edge {
-  display: flex;
+  grid-template-columns: auto minmax(16px, 1fr) auto minmax(16px, 1fr) auto;
   align-items: center;
-  gap: 7px;
-  min-height: 14px;
-  color: var(--mds-on-surface-faint);
+  gap: 6px;
+  margin-bottom: 7px;
+}
+.mds-wfgraph-route-summary i {
+  content: "";
+  height: 1px;
+  background: linear-gradient(90deg, var(--mds-cyan), transparent);
+}
+.mds-wfgraph-route-summary span,
+.mds-wfgraph-route-summary b {
+  padding: 3px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--mds-line);
+  background: var(--mds-fill-1);
+  color: var(--mds-on-surface-soft);
   font-family: var(--mds-font-mono);
   font-size: calc(10.5px * var(--mds-fs));
-  font-weight: 750;
+  font-weight: 850;
+  line-height: 1;
 }
-.mds-wfgraph-route-edge::before {
-  content: "";
-  flex: 0 0 28px;
-  height: 1px;
-  margin-left: 13px;
-  background: var(--mds-line-strong);
-}
-.mds-wfgraph-route-edge.is-active {
+.mds-wfgraph-route-summary span.is-lit {
+  border-color: var(--mds-cyan-line);
+  background: var(--mds-cyan-soft);
   color: var(--mds-cyan);
 }
-.mds-wfgraph-route-edge.is-active::before {
-  height: 2px;
-  background: var(--mds-cyan);
-  box-shadow: 0 0 7px color-mix(in srgb, var(--mds-cyan) 40%, transparent);
+.mds-wfgraph-route {
+  position: relative;
+  display: grid;
+  gap: 5px;
 }
-.mds-wfgraph-route-edge span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.mds-wfgraph-route::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 18px;
+  bottom: 18px;
+  left: 14px;
+  width: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mds-cyan) 34%, var(--mds-line));
+}
+.mds-wfgraph-route-row {
+  display: block;
 }
 .mds-wfgraph-route-node {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
-  gap: 9px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
   align-items: center;
-  min-height: 43px;
-  padding: 7px 9px;
-  border-radius: 10px;
+  min-height: 39px;
+  padding: 6px 8px;
+  border-radius: 9px;
   border: 1px solid var(--mds-line-strong);
   background: var(--mds-fill-2);
   color: var(--mds-on-surface-faint);
@@ -4603,13 +4621,13 @@
 .mds-wfgraph-route-step {
   display: inline-grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--mds-on-surface-faint) 18%, transparent);
   color: var(--mds-on-surface-soft);
   font-family: var(--mds-font-mono);
-  font-size: calc(13px * var(--mds-fs));
+  font-size: calc(12.5px * var(--mds-fs));
   font-weight: 900;
   line-height: 1;
 }
@@ -4620,38 +4638,46 @@
 .mds-wfgraph-route-copy {
   min-width: 0;
   display: grid;
-  gap: 2px;
+  gap: 1px;
 }
 .mds-wfgraph-route-copy b {
   overflow: hidden;
   color: currentColor;
-  font-size: calc(15px * var(--mds-fs));
+  font-size: calc(14.5px * var(--mds-fs));
   font-weight: 850;
   letter-spacing: 0;
   line-height: 1.08;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mds-wfgraph-route-copy em {
+.mds-wfgraph-route-meta {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  line-height: 1.1;
+}
+.mds-wfgraph-route-meta em {
+  min-width: 0;
   overflow: hidden;
   color: var(--mds-on-surface-soft);
   font-family: var(--mds-font-mono);
-  font-size: calc(12px * var(--mds-fs));
+  font-size: calc(11.5px * var(--mds-fs));
   font-style: normal;
   font-weight: 760;
-  line-height: 1.08;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .mds-wfgraph-route-ckpt {
-  align-self: center;
-  padding: 3px 7px;
+  flex: 0 0 auto;
+  padding: 2px 6px;
   border-radius: 999px;
   border: 1px solid rgba(227, 164, 94, 0.42);
   background: rgba(227, 164, 94, 0.16);
   color: var(--mds-amber);
   font-family: var(--mds-font-mono);
-  font-size: calc(10.5px * var(--mds-fs));
+  font-size: calc(10px * var(--mds-fs));
   font-weight: 850;
   line-height: 1;
   animation: mds-pulse 1.6s ease-in-out infinite;
@@ -4661,14 +4687,18 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 8px;
-  padding-top: 8px;
+  min-width: 0;
+  margin-top: 7px;
+  padding-top: 7px;
   border-top: 1px solid var(--mds-line);
   color: var(--mds-on-surface-soft);
   font-family: var(--mds-font-mono);
-  font-size: calc(11.5px * var(--mds-fs));
+  font-size: calc(10.5px * var(--mds-fs));
   font-weight: 760;
   line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .mds-wfgraph-ckpt-dot {
   width: 6px;

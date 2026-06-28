@@ -76,9 +76,8 @@ describe('WorkflowGraph', () => {
 
     expect(screen.getByText('START')).toBeInTheDocument();
     expect(screen.getByText('END')).toBeInTheDocument();
+    expect(screen.getByText('4 steps')).toBeInTheDocument();
     expect(screen.getByText('intent: plan')).toBeInTheDocument();
-    expect(screen.getByText('intent=search | plan')).toBeInTheDocument();
-    expect(screen.getByText('plan step 2')).toBeInTheDocument();
     expect(screen.getAllByText('packages=5')).toHaveLength(2);
     expect(screen.getByText('rows=3 · 2 of 2')).toBeInTheDocument();
     expect(screen.getByText('checkpoint')).toBeInTheDocument();
