@@ -128,100 +128,102 @@ export function TracePanel({
 
       {!collapsed && (
         <>
-          {/* Progress rail fills top-to-bottom as spans land. */}
-          <ThinkingPhases state={state} />
+          <div className="mds-trace-scroll">
+            {/* Progress rail fills top-to-bottom as spans land. */}
+            <ThinkingPhases state={state} />
 
-          {!compact && (
-            <div className="mds-trace-summary">
-              <span>{state.phaseLabel}</span>
-              {phaseMeta && <span className="mds-proof-pill">{phaseMeta.proofPoint}</span>}
-              <span>{state.traceSpans.length} spans</span>
-              <span>{agentCount} agents</span>
-              <span>{state.totalLatencyMs}ms</span>
-            </div>
-          )}
-          {!compact && phaseMeta && (
-            <div className="mds-phase-proof" aria-label="Active phase proof point">
-              <span>Proof point</span>
-              <b>{phaseMeta.proofPoint}</b>
-              <small>{phaseMeta.takeaway}</small>
-            </div>
-          )}
-          {!compact && state.selectedPhase === 2 && <McpToolContractPanel state={state} />}
-          {!compact && state.selectedPhase === 5 && <WorkflowStateInspector state={state} />}
-          {!compact && (
-            <div className="mds-trace-tabs" role="tablist" aria-label="Trace filters">
-              {/* RLS is a Phase 4 proof point, so other phases keep the lean tab set. */}
-              {(state.selectedPhase === 4
-                ? (['spans', 'memory', 'sql', 'rls'] as const)
-                : (['spans', 'memory', 'sql'] as const)
-              ).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  className={state.traceTab === tab ? 'is-active' : ''}
-                  onClick={() => state.setTraceTab(tab)}
-                >
-                  {tab === 'spans'
-                    ? 'Trace'
-                    : tab === 'memory'
-                      ? 'Memory'
-                      : tab === 'sql'
-                        ? 'SQL'
-                        : 'RLS'}
-                </button>
-              ))}
-            </div>
-          )}
+            {!compact && (
+              <div className="mds-trace-summary">
+                <span>{state.phaseLabel}</span>
+                {phaseMeta && <span className="mds-proof-pill">{phaseMeta.proofPoint}</span>}
+                <span>{state.traceSpans.length} spans</span>
+                <span>{agentCount} agents</span>
+                <span>{state.totalLatencyMs}ms</span>
+              </div>
+            )}
+            {!compact && phaseMeta && (
+              <div className="mds-phase-proof" aria-label="Active phase proof point">
+                <span>Proof point</span>
+                <b>{phaseMeta.proofPoint}</b>
+                <small>{phaseMeta.takeaway}</small>
+              </div>
+            )}
+            {!compact && state.selectedPhase === 2 && <McpToolContractPanel state={state} />}
+            {!compact && state.selectedPhase === 5 && <WorkflowStateInspector state={state} />}
+            {!compact && (
+              <div className="mds-trace-tabs" role="tablist" aria-label="Trace filters">
+                {/* RLS is a Phase 4 proof point, so other phases keep the lean tab set. */}
+                {(state.selectedPhase === 4
+                  ? (['spans', 'memory', 'sql', 'rls'] as const)
+                  : (['spans', 'memory', 'sql'] as const)
+                ).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    className={state.traceTab === tab ? 'is-active' : ''}
+                    onClick={() => state.setTraceTab(tab)}
+                  >
+                    {tab === 'spans'
+                      ? 'Trace'
+                      : tab === 'memory'
+                        ? 'Memory'
+                        : tab === 'sql'
+                          ? 'SQL'
+                          : 'RLS'}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          {/* Phase 5 shows the executed graph path; spans remain the detail view. */}
-          {(state.traceTab === 'spans' || compact) &&
-            state.selectedPhase === 5 &&
-            state.traceSpans.length > 0 && <WorkflowGraph state={state} />}
+            {/* Phase 5 shows the executed graph path; spans remain the detail view. */}
+            {(state.traceTab === 'spans' || compact) &&
+              state.selectedPhase === 5 &&
+              state.traceSpans.length > 0 && <WorkflowGraph state={state} />}
 
-          {state.traceTab === 'spans' || compact ? (
-            <div className="mds-span-list">
-              {activeSpans.length === 0 ? (
-                <div className="mds-empty">Submit a prompt to generate trace spans.</div>
-              ) : (
-                activeSpans.map((span, index) => (
-                  <TraceSpanRow
-                    key={span.id}
-                    span={span}
-                    index={index}
-                    active={state.replayIndex === index || (!state.isReplaying && state.expandedSpanId === span.id)}
-                    visible={!state.isReplaying || state.replayIndex >= index}
-                    expanded={!compact && state.expandedSpanId === span.id}
-                    onToggle={() => state.setExpandedSpanId(state.expandedSpanId === span.id ? null : span.id)}
-                  />
-                ))
-              )}
-            </div>
-          ) : state.traceTab === 'memory' ? (
-            <div className="mds-memory-mini">
-              {memoryFacts.map((fact) => (
-                <div key={fact.key}>
-                  <span>{fact.key}</span>
-                  <b>{fact.value}</b>
-                </div>
-              ))}
-            </div>
-          ) : state.traceTab === 'rls' ? (
-            <RlsProbeCard travelerId={state.travelerId} />
-          ) : (
-            <div className="mds-sql-list">
-              {sqlSpans.length ? (
-                sqlSpans.map((span) => (
-                  <div key={span.id}>
-                    <small>{span.file ?? span.agent ?? 'SQL span'}</small>
-                    <pre>{span.sql}</pre>
+            {state.traceTab === 'spans' || compact ? (
+              <div className="mds-span-list">
+                {activeSpans.length === 0 ? (
+                  <div className="mds-empty">Submit a prompt to generate trace spans.</div>
+                ) : (
+                  activeSpans.map((span, index) => (
+                    <TraceSpanRow
+                      key={span.id}
+                      span={span}
+                      index={index}
+                      active={state.replayIndex === index || (!state.isReplaying && state.expandedSpanId === span.id)}
+                      visible={!state.isReplaying || state.replayIndex >= index}
+                      expanded={!compact && state.expandedSpanId === span.id}
+                      onToggle={() => state.setExpandedSpanId(state.expandedSpanId === span.id ? null : span.id)}
+                    />
+                  ))
+                )}
+              </div>
+            ) : state.traceTab === 'memory' ? (
+              <div className="mds-memory-mini">
+                {memoryFacts.map((fact) => (
+                  <div key={fact.key}>
+                    <span>{fact.key}</span>
+                    <b>{fact.value}</b>
                   </div>
-                ))
-              ) : (
-                <div className="mds-empty">No SQL snippet on this turn.</div>
-              )}
-            </div>
-          )}
+                ))}
+              </div>
+            ) : state.traceTab === 'rls' ? (
+              <RlsProbeCard travelerId={state.travelerId} />
+            ) : (
+              <div className="mds-sql-list">
+                {sqlSpans.length ? (
+                  sqlSpans.map((span) => (
+                    <div key={span.id}>
+                      <small>{span.file ?? span.agent ?? 'SQL span'}</small>
+                      <pre>{span.sql}</pre>
+                    </div>
+                  ))
+                ) : (
+                  <div className="mds-empty">No SQL snippet on this turn.</div>
+                )}
+              </div>
+            )}
+          </div>
 
           {!compact && (
             <div className="mds-trace-actions">
