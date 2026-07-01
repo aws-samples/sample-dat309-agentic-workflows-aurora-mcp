@@ -385,10 +385,12 @@ aws rds-data execute-statement \
 
 In the UI, switch the phase pill to **Workflow** and try the same prompts:
 
-- "Find me a Kyoto cultural trip" → classify routes to `search`
-- "What dates are available for Tokyo in October?" → classify routes to
+- "What dates are open for the Amalfi Coast Villa Week?" → classify routes to
   `availability`
-- "Do you remember our last trip?" → classify routes to `memory_recall`
+- "Use what we discussed last time to suggest the next Tokyo step." → classify
+  routes to `memory_recall`
+- "Plan a Kyoto cultural trip end-to-end: find matching trips, then check which
+  November departures are open." → classify routes to `plan`
 
 In the trace, point out:
 

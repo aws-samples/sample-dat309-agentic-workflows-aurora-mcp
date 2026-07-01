@@ -277,9 +277,9 @@ when one fails its constraint — the catalog had **zero** Marriott properties, 
 (3) **resume** if you walked away mid-plan. Phase 5 fixes all three.
 
 **Demo (live pills, in order):**
-1. *"What dates are open for Kyoto in November? Show the slots."* → classify → **availability** → synthesize; a `PostgresSaver.put` between every node.
-2. *"Remember our last Tokyo conversation? Pick it up with a culture focus."* → classify → **memory_recall** → synthesize.
-3. *"Plan a Kyoto cultural trip and check which November departures are open."* → the payoff: classify → **search → availability** → synthesize. **Two sequential worker nodes, a checkpoint between each.** This is composition a single tool call can't make visible — Phase 5 ends on a strength.
+1. *"What dates are open for the Amalfi Coast Villa Week?"* → classify → **availability** → synthesize; a `PostgresSaver.put` after the PackageAgent node.
+2. *"Use what we discussed last time to suggest the next Tokyo step."* → classify → **memory_recall** → synthesize; same RLS-scoped memory, now as an explicit graph node.
+3. *"Plan a Kyoto cultural trip end-to-end: find matching trips, then check which November departures are open."* → the payoff: classify → **search → availability** → synthesize. **Two sequential worker nodes, a checkpoint between each.** This is composition a single tool call can't make visible — Phase 5 ends on a strength.
 
 **Talking points:** *"Same Aurora, same tools — what changed is the **orchestration**. An
 explicit StateGraph: classify fans out by intent, and the edge out of `search`

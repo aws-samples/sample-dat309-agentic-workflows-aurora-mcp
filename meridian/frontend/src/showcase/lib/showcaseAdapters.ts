@@ -61,7 +61,7 @@ export const SHOWCASE_EXAMPLE_PROMPTS: Record<Phase, string[]> = {
   // Each prompt lands on a distinct branch: availability, memory_recall, plan.
   5: [
     'What dates are open for the Amalfi Coast Villa Week?',
-    'What did we discuss last time? Pick up where we left off.',
+    'Use what we discussed last time to suggest the next Tokyo step.',
     'Plan a Kyoto cultural trip end-to-end: find matching trips, then check which November departures are open.',
   ],
 };

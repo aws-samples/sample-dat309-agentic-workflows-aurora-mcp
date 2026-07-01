@@ -115,6 +115,17 @@ export function deriveAuroraEvidence({
   const rerankSpans = traceSpans.filter((s) => /rerank|rank/i.test(spanText(s)));
   const rlsSpans = traceSpans.filter((s) => /rls|scoped|identity|traveler_preferences|conversation_messages|persist[_ ]turn|agentcore/i.test(spanText(s)));
   const checkpointSpans = traceSpans.filter(isCheckpointSpan);
+  const checkpointKind =
+    traceSpans
+      .map((span) => fieldValue(span, 'checkpointer'))
+      .find(Boolean) ?? 'PostgresSaver (Aurora)';
+  const checkpointStore =
+    traceSpans
+      .map((span) => fieldValue(span, 'checkpoint_store'))
+      .find(Boolean) ??
+    (checkpointKind.toLowerCase().includes('memorysaver')
+      ? 'process memory'
+      : 'langgraph_checkpoints');
   const hasRankDeltas = recommendations.some((p) => p.rank_delta != null || p.pre_rerank_position != null);
 
   return [
@@ -161,7 +172,9 @@ export function deriveAuroraEvidence({
       key: 'checkpoint',
       label: 'Checkpoint',
       value: checkpointSpans.length ? `${checkpointSpans.length} saved` : selectedPhase >= 5 ? 'ready' : 'later',
-      detail: checkpointSpans.length ? 'Workflow state persisted to Aurora' : 'LangGraph checkpoints unlock at Workflow',
+      detail: checkpointSpans.length
+        ? `Workflow state checkpointed via ${checkpointKind} (${checkpointStore})`
+        : 'LangGraph checkpoints unlock at Workflow',
       status: statusFor(selectedPhase >= 5, checkpointSpans.length > 0),
     },
   ];
@@ -191,7 +204,14 @@ export function deriveWorkflowState(traceSpans: ShowcaseTraceSpan[]): WorkflowSt
   const checkpoint =
     traceSpans
       .map((span) => fieldValue(span, 'checkpointer'))
-      .find(Boolean) ?? 'PostgresSaver';
+      .find(Boolean) ?? 'PostgresSaver (Aurora)';
+  const table =
+    traceSpans
+      .map((span) => fieldValue(span, 'checkpoint_store'))
+      .find(Boolean) ??
+    (checkpoint.toLowerCase().includes('memorysaver')
+      ? 'process memory'
+      : 'langgraph_checkpoints');
   const nextNode = path.find((node) => !visited.includes(node)) ?? 'complete';
 
   return {
@@ -202,7 +222,7 @@ export function deriveWorkflowState(traceSpans: ShowcaseTraceSpan[]): WorkflowSt
     nextNode,
     checkpoint,
     checkpointCount: checkpointSpans.length,
-    table: 'langgraph_checkpoints',
+    table,
   };
 }
 

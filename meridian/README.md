@@ -89,8 +89,8 @@ Each phase has two safe wins and one prompt that naturally motivates the next ph
 | SQL | `City breaks under $2000`; `Beach & Resort trips under $2500` | `Compare our top trips and show prices in EUR` → needs custom MCP tools |
 | MCP | `Compare our top trips and show prices in EUR`; `What is the cheapest month to visit Tokyo?` | `A romantic slow week somewhere with great wine` → needs intent retrieval |
 | Retrieval | `A romantic slow week somewhere with great wine`; `Check availability for the Tuscany Wine & Wellness week` | `What did we discuss last time? Pick up where we left off.` → needs durable memory |
-| Production | `Tokyo culture trip for two — boutique stays, local food, walkable neighborhoods`; `What did we discuss last time? Pick up where we left off.` | `Plan our October Tokyo trip — find open dates, pick a Marriott property, and hold a Kyoto side trip` → needs explicit workflow |
-| Workflow | `What dates are open for the Amalfi Coast Villa Week?`; `What did we discuss last time? Pick up where we left off.`; `Plan a Kyoto cultural trip end-to-end: find matching trips, then check which November departures are open.` | Finale: all three are successful branches |
+| Production | `Tokyo culture trip for two — boutique stays, local food, walkable neighborhoods`; `What did we discuss last time? Pick up where we left off.` | `Plan our October Tokyo trip — find open dates, pick a Marriott property, and stage a Kyoto side trip` → needs explicit workflow |
+| Workflow | `What dates are open for the Amalfi Coast Villa Week?`; `Use what we discussed last time to suggest the next Tokyo step.`; `Plan a Kyoto cultural trip end-to-end: find matching trips, then check which November departures are open.` | Finale: all three are successful branches |
 
 ## Architecture
 

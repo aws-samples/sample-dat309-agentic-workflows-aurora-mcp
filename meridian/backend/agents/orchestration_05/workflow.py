@@ -39,8 +39,10 @@ from __future__ import annotations
 import logging
 import os
 import uuid
+import json
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypedDict
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +54,9 @@ from langgraph.graph import StateGraph, END  # noqa: E402
 from langgraph.checkpoint.memory import MemorySaver  # noqa: E402
 
 try:
-    from langgraph.checkpoint.postgres import PostgresSaver  # type: ignore
+    from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver  # type: ignore
 except ImportError:  # pragma: no cover - optional extra
-    PostgresSaver = None  # type: ignore
+    AsyncPostgresSaver = None  # type: ignore
 
 
 AGENT_FILE = "agents/orchestration_05/workflow.py"
@@ -66,6 +68,80 @@ def _utc_now() -> datetime:
 
 def _utc_timestamp() -> str:
     return _utc_now().isoformat().replace("+00:00", "Z")
+
+
+def _truthy_env(name: str, default: str = "true") -> bool:
+    return os.getenv(name, default).strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _secret_json(secret_arn: str) -> Dict[str, Any]:
+    """Read the existing Aurora secret so Phase 5 can build a Postgres DSN.
+
+    The repo's primary data path uses RDS Data API, so .env intentionally
+    stores a Secrets Manager ARN instead of a plaintext database password.
+    PostgresSaver needs a direct PostgreSQL DSN; this adapter derives it from
+    the same Aurora secret rather than requiring a second presenter-only env var.
+    """
+    try:
+        import boto3
+
+        region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+        client = boto3.client("secretsmanager", region_name=region)
+        response = client.get_secret_value(SecretId=secret_arn)
+        raw = response.get("SecretString") or "{}"
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception as exc:
+        logger.warning("Unable to read Aurora secret for PostgresSaver DSN: %s", exc)
+        return {}
+
+
+def _resolve_checkpoint_dsn() -> Optional[str]:
+    """Resolve the DSN used by LangGraph PostgresSaver.
+
+    Priority:
+      1. Explicit LANGGRAPH_CHECKPOINT_DSN.
+      2. Auto-built DSN from Aurora env + Secrets Manager secret.
+
+    Set LANGGRAPH_AUTO_CHECKPOINT_DSN=false to disable the auto-build fallback.
+    """
+    explicit = os.getenv("LANGGRAPH_CHECKPOINT_DSN")
+    if explicit:
+        return explicit
+    if not _truthy_env("LANGGRAPH_AUTO_CHECKPOINT_DSN"):
+        return None
+
+    secret: Dict[str, Any] = {}
+    secret_arn = os.getenv("AURORA_SECRET_ARN")
+    if secret_arn:
+        secret = _secret_json(secret_arn)
+
+    username = (
+        os.getenv("AURORA_USERNAME")
+        or str(secret.get("username") or "")
+    ).strip()
+    password = (
+        os.getenv("AURORA_PASSWORD")
+        or str(secret.get("password") or "")
+    ).strip()
+    host = (
+        os.getenv("AURORA_HOST")
+        or os.getenv("AURORA_CLUSTER_ENDPOINT")
+        or str(secret.get("host") or "")
+    ).strip()
+    port = str(os.getenv("AURORA_PORT") or secret.get("port") or "5432").strip()
+    database = (
+        os.getenv("AURORA_DATABASE")
+        or str(secret.get("dbname") or secret.get("database") or "")
+    ).strip()
+
+    if not all((username, password, host, port, database)):
+        return None
+
+    user = quote(username, safe="")
+    pwd = quote(password, safe="")
+    db = quote(database, safe="")
+    return f"postgresql://{user}:{pwd}@{host}:{port}/{db}?sslmode=require"
 
 
 class WorkflowState(TypedDict, total=False):
@@ -170,23 +246,103 @@ class OrchestrationAgent:
         self.search_fn = search_fn
         self.availability_fn = availability_fn
         self.memory_recall_fn = memory_recall_fn
+        self._checkpoint_context = None
+        self._checkpoint_dsn = _resolve_checkpoint_dsn()
         self.checkpointer, self.checkpointer_kind = self._build_checkpointer()
         self.graph = self._build_graph()
+
+    @property
+    def _uses_postgres_saver(self) -> bool:
+        return self.checkpointer_kind.startswith("PostgresSaver")
+
+    def _checkpoint_activity(self, node: str, elapsed_ms: int) -> Dict[str, Any]:
+        """Trace the actual configured checkpointer, not just the ideal one."""
+        if self._uses_postgres_saver:
+            return _activity(
+                "tool_call",
+                "Checkpoint · PostgresSaver.put",
+                details=f"Workflow state serialized after {node} node ({elapsed_ms}ms)",
+                sql_query=(
+                    "INSERT INTO langgraph_checkpoints\n"
+                    "  (thread_id, checkpoint_ns, checkpoint_id,\n"
+                    "   parent_id, type, checkpoint, metadata)\n"
+                    "VALUES ($1, $2, $3, $4, 'msgpack', $5, $6)\n"
+                    "ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id)\n"
+                    "DO UPDATE SET checkpoint = EXCLUDED.checkpoint;"
+                ),
+                telemetry={
+                    "category": "memory_short",
+                    "component": "Aurora · langgraph_checkpoints",
+                    "status": "ok",
+                    "fields": [
+                        {"label": "checkpointer", "value": self.checkpointer_kind},
+                        {"label": "checkpoint_store", "value": "langgraph_checkpoints"},
+                        {"label": "durability", "value": "Aurora"},
+                    ],
+                },
+            )
+
+        return _activity(
+            "tool_call",
+            "Checkpoint · MemorySaver.put",
+            details=(
+                f"Workflow state kept in-process after {node} node ({elapsed_ms}ms). "
+                "Set LANGGRAPH_CHECKPOINT_DSN for Aurora durability."
+            ),
+            telemetry={
+                "category": "memory_short",
+                "component": "LangGraph MemorySaver (in-process)",
+                "status": "ok",
+                "fields": [
+                    {"label": "checkpointer", "value": self.checkpointer_kind},
+                    {"label": "checkpoint_store", "value": "process memory"},
+                    {"label": "durability", "value": "ephemeral"},
+                ],
+            },
+        )
 
     # ------------------------------------------------------------- checkpointer
 
     def _build_checkpointer(self):
-        dsn = os.getenv("LANGGRAPH_CHECKPOINT_DSN")
-        if dsn and PostgresSaver is not None:
-            try:
-                saver = PostgresSaver.from_conn_string(dsn)
-                saver.setup()
-                return saver, "PostgresSaver (Aurora)"
-            except Exception as exc:
-                logger.warning(
-                    "PostgresSaver unavailable (%s) — falling back to MemorySaver", exc
-                )
+        # This workflow invokes the graph with `ainvoke()`, so a durable Aurora
+        # checkpoint must be an AsyncPostgresSaver. It is entered lazily in
+        # `run()` where we can await the async context manager.
+        if self._checkpoint_dsn and AsyncPostgresSaver is None:
+            logger.warning(
+                "AsyncPostgresSaver unavailable — falling back to MemorySaver"
+            )
         return MemorySaver(), "MemorySaver (in-process)"
+
+    async def _ensure_async_checkpointer(self) -> None:
+        if self._uses_postgres_saver or not self._checkpoint_dsn:
+            return
+        if AsyncPostgresSaver is None:
+            return
+
+        ctx = AsyncPostgresSaver.from_conn_string(self._checkpoint_dsn)
+        try:
+            saver = await ctx.__aenter__()
+            await saver.setup()
+            self._checkpoint_context = ctx
+            self.checkpointer = saver
+            self.checkpointer_kind = "PostgresSaver (Aurora)"
+            self.graph = self._build_graph()
+        except Exception as exc:
+            try:
+                await ctx.__aexit__(type(exc), exc, exc.__traceback__)
+            except Exception:
+                pass
+            logger.warning(
+                "PostgresSaver unavailable (%s) — falling back to MemorySaver", exc
+            )
+
+    async def _close_async_checkpointer(self) -> None:
+        if self._checkpoint_context is None or not self._uses_postgres_saver:
+            return
+        try:
+            await self._checkpoint_context.__aexit__(None, None, None)
+        finally:
+            self._checkpoint_context = None
 
     # ------------------------------------------------------------------ graph
 
@@ -292,31 +448,7 @@ class OrchestrationAgent:
         )
         for sa in search_activities:
             activities.append(_coerce_activity(sa))
-        # PostgresSaver checkpoint after the node returns. Surface the
-        # SQL so the SQL tab shows what LangGraph writes between nodes.
-        activities.append(
-            _activity(
-                "tool_call",
-                "Checkpoint · PostgresSaver.put",
-                details=f"Workflow state serialized after search node ({elapsed}ms)",
-                sql_query=(
-                    "INSERT INTO langgraph_checkpoints\n"
-                    "  (thread_id, checkpoint_ns, checkpoint_id,\n"
-                    "   parent_id, type, checkpoint, metadata)\n"
-                    "VALUES ($1, $2, $3, $4, 'msgpack', $5, $6)\n"
-                    "ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id)\n"
-                    "DO UPDATE SET checkpoint = EXCLUDED.checkpoint;"
-                ),
-                telemetry={
-                    "category": "memory_short",
-                    "component": "Aurora · langgraph_checkpoints",
-                    "status": "ok",
-                    "fields": [
-                        {"label": "checkpointer", "value": self.checkpointer_kind},
-                    ],
-                },
-            )
-        )
+        activities.append(self._checkpoint_activity("search", elapsed))
         return {"packages": packages, "activities": activities}
 
     async def _node_availability(self, state: WorkflowState) -> WorkflowState:
@@ -362,29 +494,7 @@ class OrchestrationAgent:
         )
         for sa in sub_activities:
             activities.append(_coerce_activity(sa))
-        activities.append(
-            _activity(
-                "tool_call",
-                "Checkpoint · PostgresSaver.put",
-                details=f"Workflow state serialized after availability node ({elapsed}ms)",
-                sql_query=(
-                    "INSERT INTO langgraph_checkpoints\n"
-                    "  (thread_id, checkpoint_ns, checkpoint_id,\n"
-                    "   parent_id, type, checkpoint, metadata)\n"
-                    "VALUES ($1, $2, $3, $4, 'msgpack', $5, $6)\n"
-                    "ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id)\n"
-                    "DO UPDATE SET checkpoint = EXCLUDED.checkpoint;"
-                ),
-                telemetry={
-                    "category": "memory_short",
-                    "component": "Aurora · langgraph_checkpoints",
-                    "status": "ok",
-                    "fields": [
-                        {"label": "checkpointer", "value": self.checkpointer_kind},
-                    ],
-                },
-            )
-        )
+        activities.append(self._checkpoint_activity("availability", elapsed))
         return {"packages": packages, "activities": activities}
 
     async def _node_memory_recall(self, state: WorkflowState) -> WorkflowState:
@@ -426,29 +536,7 @@ class OrchestrationAgent:
         )
         for sa in sub_activities:
             activities.append(_coerce_activity(sa))
-        activities.append(
-            _activity(
-                "tool_call",
-                "Checkpoint · PostgresSaver.put",
-                details=f"Workflow state serialized after memory_recall node ({elapsed}ms)",
-                sql_query=(
-                    "INSERT INTO langgraph_checkpoints\n"
-                    "  (thread_id, checkpoint_ns, checkpoint_id,\n"
-                    "   parent_id, type, checkpoint, metadata)\n"
-                    "VALUES ($1, $2, $3, $4, 'msgpack', $5, $6)\n"
-                    "ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id)\n"
-                    "DO UPDATE SET checkpoint = EXCLUDED.checkpoint;"
-                ),
-                telemetry={
-                    "category": "memory_short",
-                    "component": "Aurora · langgraph_checkpoints",
-                    "status": "ok",
-                    "fields": [
-                        {"label": "checkpointer", "value": self.checkpointer_kind},
-                    ],
-                },
-            )
-        )
+        activities.append(self._checkpoint_activity("memory_recall", elapsed))
         return {"packages": packages, "activities": activities}
 
     async def _node_synthesize(self, state: WorkflowState) -> WorkflowState:
@@ -518,8 +606,12 @@ class OrchestrationAgent:
             "conversation_id": thread_id,
             "activities": [],
         }
-        result = await self.graph.ainvoke(initial, config=config)
-        return result
+        await self._ensure_async_checkpointer()
+        try:
+            result = await self.graph.ainvoke(initial, config=config)
+            return result
+        finally:
+            await self._close_async_checkpointer()
 
 
 def _coerce_activity(activity: Any) -> Dict[str, Any]:
