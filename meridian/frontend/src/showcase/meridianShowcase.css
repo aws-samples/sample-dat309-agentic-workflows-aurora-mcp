@@ -220,7 +220,6 @@
   background: var(--mds-fill-2);
   border-color: var(--mds-line);
 }
-.mds-root[data-theme="light"] .mds-phase-active-copy,
 .mds-root[data-theme="light"] .mds-capability-step,
 .mds-root[data-theme="light"] .mds-phase-proof,
 .mds-root[data-theme="light"] .mds-phase-proof-panel,
@@ -1070,36 +1069,6 @@
   color: #06232a;
   background: var(--mds-cyan);
   box-shadow: 0 0 24px rgba(49, 212, 228, 0.36);
-}
-
-.mds-phase-active-copy {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid rgba(49, 212, 228, 0.18);
-  border-radius: 11px;
-  background: rgba(49, 212, 228, 0.06);
-}
-
-.mds-phase-active-copy span {
-  padding: 3px 7px;
-  border-radius: 999px;
-  color: #06232a;
-  background: var(--mds-cyan);
-  font-size: calc(10.5px * var(--mds-fs));
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.mds-phase-active-copy b {
-  min-width: 0;
-  color: var(--mds-on-surface);
-  font-size: calc(12px * var(--mds-fs));
-  font-weight: 650;
-  line-height: 1.35;
 }
 
 .mds-capability-ladder {
