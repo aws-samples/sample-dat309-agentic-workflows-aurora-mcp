@@ -13,6 +13,7 @@ from backend.agentcore.gateway import (
     _extract_packages_from_mcp_result,
     get_agentcore_gateway,
 )
+from backend.agentcore.memory import AgentCoreMemoryAdapter
 from backend.agentcore.runtime import AgentCoreRuntimeAdapter, get_agentcore_runtime
 from backend.agentcore import cli_config
 
@@ -103,6 +104,48 @@ def test_gateway_mcp_tools_list(mock_urlopen):
     tools, _raw = adapter.list_tools()
     assert len(tools) == 1
     assert tools[0]["name"] == "search___trip"
+
+
+def test_memory_namespace_matches_deployed_template():
+    assert (
+        AgentCoreMemoryAdapter._namespace("trv_demo", "conv_123")
+        == "/users/trv_demo/sessions/conv_123"
+    )
+
+
+def test_memory_record_turn_uses_template_namespace():
+    adapter = AgentCoreMemoryAdapter(memory_id="mem-abc", region="us-east-1")
+    mock_client = MagicMock()
+    mock_client.create_event.return_value = {"event": {"eventId": "evt-1"}}
+    adapter._client = mock_client
+
+    result = adapter.record_turn("trv_demo", "conv_123", "hello", "hi")
+
+    assert result["event_id"] == "evt-1"
+    kwargs = mock_client.create_event.call_args.kwargs
+    assert kwargs["actorId"] == "trv_demo"
+    assert kwargs["sessionId"] == "conv_123"
+    assert kwargs["metadata"]["namespace"]["stringValue"] == "/users/trv_demo/sessions/conv_123"
+
+
+def test_memory_reads_use_template_namespace():
+    adapter = AgentCoreMemoryAdapter(memory_id="mem-abc", region="us-east-1")
+    mock_client = MagicMock()
+    mock_client.list_memory_records.return_value = {"memoryRecordSummaries": []}
+    mock_client.retrieve_memory_records.return_value = {"memoryRecordSummaries": []}
+    adapter._client = mock_client
+
+    adapter.list_recent_turns("trv_demo", "conv_123")
+    adapter.semantic_recall("trv_demo", "conv_123", "tokyo")
+
+    assert (
+        mock_client.list_memory_records.call_args.kwargs["namespace"]
+        == "/users/trv_demo/sessions/conv_123"
+    )
+    assert (
+        mock_client.retrieve_memory_records.call_args.kwargs["namespace"]
+        == "/users/trv_demo/sessions/conv_123"
+    )
 
 
 def test_singleton_getters():

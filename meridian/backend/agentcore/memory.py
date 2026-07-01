@@ -48,10 +48,11 @@ class AgentCoreMemoryAdapter:
     """AgentCore Memory data-plane client — the managed session layer.
 
     Mirrors each turn to AgentCore Memory (``create_event``) and reads it back
-    (``list_memory_records`` / ``retrieve_memory_records``), scoped by a
-    traveler/conversation namespace. This is the short-term session store;
-    Aurora remains the durable system of record for preferences and embeddings.
-    Real Bedrock AgentCore APIs only — no stubs.
+    (``list_memory_records`` / ``retrieve_memory_records``), scoped by the
+    namespace template deployed in ``agentcore.json``:
+    ``/users/{actorId}/sessions/{sessionId}``. This is the short-term session
+    store; Aurora remains the durable system of record for preferences and
+    embeddings. Real Bedrock AgentCore APIs only — no stubs.
     """
 
     def __init__(
@@ -86,8 +87,13 @@ class AgentCoreMemoryAdapter:
 
     @staticmethod
     def _namespace(traveler_id: str, conversation_id: str) -> str:
-        # AgentCore filters records by namespace; encode actor + session here.
-        return f"{traveler_id}/{conversation_id}"
+        # Must match the deployed AgentCore Memory namespace template in
+        # meridian_agentcore/agentcore/agentcore.json:
+        #   /users/{actorId}/sessions/{sessionId}
+        # The Runtime role's IAM policy also limits read actions to
+        # /users/*/sessions/*, so a shorter "traveler/session" namespace would
+        # not be authorized for list/retrieve.
+        return f"/users/{traveler_id}/sessions/{conversation_id}"
 
     # -------------------------------------------------------------- write path
 

@@ -337,6 +337,7 @@ class ProductionAgent:
                 },
             )
 
+            memory_namespace = self.agentcore_memory._namespace(traveler_id, conv_id)
             agentcore_turns = self.agentcore_memory.list_recent_turns(
                 traveler_id, conv_id, limit=6
             )
@@ -363,7 +364,7 @@ class ProductionAgent:
                             "value": self.agentcore_memory.memory_id,
                             "mono": True,
                         },
-                        {"label": "namespace", "value": f"{traveler_id}/{conv_id}"},
+                        {"label": "namespace", "value": memory_namespace},
                     ],
                 },
             )
@@ -524,4 +525,3 @@ def create_production_agent(activity_callback=None) -> ProductionAgent:
 # Back-compat aliases for older imports and docs.
 create_concierge_agent = create_production_agent
 ConciergeAgent = ProductionAgent
-
